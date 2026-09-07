@@ -43,17 +43,14 @@ function loadPhotoWithOverlay({ imgEl, overlayEl, url, bumpGen, currentGen, onEr
   imgEl.src = url;
 }
 
-const GEAR_TABS_PRIMARY = [
+const GEAR_TABS = [
   { id: "kayaks", label: "Kajaki" },
   { id: "paddles", label: "Wiosła" },
   { id: "lifejackets", label: "Kamizelki" },
   { id: "helmets", label: "Kaski" },
   { id: "sprayskirts", label: "Fartuchy" },
-];
-const GEAR_TABS_SECONDARY = [
   { id: "throwbags", label: "Rzutki" },
 ];
-const GEAR_TABS = [...GEAR_TABS_PRIMARY, ...GEAR_TABS_SECONDARY];
 
 // Kto może zgłosić uszkodzenie — wszyscy oprócz sympatyka/kursanta (zgodne z
 // memberRoleKeys w functions/src/service/service_config.ts).
@@ -97,6 +94,8 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
       const isPaddlesView = activeTab === "paddles";
       const isLifejacketsView = activeTab === "lifejackets";
       const isHelmetsView = activeTab === "helmets";
+      const isThrowbagsView = activeTab === "throwbags";
+      const isSprayskirtsView = activeTab === "sprayskirts";
 
       if (!ctx?.idToken) {
         viewEl.innerHTML = `
@@ -117,7 +116,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
       // osobny ekran zastępujący ją).
       const isActiveKierownik = ctx?.session?.isActiveKierownik === true;
       const gearShortcutsHtml = `
-        <div class="startTileGrid" style="margin-bottom:14px;">
+        <div class="startTileGrid gearShortcutTiles">
           <button type="button" class="startTile2 primary" data-gear-shortcut="reserve" title="Przeglądaj i rezerwuj sprzęt">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4 8 8 7 12 7 C16 7 20 8 22 12 C20 16 16 17 12 17 C8 17 4 16 2 12 Z"/><ellipse cx="12" cy="11" rx="3.5" ry="1.5"/></svg>
             <span class="startTile2Title">Wypożycz / Rezerwuj</span>
@@ -150,21 +149,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           ${gearShortcutsHtml}
 
           <div class="gearTabs" role="tablist" aria-label="Kategorie sprzętu">
-            ${GEAR_TABS_PRIMARY.map((tab) => `
-              <button
-                type="button"
-                class="gearTab ${tab.id === activeTab ? "active" : ""}"
-                data-gear-tab="${escapeAttr(tab.id)}"
-                aria-pressed="${tab.id === activeTab ? "true" : "false"}"
-                title="${escapeAttr(tab.label)}"
-              >
-                <span class="gearTabIcon">${gearTabIcon(tab.id)}</span>
-                <span class="gearTabLabel">${escapeHtml(tab.label)}</span>
-              </button>
-            `).join("")}
-          </div>
-          <div class="gearTabs gearTabsSecondary" role="tablist" aria-label="Kategorie sprzętu dodatkowe">
-            ${GEAR_TABS_SECONDARY.map((tab) => `
+            ${GEAR_TABS.map((tab) => `
               <button
                 type="button"
                 class="gearTab ${tab.id === activeTab ? "active" : ""}"
@@ -202,6 +187,18 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
             ${isLifejacketsView ? `
               <button type="button" id="gearLifejacketInfoBtn" class="ghost gearInfoBtn" title="Jak dobrać i używać kamizelki asekuracyjnej">
                 <span aria-hidden="true">ℹ️</span> Jak dobrać kamizelkę?
+              </button>
+            ` : isPaddlesView ? `
+              <button type="button" id="gearPaddleInfoBtn" class="ghost gearInfoBtn" title="Jak wybrać i używać wiosła kajakowego">
+                <span aria-hidden="true">ℹ️</span> Jak wybrać wiosło?
+              </button>
+            ` : isSprayskirtsView ? `
+              <button type="button" id="gearSprayskirtInfoBtn" class="ghost gearInfoBtn" title="Fartuch kajakowy — budowa i bezpieczeństwo">
+                <span aria-hidden="true">ℹ️</span> Jak używać fartucha?
+              </button>
+            ` : isThrowbagsView ? `
+              <button type="button" id="gearThrowbagInfoBtn" class="ghost gearInfoBtn" title="Rzutka ratownicza — budowa i zasady użytkowania">
+                <span aria-hidden="true">ℹ️</span> Jak używać rzutki?
               </button>
             ` : ""}
 
@@ -432,6 +429,9 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
       const metaEl = viewEl.querySelector("#gearMeta");
       const reloadBtn = viewEl.querySelector("#gearReloadBtn");
       const lifejacketInfoBtn = viewEl.querySelector("#gearLifejacketInfoBtn");
+      const paddleInfoBtn = viewEl.querySelector("#gearPaddleInfoBtn");
+      const sprayskirtInfoBtn = viewEl.querySelector("#gearSprayskirtInfoBtn");
+      const throwbagInfoBtn = viewEl.querySelector("#gearThrowbagInfoBtn");
       const searchEl = viewEl.querySelector("#gearSearch");
       const filterTypeSelectEl = viewEl.querySelector("#filterTypeSelect");
 
@@ -1064,7 +1064,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           } else if (isPaddlesView) {
             const poolFilter = filterPaddlePoolSelectEl?.value || "";
             if (poolFilter) {
-              const isPool = toBool(item?.isPoolAllowed);
+              const isPool = toBool(item?.meta?.isPoolAllowed);
               if (poolFilter === "pool" && !isPool) return false;
               if (poolFilter === "nopool" && isPool) return false;
             }
@@ -1557,6 +1557,39 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         });
       }
 
+      if (paddleInfoBtn) {
+        paddleInfoBtn.addEventListener("click", () => {
+          openModal({
+            title: "Wiosło kajakowe — jak wybrać i gdzie go używać",
+            topUrl: "/assets/wioslo-poradnik.webp",
+            sideUrl: "",
+            prefer: "top",
+          });
+        });
+      }
+
+      if (sprayskirtInfoBtn) {
+        sprayskirtInfoBtn.addEventListener("click", () => {
+          openModal({
+            title: "Fartuch kajakowy — Twój niezbędnik bezpieczeństwa",
+            topUrl: "/assets/fartuch-poradnik.webp",
+            sideUrl: "",
+            prefer: "top",
+          });
+        });
+      }
+
+      if (throwbagInfoBtn) {
+        throwbagInfoBtn.addEventListener("click", () => {
+          openModal({
+            title: "Rzutka ratownicza",
+            topUrl: "/assets/rzutka-poradnik.webp",
+            sideUrl: "",
+            prefer: "top",
+          });
+        });
+      }
+
       searchEl.addEventListener("input", applyFilter);
       if (filterWorkingOnlyEl) filterWorkingOnlyEl.addEventListener("change", applyFilter);
       if (filterAvailableNowOnlyEl) filterAvailableNowOnlyEl.addEventListener("change", applyFilter);
@@ -1778,7 +1811,7 @@ function renderHelmetCard(item, isFav = false, canUserReserve = true) {
   const number = String(item?.number || "").trim();
   const brand = String(item?.brand || "").trim();
   const model = String(item?.model || "").trim();
-  const isPool = toBool(item?.isPoolAllowed);
+  const isPool = toBool(item?.meta?.isPoolAllowed);
 
   const title = buildGenericGearTitle(item);
   const line2 = buildHelmetLine2(item);
@@ -1849,11 +1882,11 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
   const model = String(item?.model || "").trim();
   const color = String(item?.color || "").trim();
   const type = String(item?.type || "").trim();
-  const lengthCm = String(item?.lengthCm || "").trim();
-  const featherAngle = String(item?.featherAngle || "").trim();
+  const lengthCm = String(item?.meta?.lengthCm || "").trim();
+  const featherAngle = String(item?.meta?.featherAngle || "").trim();
   const notes = String(item?.notes || "").trim();
 
-  const isPool = toBool(item?.isPoolAllowed);
+  const isPool = toBool(item?.meta?.isPoolAllowed);
 
   const brandModel = [brand, model].filter(Boolean).join(" ");
   // Jedna zwarta linijka zamiast dwóch osobnych (marka/model + typ) — mniej wysokości
@@ -1861,6 +1894,13 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
   // przycisk "Rezerwuj" od kolumny z ikoną (feedback użytkownika 07.09.2026).
   const brandModelType = [brandModel, type].filter(Boolean).join(" · ");
   const terrainLabel = terrainCategoryLabelsText(item?.terrainCategories);
+  // Czwarty wiersz karty: długość + kąt skrętu w jednej linii — brak obu pól
+  // (arkusz ich nie ma dla tej sztuki) usuwa wiersz całkowicie, zamiast pokazywać
+  // pustą wartość/"brak" (feedback użytkownika 07.09.2026).
+  const specParts = [];
+  if (lengthCm) specParts.push(`Długość: ${lengthCm} cm`);
+  if (featherAngle) specParts.push(`Kąt skrętu: ${featherAngle}°`);
+  const specLine = specParts.join(" · ");
 
   return `
     <div class="gearCard gearOk${isPool ? " gearPool" : ""}">
@@ -1873,9 +1913,8 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
             </div>
             ${brandModelType ? `<div class="gearMiniType">${escapeHtml(brandModelType)}</div>` : ""}
             ${terrainLabel ? `<div class="gearMiniType">${escapeHtml(terrainLabel)}</div>` : ""}
-            ${lengthCm ? `<div class="gearInlineMeta gearInlineMetaMain"><strong>Długość:</strong> ${escapeHtml(lengthCm)} cm</div>` : ""}
-            <div class="gearInlineMeta gearInlineMetaMain"><strong>Kąt skrętu:</strong> ${featherAngle ? `${escapeHtml(featherAngle)}°` : "brak"}</div>
-            ${notes ? `<div class="gearInlineMeta"><strong>Uwagi:</strong> ${escapeHtml(notes)}</div>` : ""}
+            ${specLine ? `<div class="gearMiniType">${escapeHtml(specLine)}</div>` : ""}
+            ${notes ? `<div class="gearNrColorMobile">Uwagi: ${escapeHtml(notes)}</div>` : ""}
           </div>
 
           <div class="gearHeadSide">
@@ -1909,43 +1948,50 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
   `;
 }
 
+// Wiersz 2 karty rzutki/fartucha: "Materiał: X · Rozmiar: Y · Rozmiar komina: Z"
+// — pola specyficzne dla fartuchów (rzutki ich nie mają w arkuszu, więc dla nich
+// ten wiersz zawsze wychodzi pusty i znika całkowicie).
+function buildGenericGearLine2(item) {
+  const material = String(item?.meta?.material || "").trim();
+  const size = String(item?.size || "").trim();
+  const tunnelSize = String(item?.meta?.tunnelSize || "").trim();
+  const parts = [];
+  if (material) parts.push(`Materiał: ${material}`);
+  if (size) parts.push(`Rozmiar: ${size}`);
+  if (tunnelSize) parts.push(`Rozmiar komina: ${tunnelSize}`);
+  return parts.join(" · ");
+}
+
+// Wiersz 3: kolor + uwagi, jeśli są.
+function buildGenericGearLine3(item) {
+  const color = String(item?.color || "").trim();
+  const notes = String(item?.notes || "").trim();
+  return [color ? `kolor: ${color}` : "", notes].filter(Boolean).join(" · ");
+}
+
 // Rzutki i fartuchy (jedyne kategorie bez dedykowanej funkcji renderowania) —
-// bez prawdziwych zdjęć (zawsze placeholder) i bez na tyle danych, by uzasadnić
-// osobny panel "Więcej" — świadomie BEZ przycisku rozwijania, wszystko widoczne
-// od razu w max dwóch wierszach (feedback użytkownika 04.09.2026): wiersz 1 =
-// tytuł "{producent} {numer}" (np. "HF 14") + ulubione + odznaki (typ/rozmiar/
-// status/basen); wiersz 2 = pozostałe dane tekstem (kolor/uwagi) + Rezerwuj.
+// bez prawdziwych zdjęć (zawsze placeholder). Dane specyficzne (materiał/rozmiar/
+// rozmiar komina/kolor/uwagi) idą jako zawsze widoczny tekst (`.gearMiniType`/
+// `.gearNrColorMobile`, ten sam wzorzec co karta kasku/kamizelki) zamiast plakietek
+// w `.gearBadges` — te znikają całkowicie na mobile (`@media max-width:600px`),
+// co dla tej karty (bez zdjęcia, bez innych informacji) zostawiało ekran niemal
+// pusty (feedback użytkownika 07.09.2026). "status" pominięty w wyświetlaniu —
+// sync zawsze zapisuje "available", plakietka nie niosła żadnej informacji.
+// Serce i "Rezerwuj" przeniesione do JEDNEGO dolnego wiersza (przycisk po lewej,
+// serce po prawej, `justify-content:space-between`) — wcześniej serce siedziało
+// samotnie w górnym rogu, a dolny wiersz bywał pusty poza przyciskiem, co przy
+// braku innych danych wyglądało na złamany layout.
 function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
   const number = String(item?.number || "").trim();
   const brand = String(item?.brand || "").trim();
-  const color = String(item?.color || "").trim();
-  const size = String(item?.size || "").trim();
-  const type = String(item?.type || "").trim();
-  const status = String(item?.status || "").trim();
-  const notes = String(item?.notes || "").trim();
   const categoryLabel = String(item?.gearCategoryDisplay || item?.gearCategory || "Sprzęt").trim();
   const category = String(item?.gearCategory || "").trim();
 
-  const isPool = toBool(item?.isPoolAllowed);
+  const isPool = toBool(item?.meta?.isPoolAllowed);
 
   const label = [brand, number].filter(Boolean).join(" ") || categoryLabel;
-
-  const typeBadge = type
-    ? `<span class="badge soft">${escapeHtml(type)}</span>`
-    : "";
-
-  const sizeBadge = size
-    ? `<span class="badge soft">rozm. ${escapeHtml(size)}</span>`
-    : "";
-
-  const statusBadge = status
-    ? `<span class="badge soft">${escapeHtml(status)}</span>`
-    : "";
-
-  const poolBadge = isPool ? `<span class="badge pool">Basen</span>` : "";
-
-  const metaParts = [color ? `kolor: ${color}` : "", notes].filter(Boolean);
-  const metaText = metaParts.join(" · ");
+  const line2 = buildGenericGearLine2(item);
+  const line3 = buildGenericGearLine3(item);
 
   return `
     <div class="gearCard gearCardNoPhoto gearOk${isPool ? " gearPool" : ""}">
@@ -1954,27 +2000,16 @@ function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
         <div class="gearHead">
           <div class="gearTitleWrap">
             <div class="gearTitle">${escapeHtml(label)}</div>
+            ${line2 ? `<div class="gearMiniType">${escapeHtml(line2)}</div>` : ""}
+            ${line3 ? `<div class="gearNrColorMobile">${escapeHtml(line3)}</div>` : ""}
           </div>
 
           <div class="gearHeadSide">
-            <button
-              class="gearFavBtn${isFav ? " active" : ""}"
-              type="button"
-              data-gear-fav="${escapeAttr(String(item?.id || ""))}"
-              aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
-            >${heartSvg(isFav)}</button>
             ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
-            <div class="gearBadges gearBadgesStack">
-              ${poolBadge}
-              ${typeBadge}
-              ${sizeBadge}
-              ${statusBadge}
-            </div>
           </div>
         </div>
 
         <div class="gearMiniBar">
-          <div class="gearMiniMeta">${escapeHtml(metaText)}</div>
           ${isPool
             ? `<span class="badge pool gearPoolActionLabel">Basen</span>`
             : `<button
@@ -1983,6 +2018,12 @@ function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
             data-gear-bundle-reserve="${escapeAttr(String(item?.id || ""))}"
             data-gear-bundle-category="${escapeAttr(category)}"
             ${canUserReserve ? "" : "disabled"}>Rezerwuj</button>`}
+          <button
+            class="gearFavBtn${isFav ? " active" : ""}"
+            type="button"
+            data-gear-fav="${escapeAttr(String(item?.id || ""))}"
+            aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
+          >${heartSvg(isFav)}</button>
         </div>
 
       </div>
@@ -2062,7 +2103,7 @@ function renderLifejacketCard(item, isFav = false, canUserReserve = true) {
   const number = String(item?.number || "").trim();
   const brand = String(item?.brand || "").trim();
   const model = String(item?.model || "").trim();
-  const isPool = toBool(item?.isPoolAllowed);
+  const isPool = toBool(item?.meta?.isPoolAllowed);
 
   const title = buildGenericGearTitle(item);
   const line2 = buildLifejacketLine2(item);
@@ -2432,6 +2473,24 @@ function paddleColorSlotHtml(colorRaw) {
   `;
 }
 
+// Ikonka kasku w rzeczywistym kolorze sztuki — sam kształt (kopuła + rondo), bez
+// podziału na dwie połówki jak przy wiośle (kaski nie bywają dwukolorowe w danych).
+// Ten sam słownik kolorów co wiosła (PADDLE_COLOR_KEYWORDS), reużyty 1:1.
+function helmetColorSvg(hex) {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 15C3 8.9 7 4 12 4C17 4 21 8.9 21 15Z" fill="${hex}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+      <rect x="2" y="14" width="20" height="3" rx="1.5" fill="${hex}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+      <path d="M12 5V14" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
+    </svg>`;
+}
+
+function helmetColorIconHtml(colorRaw) {
+  const label = String(colorRaw || "").trim();
+  if (!label) return "";
+  const hex = resolvePaddleColorHex(label);
+  return `<span class="paddleColorIcon" title="Kolor: ${escapeAttr(label)}">${helmetColorSvg(hex)}</span>`;
+}
+
 // ── Widok masowego dodawania sprzętu na imprezę klubową ──────────────────────
 // Osobny ekran (routeId="club-event", z osobnego kafelka na stronie głównej dla
 // aktywnego kierownika) — bez kalendarza (daty = daty imprezy, ustalone serwerowo),
@@ -2711,6 +2770,7 @@ async function renderClubEventBulkView({ viewEl, ctx, label }) {
           <input type="checkbox" data-clubevent-item="${escapeAttr(id)}" ${checked ? "checked" : ""} ${isAvail ? "" : "disabled"} />
           ${terrainCategoryBadgeHtml(it?.terrainCategories)}
           ${cat === "paddles" ? paddleColorIconHtml(it?.color) : ""}
+          ${cat === "helmets" ? helmetColorIconHtml(it?.color) : ""}
           <span>${escapeHtml(displayLabel)}</span>
           ${isAvail ? "" : `<span class="badge danger">zajęty</span>`}
         </label>

@@ -942,19 +942,6 @@
   gap: 4px;
 }
 
-/* Drugi (ostatni) wiersz kart bez zdjęć/bez panelu "Więcej" (rzutki, fartuchy) —
-   pozostałe dane (kolor/uwagi) tekstem, obcięte wielokropkiem gdy za długie,
-   Rezerwuj zawsze po prawej (feedback użytkownika 04.09.2026). */
-.gearMiniMeta {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 12px;
-  color: var(--text-muted, #888);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .gearMiniStatusIcon {
   display: flex;
   align-items: center;

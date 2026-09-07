@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-07T09:34:31`
+Generated at: `2026-09-07T19:48:56`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,12 +57,12 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `564`
+- Total scanned files: `573`
 - Python files: `42`
-- Script files JS/TS/GS/etc.: `372`
+- Script files JS/TS/GS/etc.: `380`
 - Config files: `22`
-- Markdown files: `99`
-- Internal dependency edges: `625`
+- Markdown files: `100`
+- Internal dependency edges: `640`
 
 ## Project tree
 
@@ -91,6 +91,7 @@ Excluded sensitive files:
     - 04.09_imprezy_klubowe_wdrozenie_podsumowanie.md
     - 05.09_prompt_kalendarz_rezerwacji_styl.md
     - 06.09_prompt_design_system_nawigacja_kafelki.md
+    - 07.09_zgloszenia_uszkodzen_i_przebudowa_sprzet_PLAN.md
     - 10.06_session_summary.md
     - 10.07_audyt_kursant_błąd.md
     - 11.08_blachy_i_brakujące_pola_TO_DO.md
@@ -270,7 +271,9 @@ Excluded sensitive files:
       - kmRankingsHandler.js
       - notificationPrefsHandler.js
       - registerUserHandler.js
+      - resolveGearDamageReportHandler.js
       - submitEventHandler.js
+      - submitGearDamageReportHandler.js
       - submitGodzinkiHandler.js
       - userWeightHandler.js
     - modules/
@@ -283,6 +286,8 @@ Excluded sensitive files:
       - equipment/
         - bundle/
           - gear_bundle_service.js
+        - damage/
+          - gear_damage_service.js
         - kayaks/
           - gear_kayaks_service.js
         - shared/
@@ -325,6 +330,7 @@ Excluded sensitive files:
         - eventsNotifyUpcoming.js
         - eventsSyncCalendar.js
         - eventsSyncFromSheet.js
+        - gearNotifyDamageReport.js
         - gearNotifyReservationCancelledByAdmin.js
         - gearPrivateStorage.js
         - gearSyncAllFromSheet.js
@@ -461,7 +467,9 @@ Excluded sensitive files:
       - kmRankingsHandler.ts
       - notificationPrefsHandler.ts
       - registerUserHandler.ts
+      - resolveGearDamageReportHandler.ts
       - submitEventHandler.ts
+      - submitGearDamageReportHandler.ts
       - submitGodzinkiHandler.ts
       - userWeightHandler.ts
     - modules/
@@ -474,6 +482,8 @@ Excluded sensitive files:
       - equipment/
         - bundle/
           - gear_bundle_service.ts
+        - damage/
+          - gear_damage_service.ts
         - kayaks/
           - gear_kayaks_service.ts
         - shared/
@@ -516,6 +526,7 @@ Excluded sensitive files:
         - eventsNotifyUpcoming.ts
         - eventsSyncCalendar.ts
         - eventsSyncFromSheet.ts
+        - gearNotifyDamageReport.ts
         - gearNotifyReservationCancelledByAdmin.ts
         - gearPrivateStorage.ts
         - gearSyncAllFromSheet.ts
@@ -775,8 +786,10 @@ Excluded sensitive files:
 - `functions/lib/api/registerUserHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/registerUserHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/api/registerUserHandler.js` -> `functions/lib/modules/hours/opening_balance_fields.js`
+- `functions/lib/api/resolveGearDamageReportHandler.js` -> `functions/lib/modules/equipment/damage/gear_damage_service.js`
 - `functions/lib/api/submitEventHandler.js` -> `functions/lib/modules/calendar/events_service.js`
 - `functions/lib/api/submitEventHandler.js` -> `functions/lib/modules/users/userStatusCheck.js`
+- `functions/lib/api/submitGearDamageReportHandler.js` -> `functions/lib/modules/equipment/damage/gear_damage_service.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
@@ -837,7 +850,9 @@ Excluded sensitive files:
 - `functions/lib/index.js` -> `functions/lib/api/kmRankingsHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/notificationPrefsHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/registerUserHandler.js`
+- `functions/lib/index.js` -> `functions/lib/api/resolveGearDamageReportHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/submitEventHandler.js`
+- `functions/lib/index.js` -> `functions/lib/api/submitGearDamageReportHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/submitGodzinkiHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/userWeightHandler.js`
 - `functions/lib/index.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
@@ -861,6 +876,7 @@ Excluded sensitive files:
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/hours_quote.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/setup/setup_gear_vars.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/users/userStatusCheck.js`
+- `functions/lib/modules/equipment/damage/gear_damage_service.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/equipment/shared/reservation_limits.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/hours/godzinki_service.js`
@@ -885,6 +901,7 @@ Excluded sensitive files:
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsNotifyUpcoming.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsSyncCalendar.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsSyncFromSheet.js`
+- `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearNotifyDamageReport.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearPrivateStorage.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearSyncAllFromSheet.js`
@@ -934,6 +951,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/providers/googleCalendarProvider.js`
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/gearNotifyDamageReport.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/hours/godzinki_vars.js`
@@ -1057,8 +1075,10 @@ Excluded sensitive files:
 - `functions/src/api/registerUserHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/registerUserHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/api/registerUserHandler.ts` -> `functions/src/modules/hours/opening_balance_fields.ts`
+- `functions/src/api/resolveGearDamageReportHandler.ts` -> `functions/src/modules/equipment/damage/gear_damage_service.ts`
 - `functions/src/api/submitEventHandler.ts` -> `functions/src/modules/calendar/events_service.ts`
 - `functions/src/api/submitEventHandler.ts` -> `functions/src/modules/users/userStatusCheck.ts`
+- `functions/src/api/submitGearDamageReportHandler.ts` -> `functions/src/modules/equipment/damage/gear_damage_service.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
@@ -1119,7 +1139,9 @@ Excluded sensitive files:
 - `functions/src/index.ts` -> `functions/src/api/kmRankingsHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/notificationPrefsHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/registerUserHandler.ts`
+- `functions/src/index.ts` -> `functions/src/api/resolveGearDamageReportHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/submitEventHandler.ts`
+- `functions/src/index.ts` -> `functions/src/api/submitGearDamageReportHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/submitGodzinkiHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/userWeightHandler.ts`
 - `functions/src/index.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
@@ -1143,6 +1165,7 @@ Excluded sensitive files:
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/hours_quote.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/users/userStatusCheck.ts`
+- `functions/src/modules/equipment/damage/gear_damage_service.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/equipment/shared/reservation_limits.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/hours/godzinki_service.ts`
@@ -1171,6 +1194,7 @@ Excluded sensitive files:
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsNotifyUpcoming.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsSyncCalendar.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsSyncFromSheet.ts`
+- `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearNotifyDamageReport.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearPrivateStorage.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearSyncAllFromSheet.ts`
@@ -1231,6 +1255,8 @@ Excluded sensitive files:
 - `functions/src/service/tasks/eventsSyncFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/eventsSyncFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/eventsSyncFromSheet.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/modules/setup/app_vars.ts`
+- `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/modules/hours/godzinki_service.ts`
@@ -3794,8 +3820,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getAdminPendingHandler.js`
 
-- Lines: `400`
-- Size: `25578` bytes
+- Lines: `437`
+- Size: `28130` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
@@ -3995,8 +4021,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getGearKayaksHandler.js`
 
-- Lines: `126`
-- Size: `6421` bytes
+- Lines: `129`
+- Size: `6769` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 - Imports:
@@ -4097,8 +4123,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/godzinkiPurchaseHandler.js`
 
-- Lines: `82`
-- Size: `3944` bytes
+- Lines: `87`
+- Size: `4308` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -4112,8 +4138,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/kmAddLogHandler.js`
 
-- Lines: `225`
-- Size: `11216` bytes
+- Lines: `230`
+- Size: `11569` bytes
 - Internal dependencies:
   - `functions/lib/modules/km/km_log_service.js`
   - `functions/lib/modules/km/km_places_service.js`
@@ -4250,6 +4276,19 @@ Excluded sensitive files:
   - `updateObEmail`
   - `validateIncomingProfile`
 
+### `functions/lib/api/resolveGearDamageReportHandler.js`
+
+- Lines: `65`
+- Size: `3593` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/damage/gear_damage_service.js`
+- Imports:
+  - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `handleResolveGearDamageReport`
+  - `norm`
+
 ### `functions/lib/api/submitEventHandler.js`
 
 - Lines: `101`
@@ -4263,6 +4302,21 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleSubmitEvent`
+  - `norm`
+
+### `functions/lib/api/submitGearDamageReportHandler.js`
+
+- Lines: `135`
+- Size: `7157` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/damage/gear_damage_service.js`
+- Imports:
+  - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require firebase-admin`
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `enqueueJob`
+  - `handleSubmitGearDamageReport`
   - `norm`
 
 ### `functions/lib/api/submitGodzinkiHandler.js`
@@ -4296,8 +4350,8 @@ Excluded sensitive files:
 
 ### `functions/lib/index.js`
 
-- Lines: `1704`
-- Size: `74543` bytes
+- Lines: `1738`
+- Size: `75851` bytes
 - Internal dependencies:
   - `functions/lib/api/adminApprovalHandler.js`
   - `functions/lib/api/adminEventsSyncCalendarHandler.js`
@@ -4354,7 +4408,9 @@ Excluded sensitive files:
   - `functions/lib/api/kmRankingsHandler.js`
   - `functions/lib/api/notificationPrefsHandler.js`
   - `functions/lib/api/registerUserHandler.js`
+  - `functions/lib/api/resolveGearDamageReportHandler.js`
   - `functions/lib/api/submitEventHandler.js`
+  - `functions/lib/api/submitGearDamageReportHandler.js`
   - `functions/lib/api/submitGodzinkiHandler.js`
   - `functions/lib/api/userWeightHandler.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
@@ -4421,7 +4477,9 @@ Excluded sensitive files:
   - `import/require ./api/kmRankingsHandler`
   - `import/require ./api/notificationPrefsHandler`
   - `import/require ./api/registerUserHandler`
+  - `import/require ./api/resolveGearDamageReportHandler`
   - `import/require ./api/submitEventHandler`
+  - `import/require ./api/submitGearDamageReportHandler`
   - `import/require ./api/submitGodzinkiHandler`
   - `import/require ./api/userWeightHandler`
   - `import/require ./modules/equipment/bundle/gear_bundle_service`
@@ -4561,8 +4619,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 
-- Lines: `1140`
-- Size: `61305` bytes
+- Lines: `1142`
+- Size: `61521` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4611,6 +4669,22 @@ Excluded sensitive files:
   - `updateBundleReservationItems`
   - `updateGearReservationDates`
 
+### `functions/lib/modules/equipment/damage/gear_damage_service.js`
+
+- Lines: `169`
+- Size: `8068` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- Imports:
+  - `import/require ../bundle/gear_bundle_service`
+  - `import/require crypto`
+  - `import/require firebase-admin`
+- Functions:
+  - `createDamageReport`
+  - `isSupportedDamageCategory`
+  - `norm`
+  - `resolveDamageReport`
+
 ### `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
 
 - Lines: `284`
@@ -4643,8 +4717,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 
-- Lines: `129`
-- Size: `5420` bytes
+- Lines: `125`
+- Size: `5330` bytes
 - Functions:
   - `buildMeta`
   - `getCollectionConfig`
@@ -4898,8 +4972,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/providers/googleWorkspaceProvider.js`
 
-- Lines: `459`
-- Size: `20675` bytes
+- Lines: `500`
+- Size: `22477` bytes
 - Internal dependencies:
   - `functions/lib/service/providers/googleAuth.js`
 - Imports:
@@ -4914,8 +4988,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/registry.js`
 
-- Lines: `83`
-- Size: `4977` bytes
+- Lines: `85`
+- Size: `5110` bytes
 - Internal dependencies:
   - `functions/lib/service/tasks/adminApprovalWriteBack.js`
   - `functions/lib/service/tasks/adminNotifyPendingApprovals.js`
@@ -4926,6 +5000,7 @@ Excluded sensitive files:
   - `functions/lib/service/tasks/eventsNotifyUpcoming.js`
   - `functions/lib/service/tasks/eventsSyncCalendar.js`
   - `functions/lib/service/tasks/eventsSyncFromSheet.js`
+  - `functions/lib/service/tasks/gearNotifyDamageReport.js`
   - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
   - `functions/lib/service/tasks/gearPrivateStorage.js`
   - `functions/lib/service/tasks/gearSyncAllFromSheet.js`
@@ -4960,6 +5035,7 @@ Excluded sensitive files:
   - `import/require ./tasks/eventsNotifyUpcoming`
   - `import/require ./tasks/eventsSyncCalendar`
   - `import/require ./tasks/eventsSyncFromSheet`
+  - `import/require ./tasks/gearNotifyDamageReport`
   - `import/require ./tasks/gearNotifyReservationCancelledByAdmin`
   - `import/require ./tasks/gearPrivateStorage`
   - `import/require ./tasks/gearSyncAllFromSheet`
@@ -5152,6 +5228,18 @@ Excluded sensitive files:
   - `parseOrganizerFromSheetCell`
   - `shouldScrapAbsentEvent`
 
+### `functions/lib/service/tasks/gearNotifyDamageReport.js`
+
+- Lines: `103`
+- Size: `5798` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/app_vars.js`
+- Imports:
+  - `import/require ../../modules/setup/app_vars`
+- Functions:
+  - `escapeHtml`
+  - `norm`
+
 ### `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
 
 - Lines: `152`
@@ -5192,8 +5280,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/gearSyncAllFromSheet.js`
 
-- Lines: `428`
-- Size: `22493` bytes
+- Lines: `446`
+- Size: `23387` bytes
 - Internal dependencies:
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
@@ -5208,6 +5296,7 @@ Excluded sensitive files:
   - `flush`
   - `isRealRow`
   - `norm`
+  - `normalizeTerrainCategories`
   - `parseBool`
   - `parseNumber`
   - `parseSheetDate`
@@ -6371,8 +6460,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getAdminPendingHandler.ts`
 
-- Lines: `498`
-- Size: `20645` bytes
+- Lines: `548`
+- Size: `23018` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
@@ -6561,8 +6650,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getGearKayaksHandler.ts`
 
-- Lines: `162`
-- Size: `4964` bytes
+- Lines: `168`
+- Size: `5148` bytes
 - Imports:
   - `import/require express`
   - `import/require firebase-admin`
@@ -6644,8 +6733,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/godzinkiPurchaseHandler.ts`
 
-- Lines: `103`
-- Size: `3790` bytes
+- Lines: `110`
+- Size: `4106` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -6660,8 +6749,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/kmAddLogHandler.ts`
 
-- Lines: `260`
-- Size: `9788` bytes
+- Lines: `266`
+- Size: `10082` bytes
 - Internal dependencies:
   - `functions/src/modules/km/km_log_service.ts`
   - `functions/src/modules/km/km_places_service.ts`
@@ -6812,6 +6901,20 @@ Excluded sensitive files:
   - `updateObEmail`
   - `validateIncomingProfile`
 
+### `functions/src/api/resolveGearDamageReportHandler.ts`
+
+- Lines: `84`
+- Size: `3050` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/damage/gear_damage_service.ts`
+- Imports:
+  - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require express`
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `handleResolveGearDamageReport`
+  - `norm`
+
 ### `functions/src/api/submitEventHandler.ts`
 
 - Lines: `136`
@@ -6826,6 +6929,22 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleSubmitEvent`
+  - `norm`
+
+### `functions/src/api/submitGearDamageReportHandler.ts`
+
+- Lines: `126`
+- Size: `5045` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/damage/gear_damage_service.ts`
+- Imports:
+  - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require express`
+  - `import/require firebase-admin`
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `enqueueJob`
+  - `handleSubmitGearDamageReport`
   - `norm`
 
 ### `functions/src/api/submitGodzinkiHandler.ts`
@@ -6861,8 +6980,8 @@ Excluded sensitive files:
 
 ### `functions/src/index.ts`
 
-- Lines: `1880`
-- Size: `63466` bytes
+- Lines: `1916`
+- Size: `64526` bytes
 - Internal dependencies:
   - `functions/src/api/adminApprovalHandler.ts`
   - `functions/src/api/adminEventsSyncCalendarHandler.ts`
@@ -6919,7 +7038,9 @@ Excluded sensitive files:
   - `functions/src/api/kmRankingsHandler.ts`
   - `functions/src/api/notificationPrefsHandler.ts`
   - `functions/src/api/registerUserHandler.ts`
+  - `functions/src/api/resolveGearDamageReportHandler.ts`
   - `functions/src/api/submitEventHandler.ts`
+  - `functions/src/api/submitGearDamageReportHandler.ts`
   - `functions/src/api/submitGodzinkiHandler.ts`
   - `functions/src/api/userWeightHandler.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
@@ -6986,7 +7107,9 @@ Excluded sensitive files:
   - `import/require ./api/kmRankingsHandler`
   - `import/require ./api/notificationPrefsHandler`
   - `import/require ./api/registerUserHandler`
+  - `import/require ./api/resolveGearDamageReportHandler`
   - `import/require ./api/submitEventHandler`
+  - `import/require ./api/submitGearDamageReportHandler`
   - `import/require ./api/submitGodzinkiHandler`
   - `import/require ./api/userWeightHandler`
   - `import/require ./modules/equipment/bundle/gear_bundle_service`
@@ -7126,8 +7249,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 
-- Lines: `1348`
-- Size: `55935` bytes
+- Lines: `1349`
+- Size: `56048` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7175,6 +7298,22 @@ Excluded sensitive files:
   - `updateBundleReservationItems`
   - `updateGearReservationDates`
 
+### `functions/src/modules/equipment/damage/gear_damage_service.ts`
+
+- Lines: `184`
+- Size: `6875` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- Imports:
+  - `import/require ../bundle/gear_bundle_service`
+  - `import/require crypto`
+  - `import/require firebase-admin`
+- Functions:
+  - `createDamageReport`
+  - `isSupportedDamageCategory`
+  - `norm`
+  - `resolveDamageReport`
+
 ### `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
 
 - Lines: `347`
@@ -7207,8 +7346,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 
-- Lines: `154`
-- Size: `3665` bytes
+- Lines: `151`
+- Size: `3686` bytes
 - Functions:
   - `buildMeta`
   - `getCollectionConfig`
@@ -7472,8 +7611,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/providers/googleWorkspaceProvider.ts`
 
-- Lines: `531`
-- Size: `18186` bytes
+- Lines: `583`
+- Size: `19865` bytes
 - Internal dependencies:
   - `functions/src/service/providers/googleAuth.ts`
 - Imports:
@@ -7488,8 +7627,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/registry.ts`
 
-- Lines: `82`
-- Size: `4023` bytes
+- Lines: `84`
+- Size: `4130` bytes
 - Internal dependencies:
   - `functions/src/service/tasks/adminApprovalWriteBack.ts`
   - `functions/src/service/tasks/adminNotifyPendingApprovals.ts`
@@ -7500,6 +7639,7 @@ Excluded sensitive files:
   - `functions/src/service/tasks/eventsNotifyUpcoming.ts`
   - `functions/src/service/tasks/eventsSyncCalendar.ts`
   - `functions/src/service/tasks/eventsSyncFromSheet.ts`
+  - `functions/src/service/tasks/gearNotifyDamageReport.ts`
   - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
   - `functions/src/service/tasks/gearPrivateStorage.ts`
   - `functions/src/service/tasks/gearSyncAllFromSheet.ts`
@@ -7535,6 +7675,7 @@ Excluded sensitive files:
   - `import/require ./tasks/eventsNotifyUpcoming`
   - `import/require ./tasks/eventsSyncCalendar`
   - `import/require ./tasks/eventsSyncFromSheet`
+  - `import/require ./tasks/gearNotifyDamageReport`
   - `import/require ./tasks/gearNotifyReservationCancelledByAdmin`
   - `import/require ./tasks/gearPrivateStorage`
   - `import/require ./tasks/gearSyncAllFromSheet`
@@ -7750,6 +7891,20 @@ Excluded sensitive files:
   - `parseOrganizerFromSheetCell`
   - `shouldScrapAbsentEvent`
 
+### `functions/src/service/tasks/gearNotifyDamageReport.ts`
+
+- Lines: `132`
+- Size: `5495` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/app_vars.ts`
+  - `functions/src/service/types.ts`
+- Imports:
+  - `import/require ../../modules/setup/app_vars`
+  - `import/require ../types`
+- Functions:
+  - `escapeHtml`
+  - `norm`
+
 ### `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
 
 - Lines: `182`
@@ -7794,8 +7949,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/gearSyncAllFromSheet.ts`
 
-- Lines: `581`
-- Size: `20883` bytes
+- Lines: `604`
+- Size: `22608` bytes
 - Internal dependencies:
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
@@ -7812,6 +7967,7 @@ Excluded sensitive files:
   - `flush`
   - `isRealRow`
   - `norm`
+  - `normalizeTerrainCategories`
   - `parseBool`
   - `parseNumber`
   - `parseSheetDate`
@@ -8489,8 +8645,8 @@ Excluded sensitive files:
 
 ### `public/core/render_shell.js`
 
-- Lines: `1874`
-- Size: `85115` bytes
+- Lines: `1859`
+- Size: `84016` bytes
 - Imports:
   - `import/require /core/access_control.js`
   - `import/require /core/api_client.js`
@@ -8611,8 +8767,8 @@ Excluded sensitive files:
 
 ### `public/modules/admin_pending_module.js`
 
-- Lines: `531`
-- Size: `29324` bytes
+- Lines: `590`
+- Size: `33049` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
@@ -8693,8 +8849,8 @@ Excluded sensitive files:
 
 ### `public/modules/gear_module.js`
 
-- Lines: `2619`
-- Size: `115436` bytes
+- Lines: `3207`
+- Size: `145570` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
@@ -8717,10 +8873,12 @@ Excluded sensitive files:
   - `closeBundleModal`
   - `closeModal`
   - `closeWeightModal`
+  - `compressImageFile`
   - `createGearModule`
   - `dotsIconSvg`
   - `escapeAttr`
   - `escapeHtml`
+  - `formatDamageItemLabel`
   - `formatDatePLFromIso`
   - `formatItemLabel`
   - `formatItemLabelFromParts`
@@ -8736,15 +8894,21 @@ Excluded sensitive files:
   - `loadExisting`
   - `loadFavorites`
   - `loadGear`
+  - `loadItems`
   - `loadOccupiedRanges`
   - `loadPhotoWithOverlay`
   - `lockIconSvg`
   - `normalizeSimpleValue`
   - `normalizeTypeValue`
   - `openBundleModal`
+  - `openDamageModal`
   - `openKayakPhotoModal`
   - `openModal`
   - `openWeightModal`
+  - `paddleColorHexPair`
+  - `paddleColorIconHtml`
+  - `paddleColorSlotHtml`
+  - `paddleColorSvg`
   - `parseWeightRangeMax`
   - `populateSizeFilter`
   - `populateTypeFilter`
@@ -8754,15 +8918,20 @@ Excluded sensitive files:
   - `renderBundleItemsList`
   - `renderCategoryBody`
   - `renderClubEventBulkView`
+  - `renderDamageReportPicker`
   - `renderGenericGearCard`
   - `renderHelmetCard`
+  - `renderItems`
   - `renderKayakCard`
   - `renderLifejacketCard`
   - `renderPaddleCard`
+  - `renderPhotoRow`
   - `renderReservationsSimple`
+  - `resolvePaddleColorHex`
   - `resolvedCount`
   - `setErr`
   - `setOk`
+  - `setSeverity`
   - `setWeightErr`
   - `showCategory`
   - `showPhotoAtIdx`
@@ -8770,6 +8939,9 @@ Excluded sensitive files:
   - `startBundleForItem`
   - `submitBundleReservation`
   - `switchEvent`
+  - `terrainCategoryBadgeHtml`
+  - `terrainCategoryLabelsText`
+  - `terrainCategoryLegendHtml`
   - `toBool`
   - `toBoolOrNull`
   - `updateSummaryAndButton`
@@ -9203,8 +9375,8 @@ Excluded sensitive files:
 
 ### `firebase.json`
 
-- Lines: `542`
-- Size: `13636` bytes
+- Lines: `556`
+- Size: `14000` bytes
 - Detected top-level keys / sections:
   - `emulators`
   - `firestore`
@@ -9890,6 +10062,32 @@ Excluded sensitive files:
   - `## 12. Odznaki/plakietki (pill badge)`
   - `## 13. Modal (okno dialogowe) — wyśrodkowany na desktopie, bottom-sheet na mobile`
   - `## Podsumowanie zasad do zastosowania w nowych komponentach`
+
+### `DOCS/Sessions & TO DOs/07.09_zgloszenia_uszkodzen_i_przebudowa_sprzet_PLAN.md`
+
+- Lines: `279`
+- Size: `16688` bytes
+- Headings:
+  - `# Zgłaszanie uszkodzeń sprzętu + przebudowa zakładki Sprzęt — PLAN`
+  - `## Kontekst`
+  - `## Ustalenia z użytkownikiem`
+  - `## Kluczowe ustalenia techniczne (z researchu kodu)`
+  - `## Model danych`
+  - `## Backend`
+  - `### 1. Nowy plik `functions/src/modules/equipment/damage/gear_damage_service.ts``
+  - `### 2. Filtrowanie zablokowanych sztuk (2-3 miejsca, ten sam warunek)`
+  - `### 3. Nowe endpointy (wzorzec z istniejących handlerów w `functions/src/api/`)`
+  - `### 4. Panel Zarządu — nowa sekcja w `getAdminPendingHandler.ts``
+  - `## Frontend`
+  - `### 1. Home (`public/core/render_shell.js`) — sprzątanie`
+  - `### 2. `public/core/modules_registry.js:73``
+  - `### 3. `public/modules/gear_module.js` — routing (`render()`, dziś linie 76-82)`
+  - `### 4. Nowa funkcja `renderGearLanding({viewEl, ctx, label})``
+  - `### 5. Nowa funkcja `renderDamageReportPicker({viewEl, ctx, label})``
+  - `### 6. Modal zgłoszenia — nowy, wzorem istniejących (`#gearBundleModal`,`
+  - `### 7. Panel Zarządu — `public/modules/admin_pending_module.js``
+  - `## Świadomie POZA zakresem (dla lekkości rozwiązania)`
+  - `## Weryfikacja`
 
 ### `DOCS/Sessions & TO DOs/10.06_session_summary.md`
 
@@ -11936,11 +12134,11 @@ Excluded sensitive files:
 - `public/skrypt_kurs/chapters/ch05.html` — 132 lines, 7205 bytes
 - `public/skrypt_kurs/chapters/ch06.html` — 265 lines, 13264 bytes
 - `public/styles/app.css` — 10 lines, 254 bytes
-- `public/styles/base.css` — 609 lines, 18607 bytes
+- `public/styles/base.css` — 639 lines, 19864 bytes
 - `public/styles/basen.css` — 815 lines, 17080 bytes
 - `public/styles/dashboard.css` — 162 lines, 2708 bytes
 - `public/styles/events.css` — 284 lines, 5064 bytes
-- `public/styles/gear.css` — 1603 lines, 30934 bytes
+- `public/styles/gear.css` — 1836 lines, 36414 bytes
 - `public/styles/godzinki.css` — 194 lines, 3828 bytes
 - `public/styles/km.css` — 496 lines, 10234 bytes
 - `public/styles/kurs.css` — 430 lines, 7128 bytes

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T09:34:31",
+  "generated_at": "2026-09-07T19:48:56",
   "project_root": "C:\\Users\\kswitek\\Documents\\morzkulc_app",
   "settings": {
     "excluded_dirs": [
@@ -2443,6 +2443,44 @@
         "## 12. Odznaki/plakietki (pill badge)",
         "## 13. Modal (okno dialogowe) — wyśrodkowany na desktopie, bottom-sheet na mobile",
         "## Podsumowanie zasad do zastosowania w nowych komponentach"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/07.09_zgloszenia_uszkodzen_i_przebudowa_sprzet_PLAN.md",
+      "extension": ".md",
+      "size_bytes": 16688,
+      "line_count": 279,
+      "sha1_short": "860d00d561",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Zgłaszanie uszkodzeń sprzętu + przebudowa zakładki Sprzęt — PLAN",
+        "## Kontekst",
+        "## Ustalenia z użytkownikiem",
+        "## Kluczowe ustalenia techniczne (z researchu kodu)",
+        "## Model danych",
+        "## Backend",
+        "### 1. Nowy plik `functions/src/modules/equipment/damage/gear_damage_service.ts`",
+        "### 2. Filtrowanie zablokowanych sztuk (2-3 miejsca, ten sam warunek)",
+        "### 3. Nowe endpointy (wzorzec z istniejących handlerów w `functions/src/api/`)",
+        "### 4. Panel Zarządu — nowa sekcja w `getAdminPendingHandler.ts`",
+        "## Frontend",
+        "### 1. Home (`public/core/render_shell.js`) — sprzątanie",
+        "### 2. `public/core/modules_registry.js:73`",
+        "### 3. `public/modules/gear_module.js` — routing (`render()`, dziś linie 76-82)",
+        "### 4. Nowa funkcja `renderGearLanding({viewEl, ctx, label})`",
+        "### 5. Nowa funkcja `renderDamageReportPicker({viewEl, ctx, label})`",
+        "### 6. Modal zgłoszenia — nowy, wzorem istniejących (`#gearBundleModal`,",
+        "### 7. Panel Zarządu — `public/modules/admin_pending_module.js`",
+        "## Świadomie POZA zakresem (dla lekkości rozwiązania)",
+        "## Weryfikacja"
       ],
       "config_keys": [],
       "notes": []
@@ -5304,9 +5342,9 @@
     {
       "path": "firebase.json",
       "extension": ".json",
-      "size_bytes": 13636,
-      "line_count": 542,
-      "sha1_short": "d88805364f",
+      "size_bytes": 14000,
+      "line_count": 556,
+      "sha1_short": "32ff3b1b65",
       "kind": "config",
       "module_aliases": [],
       "imports": [],
@@ -7280,9 +7318,9 @@
     {
       "path": "functions/lib/api/getAdminPendingHandler.js",
       "extension": ".js",
-      "size_bytes": 25578,
-      "line_count": 400,
-      "sha1_short": "7c35ea9800",
+      "size_bytes": 28130,
+      "line_count": 437,
+      "sha1_short": "8e6f1317e8",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -8174,9 +8212,9 @@
     {
       "path": "functions/lib/api/getGearKayaksHandler.js",
       "extension": ".js",
-      "size_bytes": 6421,
-      "line_count": 126,
-      "sha1_short": "a1b696b220",
+      "size_bytes": 6769,
+      "line_count": 129,
+      "sha1_short": "f31550cb61",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -8714,9 +8752,9 @@
     {
       "path": "functions/lib/api/godzinkiPurchaseHandler.js",
       "extension": ".js",
-      "size_bytes": 3944,
-      "line_count": 82,
-      "sha1_short": "8acbec5d5a",
+      "size_bytes": 4308,
+      "line_count": 87,
+      "sha1_short": "356e628e50",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -8768,9 +8806,9 @@
     {
       "path": "functions/lib/api/kmAddLogHandler.js",
       "extension": ".js",
-      "size_bytes": 11216,
-      "line_count": 225,
-      "sha1_short": "e71b369ac1",
+      "size_bytes": 11569,
+      "line_count": 230,
+      "sha1_short": "0d3590df82",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9467,6 +9505,61 @@
       "notes": []
     },
     {
+      "path": "functions/lib/api/resolveGearDamageReportHandler.js",
+      "extension": ".js",
+      "size_bytes": 3593,
+      "line_count": 65,
+      "sha1_short": "3a34d60852",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../modules/equipment/damage/gear_damage_service",
+          "module": "../modules/equipment/damage/gear_damage_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/equipment/damage/gear_damage_service.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "handleResolveGearDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/api/submitEventHandler.js",
       "extension": ".js",
       "size_bytes": 5146,
@@ -9505,6 +9598,78 @@
       "functions": [
         {
           "name": "handleSubmitEvent",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/lib/api/submitGearDamageReportHandler.js",
+      "extension": ".js",
+      "size_bytes": 7157,
+      "line_count": 135,
+      "sha1_short": "d2fececac1",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../modules/equipment/damage/gear_damage_service",
+          "module": "../modules/equipment/damage/gear_damage_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/equipment/damage/gear_damage_service.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "enqueueJob",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "handleSubmitGearDamageReport",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -9648,9 +9813,9 @@
     {
       "path": "functions/lib/index.js",
       "extension": ".js",
-      "size_bytes": 74543,
-      "line_count": 1704,
-      "sha1_short": "919d1bf82e",
+      "size_bytes": 75851,
+      "line_count": 1738,
+      "sha1_short": "7cf4a96712",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -10040,8 +10205,22 @@
           "type": "script_import"
         },
         {
+          "raw": "import/require ./api/resolveGearDamageReportHandler",
+          "module": "./api/resolveGearDamageReportHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
           "raw": "import/require ./api/submitEventHandler",
           "module": "./api/submitEventHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./api/submitGearDamageReportHandler",
+          "module": "./api/submitGearDamageReportHandler",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -10208,7 +10387,9 @@
         "functions/lib/api/kmRankingsHandler.js",
         "functions/lib/api/notificationPrefsHandler.js",
         "functions/lib/api/registerUserHandler.js",
+        "functions/lib/api/resolveGearDamageReportHandler.js",
         "functions/lib/api/submitEventHandler.js",
+        "functions/lib/api/submitGearDamageReportHandler.js",
         "functions/lib/api/submitGodzinkiHandler.js",
         "functions/lib/api/userWeightHandler.js",
         "functions/lib/modules/equipment/bundle/gear_bundle_service.js",
@@ -11164,9 +11345,9 @@
     {
       "path": "functions/lib/modules/equipment/bundle/gear_bundle_service.js",
       "extension": ".js",
-      "size_bytes": 61305,
-      "line_count": 1140,
-      "sha1_short": "48281f6b7a",
+      "size_bytes": 61521,
+      "line_count": 1142,
+      "sha1_short": "150993b89b",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -11514,6 +11695,88 @@
       "notes": []
     },
     {
+      "path": "functions/lib/modules/equipment/damage/gear_damage_service.js",
+      "extension": ".js",
+      "size_bytes": 8068,
+      "line_count": 169,
+      "sha1_short": "8d8b7c08a4",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../bundle/gear_bundle_service",
+          "module": "../bundle/gear_bundle_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require crypto",
+          "module": "crypto",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/equipment/bundle/gear_bundle_service.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "createDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isSupportedDamageCategory",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "resolveDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/modules/equipment/kayaks/gear_kayaks_service.js",
       "extension": ".js",
       "size_bytes": 15399,
@@ -11672,9 +11935,9 @@
     {
       "path": "functions/lib/modules/equipment/shared/gear_catalog_service.js",
       "extension": ".js",
-      "size_bytes": 5420,
-      "line_count": 129,
-      "sha1_short": "5540895c24",
+      "size_bytes": 5330,
+      "line_count": 125,
+      "sha1_short": "672b6f5a6e",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
@@ -13107,9 +13370,9 @@
     {
       "path": "functions/lib/service/providers/googleWorkspaceProvider.js",
       "extension": ".js",
-      "size_bytes": 20675,
-      "line_count": 459,
-      "sha1_short": "9260d5b069",
+      "size_bytes": 22477,
+      "line_count": 500,
+      "sha1_short": "0a6f654931",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -13182,9 +13445,9 @@
     {
       "path": "functions/lib/service/registry.js",
       "extension": ".js",
-      "size_bytes": 4977,
-      "line_count": 83,
-      "sha1_short": "c9431cd1bd",
+      "size_bytes": 5110,
+      "line_count": 85,
+      "sha1_short": "b80a3d552f",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -13247,6 +13510,13 @@
         {
           "raw": "import/require ./tasks/eventsSyncFromSheet",
           "module": "./tasks/eventsSyncFromSheet",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/gearNotifyDamageReport",
+          "module": "./tasks/gearNotifyDamageReport",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -13430,6 +13700,7 @@
         "functions/lib/service/tasks/eventsNotifyUpcoming.js",
         "functions/lib/service/tasks/eventsSyncCalendar.js",
         "functions/lib/service/tasks/eventsSyncFromSheet.js",
+        "functions/lib/service/tasks/gearNotifyDamageReport.js",
         "functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js",
         "functions/lib/service/tasks/gearPrivateStorage.js",
         "functions/lib/service/tasks/gearSyncAllFromSheet.js",
@@ -14185,6 +14456,54 @@
       "notes": []
     },
     {
+      "path": "functions/lib/service/tasks/gearNotifyDamageReport.js",
+      "extension": ".js",
+      "size_bytes": 5798,
+      "line_count": 103,
+      "sha1_short": "034294a016",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/setup/app_vars",
+          "module": "../../modules/setup/app_vars",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/app_vars.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "escapeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js",
       "extension": ".js",
       "size_bytes": 7171,
@@ -14384,9 +14703,9 @@
     {
       "path": "functions/lib/service/tasks/gearSyncAllFromSheet.js",
       "extension": ".js",
-      "size_bytes": 22493,
-      "line_count": 428,
-      "sha1_short": "fd6113492c",
+      "size_bytes": 23387,
+      "line_count": 446,
+      "sha1_short": "dee966f75f",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -14470,6 +14789,16 @@
         },
         {
           "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "normalizeTerrainCategories",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -19936,9 +20265,9 @@
     {
       "path": "functions/src/api/getAdminPendingHandler.ts",
       "extension": ".ts",
-      "size_bytes": 20645,
-      "line_count": 498,
-      "sha1_short": "c151092d77",
+      "size_bytes": 23018,
+      "line_count": 548,
+      "sha1_short": "b572a26863",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -20807,9 +21136,9 @@
     {
       "path": "functions/src/api/getGearKayaksHandler.ts",
       "extension": ".ts",
-      "size_bytes": 4964,
-      "line_count": 162,
-      "sha1_short": "a3cbb051fe",
+      "size_bytes": 5148,
+      "line_count": 168,
+      "sha1_short": "0833201313",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -21220,9 +21549,9 @@
     {
       "path": "functions/src/api/godzinkiPurchaseHandler.ts",
       "extension": ".ts",
-      "size_bytes": 3790,
-      "line_count": 103,
-      "sha1_short": "fb4e4ac489",
+      "size_bytes": 4106,
+      "line_count": 110,
+      "sha1_short": "6824a645a9",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -21281,9 +21610,9 @@
     {
       "path": "functions/src/api/kmAddLogHandler.ts",
       "extension": ".ts",
-      "size_bytes": 9788,
-      "line_count": 260,
-      "sha1_short": "3af56bbd5e",
+      "size_bytes": 10082,
+      "line_count": 266,
+      "sha1_short": "8b87f4fe8f",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -22060,6 +22389,68 @@
       "notes": []
     },
     {
+      "path": "functions/src/api/resolveGearDamageReportHandler.ts",
+      "extension": ".ts",
+      "size_bytes": 3050,
+      "line_count": 84,
+      "sha1_short": "c5349d0e28",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../modules/equipment/damage/gear_damage_service",
+          "module": "../modules/equipment/damage/gear_damage_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require express",
+          "module": "express",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/equipment/damage/gear_damage_service.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "handleResolveGearDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/api/submitEventHandler.ts",
       "extension": ".ts",
       "size_bytes": 4575,
@@ -22105,6 +22496,85 @@
       "functions": [
         {
           "name": "handleSubmitEvent",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/src/api/submitGearDamageReportHandler.ts",
+      "extension": ".ts",
+      "size_bytes": 5045,
+      "line_count": 126,
+      "sha1_short": "54d698b453",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../modules/equipment/damage/gear_damage_service",
+          "module": "../modules/equipment/damage/gear_damage_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require express",
+          "module": "express",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/equipment/damage/gear_damage_service.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "enqueueJob",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "handleSubmitGearDamageReport",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -22262,9 +22732,9 @@
     {
       "path": "functions/src/index.ts",
       "extension": ".ts",
-      "size_bytes": 63466,
-      "line_count": 1880,
-      "sha1_short": "133f22b778",
+      "size_bytes": 64526,
+      "line_count": 1916,
+      "sha1_short": "f5d4836899",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -22654,8 +23124,22 @@
           "type": "script_import"
         },
         {
+          "raw": "import/require ./api/resolveGearDamageReportHandler",
+          "module": "./api/resolveGearDamageReportHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
           "raw": "import/require ./api/submitEventHandler",
           "module": "./api/submitEventHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./api/submitGearDamageReportHandler",
+          "module": "./api/submitGearDamageReportHandler",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -22829,7 +23313,9 @@
         "functions/src/api/kmRankingsHandler.ts",
         "functions/src/api/notificationPrefsHandler.ts",
         "functions/src/api/registerUserHandler.ts",
+        "functions/src/api/resolveGearDamageReportHandler.ts",
         "functions/src/api/submitEventHandler.ts",
+        "functions/src/api/submitGearDamageReportHandler.ts",
         "functions/src/api/submitGodzinkiHandler.ts",
         "functions/src/api/userWeightHandler.ts",
         "functions/src/modules/equipment/bundle/gear_bundle_service.ts",
@@ -23775,9 +24261,9 @@
     {
       "path": "functions/src/modules/equipment/bundle/gear_bundle_service.ts",
       "extension": ".ts",
-      "size_bytes": 55935,
-      "line_count": 1348,
-      "sha1_short": "57de3e9d75",
+      "size_bytes": 56048,
+      "line_count": 1349,
+      "sha1_short": "62a682db2e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -24115,6 +24601,88 @@
       "notes": []
     },
     {
+      "path": "functions/src/modules/equipment/damage/gear_damage_service.ts",
+      "extension": ".ts",
+      "size_bytes": 6875,
+      "line_count": 184,
+      "sha1_short": "64735498dd",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../bundle/gear_bundle_service",
+          "module": "../bundle/gear_bundle_service",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require crypto",
+          "module": "crypto",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/equipment/bundle/gear_bundle_service.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "createDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isSupportedDamageCategory",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "resolveDamageReport",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/modules/equipment/kayaks/gear_kayaks_service.ts",
       "extension": ".ts",
       "size_bytes": 13430,
@@ -24273,9 +24841,9 @@
     {
       "path": "functions/src/modules/equipment/shared/gear_catalog_service.ts",
       "extension": ".ts",
-      "size_bytes": 3665,
-      "line_count": 154,
-      "sha1_short": "c1a3c64126",
+      "size_bytes": 3686,
+      "line_count": 151,
+      "sha1_short": "7fa4da88ed",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
@@ -25733,9 +26301,9 @@
     {
       "path": "functions/src/service/providers/googleWorkspaceProvider.ts",
       "extension": ".ts",
-      "size_bytes": 18186,
-      "line_count": 531,
-      "sha1_short": "89da4fa210",
+      "size_bytes": 19865,
+      "line_count": 583,
+      "sha1_short": "eb6e8425a9",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -25808,9 +26376,9 @@
     {
       "path": "functions/src/service/registry.ts",
       "extension": ".ts",
-      "size_bytes": 4023,
-      "line_count": 82,
-      "sha1_short": "b1b15d4409",
+      "size_bytes": 4130,
+      "line_count": 84,
+      "sha1_short": "22eaacac92",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -25873,6 +26441,13 @@
         {
           "raw": "import/require ./tasks/eventsSyncFromSheet",
           "module": "./tasks/eventsSyncFromSheet",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/gearNotifyDamageReport",
+          "module": "./tasks/gearNotifyDamageReport",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -26063,6 +26638,7 @@
         "functions/src/service/tasks/eventsNotifyUpcoming.ts",
         "functions/src/service/tasks/eventsSyncCalendar.ts",
         "functions/src/service/tasks/eventsSyncFromSheet.ts",
+        "functions/src/service/tasks/gearNotifyDamageReport.ts",
         "functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts",
         "functions/src/service/tasks/gearPrivateStorage.ts",
         "functions/src/service/tasks/gearSyncAllFromSheet.ts",
@@ -26901,6 +27477,62 @@
       "notes": []
     },
     {
+      "path": "functions/src/service/tasks/gearNotifyDamageReport.ts",
+      "extension": ".ts",
+      "size_bytes": 5495,
+      "line_count": 132,
+      "sha1_short": "b69030bced",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/setup/app_vars",
+          "module": "../../modules/setup/app_vars",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../types",
+          "module": "../types",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/app_vars.ts",
+        "functions/src/service/types.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "escapeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts",
       "extension": ".ts",
       "size_bytes": 6260,
@@ -27116,9 +27748,9 @@
     {
       "path": "functions/src/service/tasks/gearSyncAllFromSheet.ts",
       "extension": ".ts",
-      "size_bytes": 20883,
-      "line_count": 581,
-      "sha1_short": "934a657230",
+      "size_bytes": 22608,
+      "line_count": 604,
+      "sha1_short": "410c03e7e0",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -27210,6 +27842,16 @@
         },
         {
           "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "normalizeTerrainCategories",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -31097,9 +31739,9 @@
     {
       "path": "public/core/render_shell.js",
       "extension": ".js",
-      "size_bytes": 85115,
-      "line_count": 1874,
-      "sha1_short": "993272d736",
+      "size_bytes": 84016,
+      "line_count": 1859,
+      "sha1_short": "d56563c115",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -32104,9 +32746,9 @@
     {
       "path": "public/modules/admin_pending_module.js",
       "extension": ".js",
-      "size_bytes": 29324,
-      "line_count": 531,
-      "sha1_short": "adcf89ac20",
+      "size_bytes": 33049,
+      "line_count": 590,
+      "sha1_short": "49b1fe5b8e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -32804,9 +33446,9 @@
     {
       "path": "public/modules/gear_module.js",
       "extension": ".js",
-      "size_bytes": 115436,
-      "line_count": 2619,
-      "sha1_short": "381b5d329c",
+      "size_bytes": 145570,
+      "line_count": 3207,
+      "sha1_short": "5c8ccebae2",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33003,6 +33645,16 @@
           "doc": null
         },
         {
+          "name": "compressImageFile",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "createGearModule",
           "type": "function",
           "line_start": null,
@@ -33034,6 +33686,16 @@
         },
         {
           "name": "escapeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDamageItemLabel",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33193,6 +33855,16 @@
           "doc": null
         },
         {
+          "name": "loadItems",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "loadOccupiedRanges",
           "type": "function",
           "line_start": null,
@@ -33253,6 +33925,16 @@
           "doc": null
         },
         {
+          "name": "openDamageModal",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "openKayakPhotoModal",
           "type": "function",
           "line_start": null,
@@ -33274,6 +33956,46 @@
         },
         {
           "name": "openWeightModal",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "paddleColorHexPair",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "paddleColorIconHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "paddleColorSlotHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "paddleColorSvg",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33373,6 +34095,16 @@
           "doc": null
         },
         {
+          "name": "renderDamageReportPicker",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "renderGenericGearCard",
           "type": "function",
           "line_start": null,
@@ -33384,6 +34116,16 @@
         },
         {
           "name": "renderHelmetCard",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "renderItems",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33423,7 +34165,27 @@
           "doc": null
         },
         {
+          "name": "renderPhotoRow",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "renderReservationsSimple",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "resolvePaddleColorHex",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33454,6 +34216,16 @@
         },
         {
           "name": "setOk",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "setSeverity",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33524,6 +34296,36 @@
         },
         {
           "name": "switchEvent",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "terrainCategoryBadgeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "terrainCategoryLabelsText",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "terrainCategoryLegendHtml",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -35681,9 +36483,9 @@
     {
       "path": "public/styles/base.css",
       "extension": ".css",
-      "size_bytes": 18607,
-      "line_count": 609,
-      "sha1_short": "2418909b2c",
+      "size_bytes": 19864,
+      "line_count": 639,
+      "sha1_short": "b013a86a81",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -35749,9 +36551,9 @@
     {
       "path": "public/styles/gear.css",
       "extension": ".css",
-      "size_bytes": 30934,
-      "line_count": 1603,
-      "sha1_short": "82c88b726c",
+      "size_bytes": 36414,
+      "line_count": 1836,
+      "sha1_short": "32559aa2d8",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -35836,7 +36638,7 @@
       "extension": ".js",
       "size_bytes": 5447,
       "line_count": 157,
-      "sha1_short": "756ef738a4",
+      "sha1_short": "e232acd633",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
