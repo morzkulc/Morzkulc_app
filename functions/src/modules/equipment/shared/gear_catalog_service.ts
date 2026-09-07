@@ -99,15 +99,12 @@ function pickGearItem(doc: any, category: GearCategory, fallbackLabel: string) {
     brand: norm(doc?.brand),
     model: norm(doc?.model),
     type: norm(doc?.type),
+    terrainCategories: Array.isArray(doc?.terrainCategories) ? doc.terrainCategories : [],
     color: norm(doc?.color),
     size: norm(doc?.size),
     status: norm(doc?.status),
     gearCategory: norm(doc?.gearCategory) || category,
     gearCategoryDisplay: norm(doc?.gearCategoryDisplay) || fallbackLabel,
-    image: norm(doc?.image),
-    images: {
-      main: norm(doc?.images?.main),
-    },
     notes: norm(doc?.notes),
     meta: buildMeta(doc, category),
   };
@@ -146,7 +143,7 @@ export async function listGearItemsByCategory(
   out.sort((a, b) => {
     const aKey = norm(a?.number) || norm(a?.id);
     const bKey = norm(b?.number) || norm(b?.id);
-    return aKey.localeCompare(bKey, "pl");
+    return aKey.localeCompare(bKey, "pl", {numeric: true});
   });
 
   return out;

@@ -327,6 +327,58 @@ export class GoogleWorkspaceProvider {
     });
   }
 
+  // multipart/alternative (text/plain + text/html) — dla powiadomień, które muszą pokazać
+  // zdjęcia inline (np. gear.notifyDamageReport). Obrazki jako zwykłe <img src="https://...">
+  // (publiczne linki z download-token Firebase Storage, ten sam mechanizm co miniatury w
+  // panelu Zarządu) — nie base64/cid attachments, żeby nie dublować bajtów zdjęcia w mailu.
+  // Zawsze z częścią text/plain (fallback dla klientów bez HTML + lepsza dostarczalność).
+  async sendGenericEmailHtml(
+    toEmail: string,
+    subject: string,
+    bodyText: string,
+    bodyHtml: string
+  ): Promise<void> {
+    const gmail = await this.getGmailClient();
+
+    const from = normalizeEmail(this.delegatedUserEmail);
+    const to = normalizeEmail(toEmail);
+
+    assertLooksLikeEmail("fromEmail (delegated)", from);
+    assertLooksLikeEmail("toEmail", to);
+
+    const boundary = `boundary_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const messageParts = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${encodeMimeHeader(subject)}`,
+      "MIME-Version: 1.0",
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      bodyText,
+      "",
+      `--${boundary}`,
+      "Content-Type: text/html; charset=utf-8",
+      "",
+      bodyHtml,
+      "",
+      `--${boundary}--`,
+    ];
+
+    const raw = Buffer.from(messageParts.join("\n"))
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
+    });
+  }
+
   // ✅ CHANGED: replyToEmail added
   async sendWelcomeEmail(
     fromEmail: string,

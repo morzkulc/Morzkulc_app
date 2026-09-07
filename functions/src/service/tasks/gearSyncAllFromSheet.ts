@@ -45,6 +45,29 @@ function norm(v: any): string {
   return String(v == null ? "" : v).trim();
 }
 
+// Kategorie terenowe (górskie/nizinne/torowo-morskie) — jedna, spójna kolumna "Typ" w
+// arkuszu, wspólna dla kamizelek/wioseł/fartuchów (dla wioseł/fartuchów to przemianowana
+// dawna kolumna "Zdjęcie", która nigdzie nie była wykorzystywana w apce). Dopasowanie po
+// fragmencie słowa (nie exact-match) — odporne na odmianę przez rodzaj (górski/górska/górskie).
+// TABLICA nie pojedyncza wartość: wiosła mogą mieć wartość złożoną typu "Niziny / Góry"
+// (sztuka nadaje się do obu terenów) — zwracamy WSZYSTKIE dopasowane kategorie, zawsze w
+// tej samej kolejności (mountain, lowland, sea), niezależnie od kolejności słów w arkuszu.
+export type TerrainCategory = "mountain" | "lowland" | "sea";
+
+export function normalizeTerrainCategories(raw: any): TerrainCategory[] {
+  const s = norm(raw).toLowerCase();
+  if (!s) return [];
+  const out: TerrainCategory[] = [];
+  // Krótki rdzeń "gór"/"gor" (nie "górsk") — celowo odporne też na literówki typu
+  // przestawienia liter w końcówce (w arkuszu znaleziono "Górksa" zamiast "Górska",
+  // 07.09.2026), bez ryzyka kolizji: żadna z pozostałych dwóch kategorii nie
+  // zawiera "g" w swojej nazwie ("nizinna", "torowo-morska").
+  if (s.includes("gór") || s.includes("gor")) out.push("mountain");
+  if (s.includes("nizin")) out.push("lowland");
+  if (s.includes("morsk") || s.includes("torow")) out.push("sea");
+  return out;
+}
+
 function parseBool(v: any): boolean | null {
   const s = norm(v).toLowerCase();
   if (!s) return null;
@@ -160,13 +183,13 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
       model: norm(r["Model"]),
       color: norm(r["Kolor"]),
       type: norm(r["Rodzaj"]),
+      terrainCategories: normalizeTerrainCategories(r["Typ"]),
+      terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       lengthCm: parseNumber(r["Długość"]),
       featherAngle: norm(r["Kąt skrętu"]),
       isBreakdown: parseBool(r["Składane"]),
       isPoolAllowed: parseBool(r["Basen"]),
       notes: norm(r["Uwagi"]),
-      image: norm(r["Zdjęcia"]),
-      images: {main: norm(r["Zdjęcia"])},
       status: "available",
       gearCategory: "paddles",
       gearCategoryDisplay: "Wiosła",
@@ -181,11 +204,11 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
       color: norm(r["Kolor"]),
       buoyancy: norm(r["Wyporność"]),
       type: norm(r["Typ"]),
+      terrainCategories: normalizeTerrainCategories(r["Typ"]),
+      terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       size: norm(r["Rozmiar"]),
       isPoolAllowed: parseBool(r["Basen"]),
       notes: norm(r["Uwagi"]),
-      image: norm(r["Zdjęcie"]),
-      images: {main: norm(r["Zdjęcie"])},
       status: "available",
       gearCategory: "lifejackets",
       gearCategoryDisplay: "Kamizelki",
@@ -201,8 +224,6 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
       size: norm(r["Rozmiar"]),
       isPoolAllowed: parseBool(r["Basen"]),
       notes: norm(r["Uwagi"]),
-      image: norm(r["Zdjęcie"]),
-      images: {main: norm(r["Zdjęcie"])},
       status: "available",
       gearCategory: "helmets",
       gearCategoryDisplay: "Kaski",
@@ -227,6 +248,8 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
       material: norm(r["Materiał"]),
       size: norm(r["Rozmiar"]),
       tunnelSize: norm(r["Rozmiar Komina"]),
+      terrainCategories: normalizeTerrainCategories(r["Typ"]),
+      terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       isPoolAllowed: parseBool(r["Basen"]),
       isLowlandAllowed: parseBool(r["Niziny"]),
       notes: norm(r["Uwagi"]),

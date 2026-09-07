@@ -605,18 +605,26 @@
    przy przewijalnej zawartości wyśrodkowanie w gridzie przycina górę treści
    niezależnie od pozycji scrolla (znany efekt place-items:center + overflow). */
 #gearBundleModal .gearModalCard,
-#reservationEditModal .gearModalCard {
+#reservationEditModal .gearModalCard,
+#gearDamageModal .gearModalCard {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
 
 #gearBundleModal .gearModalBody,
-#reservationEditModal .gearModalBody {
+#reservationEditModal .gearModalBody,
+#gearDamageModal .gearModalBody {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: block;
+  /* Bazowe .gearModalBody ma place-items:center (dla trybu grid z pojedynczym
+     zdjęciem) — samo display:block NIE czyści zostawionego justify-items:center,
+     które we `display:block` nadal działa (CSS Box Alignment L3: wyrównanie
+     blokowych dzieci) i kurczy je do szerokości treści zamiast rozciągać na
+     całą szerokość (odkryte na polu Opis w #gearDamageModal, 07.09.2026). */
+  justify-items: normal;
 }
 
 .gearModalBody img {
@@ -800,6 +808,18 @@
   width: 18px;
   height: 18px;
   pointer-events: none;
+}
+
+/* Mały trigger poradnika doboru kamizelki — element gridu .gearToolbar domyślnie
+   rozciąga się na pełną szerokość (justify-items:stretch), więc trzeba go
+   jawnie skurczyć i wyrównać do lewej. */
+.gearInfoBtn {
+  justify-self: start;
+  padding: 8px 14px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ================= MOBILE OPTIMIZATIONS ================= */
@@ -1258,6 +1278,219 @@
 .clubEventItemRowDisabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ─── Kategorie terenowe sprzętu (górskie/nizinne/torowo-morskie) ─── */
+
+.terrainBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.terrainBadge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Wariant na kartach głównej listy — szerokość dopasowana 1:1 do .gearFavBtn
+   (min-width/height 30px), żeby serce i plakietka centrowały się w tej samej
+   kolumnie (.gearHeadSide, justify-items:end) bez rozjazdu środków. */
+.terrainBadgeLg {
+  width: 30px;
+  height: 30px;
+}
+
+.terrainBadgeLg svg {
+  width: 18px;
+  height: 18px;
+}
+
+.terrainBadgeGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.terrainBadgeSep {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, #888);
+}
+
+/* ─── Kolor wiosła (ikonka zamiast martwego tekstu/zamiast zdjęcia — wiosła go nie mają) ─── */
+.paddleColorIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.paddleColorIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Slot "w miejscu zdjęcia" na karcie głównej listy — ta sama lewa kolumna karty
+   (.gearCardInner: 76px 1fr) i te same wymiary/obramowanie co .gearImgsSingle
+   .gearImgPh u kajaków/kamizelek/kasków, ale z zawsze widocznym podpisem koloru
+   (nie tylko tooltip) — wiosła bywają dwukolorowe, sama ikonka może nie wystarczyć. */
+.gearImgsSingle .paddleColorPh {
+  aspect-ratio: unset;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border-radius: 0;
+  border-top: 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-right: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 4px;
+}
+
+:root[data-theme="light"] .paddleColorPh {
+  background: rgba(12,18,32,0.04);
+}
+
+.paddleColorPh svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.paddleColorPhLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.terrainLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-2);
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+
+.terrainLegendHint {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.terrainLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* Wiersz-przycisk listy w ekranie "Zgłoś uszkodzenie" — ten sam .clubEventItemRow
+   co lista kierownika, ale bez ramki/tła bazowego przycisku (tu nie ma checkboxa,
+   cały wiersz jest klikalny). */
+.gearDamageItemBtn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  justify-content: flex-start;
+}
+.gearDamageItemBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+:root[data-theme="light"] .gearDamageItemBtn:hover {
+  background: rgba(12, 18, 32, 0.04);
+}
+
+/* ─── Modal "Zgłoś uszkodzenie" — nagłówek z hasłem + wybór oceny ─── */
+.damageModalHeading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+
+.damageModalSlogan {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #888);
+}
+
+#gearDamageModalTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+/* Duże ikony-obrysy bez kolorów (feedback użytkownika 07.09.2026) — kolor tylko
+   na stan "wybrane", spójny z resztą strony (var(--primary)), nie z samą oceną. */
+.damageSeverityPicker {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.damageSeverityBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 6px;
+  border-radius: var(--radius-md, 14px);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.damageSeverityBtn svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.damageSeverityBtn span {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.damageSeverityBtn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.damageSeverityBtn.active {
+  border-color: var(--primary);
+  background: var(--primary-2);
+  color: var(--text);
 }
 
 /* Pasek "Rezerwuj"/"Anuluj" NA SAMEJ GÓRZE ekranu, przed przewijaną listą

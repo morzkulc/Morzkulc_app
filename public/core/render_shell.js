@@ -198,15 +198,6 @@ async function renderHomeDashboard({ viewEl, ctx }) {
               <span class="startTile2Title">Sprzęt</span>
             </button>
 
-            ${ctx?.session?.isActiveKierownik ? `
-            <button type="button" class="startTile2 kierownik" data-home-action="club-event-gear"
-              title="Zarezerwuj sprzęt na imprezę klubową (bezpłatnie, bez limitu ilości)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4 8 8 7 12 7 C16 7 20 8 22 12 C20 16 16 17 12 17 C8 17 4 16 2 12 Z"/><ellipse cx="12" cy="11" rx="3.5" ry="1.5"/><line x1="18" y1="4" x2="18" y2="10"/><line x1="15" y1="7" x2="21" y2="7"/></svg>
-              <span class="startTile2Title">Sprzęt na imprezę</span>
-              <span class="startTile2Subtitle">dostęp kierownika</span>
-            </button>
-            ` : ""}
-
             ${!dash.isKursant && !dash.isSympatyk ? `
             <button type="button" class="startTile2" data-home-action="add-hours">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -353,12 +344,6 @@ async function renderHomeDashboard({ viewEl, ctx }) {
   if (reserveBtn) reserveBtn.addEventListener("click", () => {
     const gearTarget = getGearRoute(ctx);
     setHash(gearTarget.moduleId, gearTarget.routeId);
-  });
-
-  const clubEventGearBtn = viewEl.querySelector("[data-home-action='club-event-gear']");
-  if (clubEventGearBtn) clubEventGearBtn.addEventListener("click", () => {
-    const gearTarget = getGearRoute(ctx);
-    setHash(gearTarget.moduleId, "club-event");
   });
 
   viewEl.querySelectorAll("[data-home-action='basen']").forEach((btn) => {

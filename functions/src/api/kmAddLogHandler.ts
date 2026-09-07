@@ -39,6 +39,7 @@ export type KmAddLogDeps = {
   setCorsHeaders: (req: Request, res: Response) => void;
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
+  memberRoleKeys: string[];
 };
 
 const VALID_WATER_TYPES = new Set([
@@ -99,6 +100,11 @@ export async function handleKmAddLog(
         return;
       }
       const userData = userSnap.data() as any;
+      const roleKey = norm(userData?.role_key);
+      if (!deps.memberRoleKeys.includes(roleKey)) {
+        res.status(403).json({ok: false, code: "forbidden", error: "Dodawanie wpisów do kilometrówki wymaga roli Kandydat lub Członek."});
+        return;
+      }
       const profile = userData?.profile || {};
       const userSnapshot = {
         displayName: norm(userData?.profile?.firstName + " " + userData?.profile?.lastName) ||

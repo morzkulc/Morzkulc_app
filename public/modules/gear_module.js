@@ -12,6 +12,7 @@ const UPDATE_BUNDLE_RESERVATION_ITEMS_URL = "/api/gear/reservations/update-items
 const CANCEL_RESERVATION_URL = "/api/gear/reservations/cancel";
 const MY_RESERVATIONS_URL = "/api/gear/my-reservations";
 const GEAR_ITEM_AVAILABILITY_URL = "/api/gear/items/availability";
+const SUBMIT_DAMAGE_REPORT_URL = "/api/gear/damage-report";
 const GEAR_FAVORITES_URL = "/api/gear/favorites";
 const GEAR_FAVORITES_TOGGLE_URL = "/api/gear/favorites/toggle";
 const KAYAK_RESERVATIONS_URL = "/api/gear/kayak-reservations";
@@ -54,6 +55,10 @@ const GEAR_TABS_SECONDARY = [
 ];
 const GEAR_TABS = [...GEAR_TABS_PRIMARY, ...GEAR_TABS_SECONDARY];
 
+// Kto może zgłosić uszkodzenie — wszyscy oprócz sympatyka/kursanta (zgodne z
+// memberRoleKeys w functions/src/service/service_config.ts).
+const DAMAGE_REPORTER_ROLES = ["rola_kandydat", "rola_czlonek", "rola_kr", "rola_zarzad"];
+
 const GEAR_CATEGORY_SINGULAR = {
   kayaks: "Kajak",
   paddles: "Wiosło",
@@ -81,6 +86,11 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         return;
       }
 
+      if (requestedRoute === "report-damage") {
+        await renderDamageReportPicker({ viewEl, ctx, id, label });
+        return;
+      }
+
       const activeTab = GEAR_TABS.find((t) => t.id === requestedRoute)?.id || "kayaks";
       const activeTabLabel = GEAR_TABS.find((t) => t.id === activeTab)?.label || "Kajaki";
       const isKayaksView = activeTab === "kayaks";
@@ -98,6 +108,35 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         return;
       }
 
+      // Skróty nad listą sprzętu — Panel kierownika i Zgłoś uszkodzenie są ZAWSZE
+      // widoczne (żeby użytkownicy wiedzieli, że istnieją), ale renderowane z
+      // atrybutem `disabled` gdy niedostępne dla bieżącego użytkownika/stanu —
+      // dokładnie ten sam wzorzec co kafelek Basen na stronie głównej. Lista
+      // sprzętu poniżej zostaje domyślnym widokiem, niezależnie od kafelków
+      // (feedback użytkownika 07.09.2026 — kafelki to dodatek NAD listą, nie
+      // osobny ekran zastępujący ją).
+      const isActiveKierownik = ctx?.session?.isActiveKierownik === true;
+      const gearShortcutsHtml = `
+        <div class="startTileGrid" style="margin-bottom:14px;">
+          <button type="button" class="startTile2 primary" data-gear-shortcut="reserve" title="Przeglądaj i rezerwuj sprzęt">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4 8 8 7 12 7 C16 7 20 8 22 12 C20 16 16 17 12 17 C8 17 4 16 2 12 Z"/><ellipse cx="12" cy="11" rx="3.5" ry="1.5"/></svg>
+            <span class="startTile2Title">Wypożycz / Rezerwuj</span>
+          </button>
+
+          <button type="button" class="startTile2${isActiveKierownik ? " kierownik" : ""}" data-gear-shortcut="club-event"
+            title="Zarezerwuj sprzęt na imprezę klubową (bezpłatnie, bez limitu ilości)"${isActiveKierownik ? "" : " disabled"}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4 8 8 7 12 7 C16 7 20 8 22 12 C20 16 16 17 12 17 C8 17 4 16 2 12 Z"/><ellipse cx="12" cy="11" rx="3.5" ry="1.5"/><line x1="18" y1="4" x2="18" y2="10"/><line x1="15" y1="7" x2="21" y2="7"/></svg>
+            <span class="startTile2Title">Panel kierownika</span>
+            <span class="startTile2Subtitle">${isActiveKierownik ? "aktywny teraz" : "dla kierowników imprez"}</span>
+          </button>
+
+          <button type="button" class="startTile2 danger" data-gear-shortcut="report-damage" title="Zgłoś uszkodzenie sprzętu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="startTile2Title">Zgłoś uszkodzenie</span>
+          </button>
+        </div>
+      `;
+
       viewEl.innerHTML = `
         <div class="card wide">
           <div class="moduleHeader">
@@ -107,6 +146,8 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
               <button type="button" class="moduleNavBtn" data-mod-home title="Strona główna">${NAV_HOME_SVG}</button>
             </div>
           </div>
+
+          ${gearShortcutsHtml}
 
           <div class="gearTabs" role="tablist" aria-label="Kategorie sprzętu">
             ${GEAR_TABS_PRIMARY.map((tab) => `
@@ -157,6 +198,12 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
                 <button id="gearReloadBtn" type="button" class="gearReloadBtn ghost" title="Odśwież" aria-label="Odśwież">${refreshIconSvg()}</button>
               </div>
             </div>
+
+            ${isLifejacketsView ? `
+              <button type="button" id="gearLifejacketInfoBtn" class="ghost gearInfoBtn" title="Jak dobrać i używać kamizelki asekuracyjnej">
+                <span aria-hidden="true">ℹ️</span> Jak dobrać kamizelkę?
+              </button>
+            ` : ""}
 
             ${
               isKayaksView ? `
@@ -371,10 +418,20 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         window.location.hash = "#home/home";
       });
 
+      viewEl.querySelectorAll("[data-gear-shortcut]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.getAttribute("data-gear-shortcut");
+          if (action === "reserve") window.location.hash = `#${id}/kayaks`;
+          else if (action === "club-event") window.location.hash = `#${id}/club-event`;
+          else if (action === "report-damage") window.location.hash = `#${id}/report-damage`;
+        });
+      });
+
       const errEl = viewEl.querySelector("#gearErr");
       const listEl = viewEl.querySelector("#gearList");
       const metaEl = viewEl.querySelector("#gearMeta");
       const reloadBtn = viewEl.querySelector("#gearReloadBtn");
+      const lifejacketInfoBtn = viewEl.querySelector("#gearLifejacketInfoBtn");
       const searchEl = viewEl.querySelector("#gearSearch");
       const filterTypeSelectEl = viewEl.querySelector("#filterTypeSelect");
 
@@ -889,7 +946,10 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
                 ? items.map((item) => renderHelmetCard(item, favSet.has(String(item?.id || "")), canUserReserve)).join("")
                 : items.map((item) => renderGenericGearCard(item, favSet.has(String(item?.id || "")), canUserReserve)).join("");
 
+        const presentTerrainKeys = [...new Set(items.flatMap((it) => it?.terrainCategories || []))];
+
         listEl.innerHTML = `
+          ${presentTerrainKeys.length ? terrainCategoryLegendHtml(presentTerrainKeys) : ""}
           <div class="gearGrid">
             ${cards}
           </div>
@@ -1486,6 +1546,17 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         await loadGear(activeTab);
       });
 
+      if (lifejacketInfoBtn) {
+        lifejacketInfoBtn.addEventListener("click", () => {
+          openModal({
+            title: "Jak dobrać i używać kamizelki asekuracyjnej",
+            topUrl: "/assets/kamizelka-poradnik.webp",
+            sideUrl: "",
+            prefer: "top",
+          });
+        });
+      }
+
       searchEl.addEventListener("input", applyFilter);
       if (filterWorkingOnlyEl) filterWorkingOnlyEl.addEventListener("change", applyFilter);
       if (filterAvailableNowOnlyEl) filterAvailableNowOnlyEl.addEventListener("change", applyFilter);
@@ -1785,6 +1856,11 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
   const isPool = toBool(item?.isPoolAllowed);
 
   const brandModel = [brand, model].filter(Boolean).join(" ");
+  // Jedna zwarta linijka zamiast dwóch osobnych (marka/model + typ) — mniej wysokości
+  // karty na mobile, tam gdzie do tej pory rozjeżdżało się to w pionie i odklejało
+  // przycisk "Rezerwuj" od kolumny z ikoną (feedback użytkownika 07.09.2026).
+  const brandModelType = [brandModel, type].filter(Boolean).join(" · ");
+  const terrainLabel = terrainCategoryLabelsText(item?.terrainCategories);
 
   return `
     <div class="gearCard gearOk${isPool ? " gearPool" : ""}">
@@ -1795,10 +1871,9 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
             <div class="gearTitleLine">
               <span class="gearTitle">Wiosło nr ${escapeHtml(number || "?")}</span>
             </div>
-            ${brandModel ? `<div class="gearMiniType">${escapeHtml(brandModel)}</div>` : ""}
-            ${type ? `<div class="gearInlineMeta gearInlineMetaMain gearMiniType">${escapeHtml(type)}</div>` : ""}
+            ${brandModelType ? `<div class="gearMiniType">${escapeHtml(brandModelType)}</div>` : ""}
+            ${terrainLabel ? `<div class="gearMiniType">${escapeHtml(terrainLabel)}</div>` : ""}
             ${lengthCm ? `<div class="gearInlineMeta gearInlineMetaMain"><strong>Długość:</strong> ${escapeHtml(lengthCm)} cm</div>` : ""}
-            ${color ? `<div class="gearInlineMeta gearInlineMetaMain"><strong>Kolor:</strong> ${escapeHtml(color)}</div>` : ""}
             <div class="gearInlineMeta gearInlineMetaMain"><strong>Kąt skrętu:</strong> ${featherAngle ? `${escapeHtml(featherAngle)}°` : "brak"}</div>
             ${notes ? `<div class="gearInlineMeta"><strong>Uwagi:</strong> ${escapeHtml(notes)}</div>` : ""}
           </div>
@@ -1810,9 +1885,12 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
               data-gear-fav="${escapeAttr(String(item?.id || ""))}"
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
+            ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
             ${isPool ? `<div class="gearBadges gearBadgesStack"><span class="badge pool">Basen</span></div>` : ""}
           </div>
         </div>
+
+        ${paddleColorSlotHtml(color)}
 
         <div class="gearMiniBar">
           ${isPool
@@ -1885,6 +1963,7 @@ function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
               data-gear-fav="${escapeAttr(String(item?.id || ""))}"
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
+            ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
             <div class="gearBadges gearBadgesStack">
               ${poolBadge}
               ${typeBadge}
@@ -2009,6 +2088,7 @@ function renderLifejacketCard(item, isFav = false, canUserReserve = true) {
               data-gear-fav="${escapeAttr(String(item?.id || ""))}"
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
+            ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
             ${isPool ? `<div class="gearBadges gearBadgesStack"><span class="badge pool">Basen</span></div>` : ""}
           </div>
         </div>
@@ -2183,6 +2263,173 @@ function gearTabIcon(id) {
     default:
       return "";
   }
+}
+
+// ── Kategorie terenowe sprzętu (górskie/nizinne/torowo-morskie) ──────────────
+// Pole `terrainCategories` — TABLICA (backend: gearSyncAllFromSheet.ts, kolumna "Typ"
+// w arkuszu, wspólna dla kamizelek/wioseł/fartuchów; wiosła mogą mieć wartość złożoną
+// typu "Niziny / Góry" → 2 elementy) — wyświetlane jako plakietki (1 lub 2 oddzielone
+// "/") przy każdej pozycji + legenda na górze listy. Świadomie kolory NIE z palety
+// motywu (jasny/ciemny) — to stałe, rozpoznawalne kolory terenu, muszą wyglądać tak
+// samo w obu motywach.
+const TERRAIN_CATEGORIES = {
+  mountain: {
+    label: "Górskie",
+    bg: "#f8fafc",
+    fg: "#1e293b",
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19L9.5 8l3.5 5.5L16 9l5 10z"/></svg>',
+  },
+  lowland: {
+    label: "Nizinne",
+    bg: "#16a34a",
+    fg: "#ffffff",
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 15Q7 11 12 15Q17 19 22 15"/><path d="M2 10Q7 6 12 10Q17 14 22 10"/></svg>',
+  },
+  sea: {
+    label: "Torowo-morskie",
+    bg: "#2563eb",
+    fg: "#ffffff",
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 17Q5 14 8 17Q11 20 14 17Q17 14 20 17Q21.5 18.5 22 17"/><path d="M4 11l7-7 9 9"/></svg>',
+  },
+};
+
+// `keys` — tablica ("mountain"/"lowland"/"sea"), zwykle 1 element, ale wiosła mogą mieć
+// wartość złożoną w arkuszu (np. "Niziny / Góry") — wtedy 2 plakietki oddzielone "/".
+function terrainCategoryBadgeHtml(keys, opts) {
+  const list = Array.isArray(keys) ? keys : keys ? [keys] : [];
+  const cats = list.map((k) => TERRAIN_CATEGORIES[String(k || "")]).filter(Boolean);
+  if (!cats.length) return "";
+  const sizeClass = opts && opts.large ? " terrainBadgeLg" : "";
+  const badges = cats.map((cat, idx) => {
+    const badge = `<span class="terrainBadge${sizeClass}" title="${escapeAttr(cat.label)}" style="background:${cat.bg};border-color:${cat.bg};">${cat.svg}</span>`;
+    return idx > 0 ? `<span class="terrainBadgeSep" aria-hidden="true">/</span>${badge}` : badge;
+  }).join("");
+  // Owinięte w jeden element, żeby grupa (plakietka+"/"+plakietka) była JEDNĄ pozycją
+  // w .gearHeadSide (display:grid) zamiast rozjeżdżać się na osobne wiersze siatki.
+  return `<span class="terrainBadgeGroup">${badges}</span>`;
+}
+
+// Tekstowa nazwa kategorii ("Nizinne" / "Nizinne / Górskie") — powielenie tego, co
+// pokazuje ikona, żeby nie trzeba było zgadywać po samym kolorze/kształcie plakietki
+// (feedback użytkownika 07.09.2026, ten sam wzorzec co powielenie "symetryczne" obok
+// ikonki wiosła).
+function terrainCategoryLabelsText(keys) {
+  const list = Array.isArray(keys) ? keys : keys ? [keys] : [];
+  return list.map((k) => TERRAIN_CATEGORIES[String(k || "")]?.label).filter(Boolean).join(" / ");
+}
+
+// `presentKeys` — tylko kategorie faktycznie występujące w aktualnie widocznej
+// liście (np. wiosła nigdy nie mają "sea"/torowo-morskiej — pokazywanie jej w
+// legendzie wioseł było mylące, feedback użytkownika 07.09.2026). Domyślnie
+// (brak argumentu) pokazuje wszystkie 3 — zachowanie sprzed tej poprawki.
+function terrainCategoryLegendHtml(presentKeys) {
+  const allowed = presentKeys ? new Set(presentKeys) : null;
+  const cats = Object.entries(TERRAIN_CATEGORIES).filter(([key]) => !allowed || allowed.has(key));
+  if (!cats.length) return "";
+  const items = cats.map(([, cat]) => `
+    <span class="terrainLegendItem">
+      <span class="terrainBadge" style="background:${cat.bg};border-color:${cat.bg};">${cat.svg}</span>
+      ${escapeHtml(cat.label)}
+    </span>
+  `).join("");
+  return `
+    <div class="terrainLegend">
+      <span class="terrainLegendHint">Używaj sprzętu zgodnie z przeznaczeniem:</span>
+      ${items}
+    </div>
+  `;
+}
+
+// ── Kolor wiosła ──────────────────────────────────────────────────────────
+// Wiosła nie mają zdjęć (i nigdy nie będą — świadoma decyzja, w przeciwieństwie do
+// kajaków/kamizelek/kasków) i pole `color` z arkusza dotąd nigdzie się nie
+// wyświetlało (martwe .gearInlineMeta, patrz project_gear_card_dead_layout w
+// pamięci) — zamiast tekstu, ikonka wiosła w rzeczywistym kolorze sztuki,
+// widoczna przy KAŻDYM wiośle w KAŻDYM widoku. Dopasowanie po rdzeniu słowa
+// (odporne na odmianę/literówki jak przy kategoriach terenowych); nierozpoznany
+// kolor dostaje neutralny szary — nigdy brak ikonki, gdy pole koloru jest wypełnione.
+// Wiosła bywają dwukolorowe (np. "żółty/niebieski") — rozbite na 2 kolory,
+// każda łopatka w innym kolorze + zawsze widoczny podpis z dokładnym tekstem
+// z arkusza (ikonka sama w sobie może nie oddać niuansu, np. szary vs biały).
+const PADDLE_COLOR_KEYWORDS = [
+  ["żółt", "#eab308"], ["zółt", "#eab308"], ["zolt", "#eab308"],
+  ["niebiesk", "#3b82f6"],
+  ["czerwon", "#ef4444"],
+  ["ziel", "#22c55e"],
+  ["pomarańcz", "#f97316"], ["pomarancz", "#f97316"],
+  ["fiolet", "#a855f7"],
+  ["różow", "#ec4899"], ["rozow", "#ec4899"],
+  ["szar", "#9ca3af"],
+  ["czarn", "#52525b"],
+  ["biał", "#f8fafc"], ["bial", "#f8fafc"],
+];
+
+function resolvePaddleColorHex(raw) {
+  const s = String(raw || "").trim().toLowerCase();
+  if (!s) return null;
+  for (const [needle, hex] of PADDLE_COLOR_KEYWORDS) {
+    if (s.includes(needle)) return hex;
+  }
+  return "#71717a"; // kolor rozpoznany w danych, ale nieznany nam słownikowo — neutralny szary zamiast braku ikonki
+}
+
+// Rozbija "żółty/niebieski", "żółty i niebieski", "żółty, niebieski" ORAZ polskie
+// przymiotniki złożone typu "czarno-różowy" (myślnik) na maks. 2 kolory (łopatka
+// 1 / łopatka 2). Jeden kolor → obie łopatki tym samym kolorem. Uwaga: dzielimy
+// na myślniku PRZED sprawdzeniem słownika kolorów, więc "czarno-różowy" trafia
+// jako dwa osobne kawałki ("czarno", "różowy"), z których każdy nadal pasuje po
+// rdzeniu (np. "czarno".includes("czarn")) — inaczej pierwszy pasujący rdzień w
+// PADDLE_COLOR_KEYWORDS (tu: "różow") "wygrywałby" cały napis i drugi kolor by zniknął.
+function paddleColorHexPair(label) {
+  const parts = label.split(/\s*[/,+-]\s*|\s+i\s+/i).map((p) => p.trim()).filter(Boolean);
+  const hex1 = resolvePaddleColorHex(parts[0] || label);
+  const hex2 = parts[1] ? resolvePaddleColorHex(parts[1]) : hex1;
+  return [hex1, hex2];
+}
+
+// Jedno pióro (nie całe wiosło z trzonkiem — dwie łopatki na patyku wyglądały jak
+// hantel, feedback użytkownika 07.09.2026). Kolor dzielony klipem na lewą/prawą
+// połowę pióra — jeden kolor wypełnia obie połówki tym samym odcieniem.
+let paddleBladeClipSeq = 0;
+function paddleColorSvg(hex1, hex2) {
+  const clipId = `paddleBladeClip${paddleBladeClipSeq++}`;
+  const blade = "M12 2C16 2 18 6.5 18 11C18 15.5 15.3 19.5 12 22C8.7 19.5 6 15.5 6 11C6 6.5 8 2 12 2Z";
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">
+      <defs><clipPath id="${clipId}"><path d="${blade}"/></clipPath></defs>
+      <g clip-path="url(#${clipId})">
+        <rect x="0" y="0" width="12" height="24" fill="${hex1}"/>
+        <rect x="12" y="0" width="12" height="24" fill="${hex2}"/>
+      </g>
+      <path d="${blade}" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+      <line x1="12" y1="7" x2="12" y2="18" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+    </svg>`;
+}
+
+// Kompaktowa wersja (wiersze: Panel kierownika, picker "Zgłoś uszkodzenie") — sama
+// ikonka + podpis w tooltipie (najechanie myszką), bez miejsca na widoczny tekst.
+function paddleColorIconHtml(colorRaw) {
+  const label = String(colorRaw || "").trim();
+  if (!label) return "";
+  const [hex1, hex2] = paddleColorHexPair(label);
+  return `<span class="paddleColorIcon" title="Kolor: ${escapeAttr(label)}">${paddleColorSvg(hex1, hex2)}</span>`;
+}
+
+// Wersja "w miejscu zdjęcia" (karta głównej listy, renderPaddleCard) — ta sama
+// pozycja w layoucie co .gearImgs u kajaków/kamizelek/kasków (lewa kolumna karty,
+// .gearCardInner: grid-template-columns 76px 1fr), z zawsze WIDOCZNYM podpisem
+// koloru pod ikonką (nie tylko tooltip) — kluczowe przy dwukolorowych wiosłach.
+function paddleColorSlotHtml(colorRaw) {
+  const label = String(colorRaw || "").trim();
+  if (!label) return "";
+  const [hex1, hex2] = paddleColorHexPair(label);
+  return `
+    <div class="gearImgs gearImgsSingle">
+      <div class="paddleColorPh">
+        ${paddleColorSvg(hex1, hex2)}
+        <div class="paddleColorPhLabel">${escapeHtml(label)}</div>
+      </div>
+    </div>
+  `;
 }
 
 // ── Widok masowego dodawania sprzętu na imprezę klubową ──────────────────────
@@ -2462,13 +2709,20 @@ async function renderClubEventBulkView({ viewEl, ctx, label }) {
       return `
         <label class="clubEventItemRow${isAvail ? "" : " clubEventItemRowDisabled"}">
           <input type="checkbox" data-clubevent-item="${escapeAttr(id)}" ${checked ? "checked" : ""} ${isAvail ? "" : "disabled"} />
+          ${terrainCategoryBadgeHtml(it?.terrainCategories)}
+          ${cat === "paddles" ? paddleColorIconHtml(it?.color) : ""}
           <span>${escapeHtml(displayLabel)}</span>
           ${isAvail ? "" : `<span class="badge danger">zajęty</span>`}
         </label>
       `;
     }).join("");
 
+    // Legenda tylko z kategoriami faktycznie występującymi w tej kategorii sprzętu
+    // (np. wiosła nigdy nie mają "sea"/torowo-morskiej — pokazywanie jej było mylące).
+    const presentTerrainKeys = [...new Set(s.items.flatMap((it) => it?.terrainCategories || []))];
+
     catBodyEl.innerHTML = `
+      ${presentTerrainKeys.length ? terrainCategoryLegendHtml(presentTerrainKeys) : ""}
       <div class="clubEventItemList">${rows}</div>
     `;
 
@@ -2615,4 +2869,338 @@ async function renderClubEventBulkView({ viewEl, ctx, label }) {
   await loadExisting();
   await showCategory(activeCat);
   updateSummaryAndButton();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Zgłaszanie uszkodzeń — wybór kategorii+sztuki (reużywa te same listy co
+// główny widok, GEAR_URL+category, patrz loadGear() wyżej) i modal zgłoszenia
+// (2 kategorie: "Można używać" nie blokuje, "Trzeba naprawić" blokuje
+// rezerwację do czasu naprawy — patrz gear_damage_service.ts).
+// ──────────────────────────────────────────────────────────────────────────────
+function formatDamageItemLabel(it) {
+  const number = String(it?.number || "").trim();
+  const brand = String(it?.brand || "").trim();
+  const model = String(it?.model || "").trim();
+  const base = [brand, model].filter(Boolean).join(" ") || number || String(it?.id || "");
+  return number && base !== number ? `${base} (nr ${number})` : base;
+}
+
+// Skaluje zdjęcie do maks. dłuższego boku i koduje jako JPEG — trzyma payload
+// requestu (base64 w JSON) daleko poniżej limitu Cloud Functions, bez
+// potrzeby resumable-upload/multipart.
+function compressImageFile(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read_failed"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode_failed"));
+      img.onload = () => {
+        let width = img.naturalWidth;
+        let height = img.naturalHeight;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height >= width && height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve({ dataUrl: canvas.toDataURL("image/jpeg", quality), mimeType: "image/jpeg" });
+      };
+      img.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function renderDamageReportPicker({ viewEl, ctx, id, label }) {
+  if (!ctx?.idToken) {
+    viewEl.innerHTML = `<div class="card center"><h2>${escapeHtml(label)}</h2><p>Brak tokenu sesji. Odśwież stronę.</p></div>`;
+    return;
+  }
+
+  // Ekran jest widoczny dla WSZYSTKICH (żeby każdy wiedział, jak zgłaszanie
+  // uszkodzeń wygląda) — tylko wysyłka jest ograniczona rolą (feedback
+  // użytkownika 07.09.2026: "mogą zobaczyć jak zgłaszamy uszkodzenia ale nie
+  // mogą ich zgłaszać"). Ten sam wzorzec co disabled-kafelek na ekranie startowym
+  // modułu, przeniesiony o poziom niżej — na przycisk "Wyślij zgłoszenie" w modalu.
+  const roleKey = String(ctx?.session?.role_key || "");
+  const canSubmitDamageReport = DAMAGE_REPORTER_ROLES.includes(roleKey);
+
+  viewEl.innerHTML = `
+    <div class="card wide">
+      <div class="moduleHeader">
+        <h2>Zgłoś uszkodzenie</h2>
+        <div class="moduleNav">
+          <button type="button" class="moduleNavBtn" data-mod-back title="Wróć">${NAV_BACK_SVG}</button>
+          <button type="button" class="moduleNavBtn" data-mod-home title="Strona główna">${NAV_HOME_SVG}</button>
+        </div>
+      </div>
+
+      <p class="hint">Wybierz kategorię i sztukę, na której zauważono uszkodzenie.</p>
+
+      <div class="gearTabs" role="tablist" aria-label="Kategorie sprzętu">
+        ${GEAR_TABS.map((tab, idx) => `
+          <button
+            type="button"
+            class="gearTab${idx === 0 ? " active" : ""}"
+            data-damage-tab="${escapeAttr(tab.id)}"
+            aria-pressed="${idx === 0 ? "true" : "false"}"
+            title="${escapeAttr(tab.label)}"
+          >
+            <span class="gearTabIcon">${gearTabIcon(tab.id)}</span>
+            <span class="gearTabLabel">${escapeHtml(tab.label)}</span>
+          </button>
+        `).join("")}
+      </div>
+
+      <div id="damageItemErr" class="err hidden" style="margin-top:12px;"></div>
+      <div id="damageItemList" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="gearDamageModal" class="gearModal hidden" aria-hidden="true">
+      <div class="gearModalBackdrop" data-damage-modal-close></div>
+      <div class="gearModalCard">
+        <div class="gearModalTop">
+          <div class="damageModalHeading">
+            <div class="damageModalSlogan">„To nie jest klub dla słabego sprzętu”</div>
+            <h3 id="gearDamageModalTitle"></h3>
+          </div>
+          <button type="button" class="moduleNavBtn" data-damage-modal-close title="Zamknij">${NAV_BACK_SVG}</button>
+        </div>
+        <div class="gearModalBody">
+          <div class="damageSeverityPicker">
+            <button type="button" class="damageSeverityBtn" data-severity="usable">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+              <span>Da się używać</span>
+            </button>
+            <button type="button" class="damageSeverityBtn" data-severity="repair">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+              <span>To się wyklepie</span>
+            </button>
+            <button type="button" class="damageSeverityBtn" data-severity="dead">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a7 7 0 0 0-7 7c0 2.6 1.3 4.4 2.5 5.4V18a1 1 0 0 0 1 1h1v2h1v-2h2v2h1v-2h1a1 1 0 0 0 1-1v-2.6C17.7 14.4 19 12.6 19 10a7 7 0 0 0-7-7z"/>
+                <circle cx="9.3" cy="10.3" r="1.3" fill="currentColor" stroke="none"/>
+                <circle cx="14.7" cy="10.3" r="1.3" fill="currentColor" stroke="none"/>
+                <path d="M10.5 14h3"/>
+              </svg>
+              <span>Trup</span>
+            </button>
+          </div>
+          <div>
+            <label for="damageDescription">Opis</label>
+            <textarea id="damageDescription" placeholder="Co się stało?"></textarea>
+          </div>
+          <div>
+            <label>Zdjęcia (opcjonalnie, max 2)</label>
+            <div id="damagePhotoRow" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;"></div>
+            <button type="button" id="damagePhotoAddBtn" class="ghost">Dodaj zdjęcie</button>
+            <input id="damagePhotoInput" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" />
+          </div>
+          <div id="damageAuthHint" class="hint hidden">Podgląd — zgłaszanie uszkodzeń jest dostępne dla pełnoprawnych członków klubu.</div>
+          <div id="damageModalErr" class="err hidden"></div>
+          <div id="damageModalOk" class="ok hidden"></div>
+        </div>
+        <div class="gearModalActions">
+          <button type="button" class="ghost ghostCancel" data-damage-modal-close>Anuluj</button>
+          <button type="button" class="primary" id="damageSubmitBtn">Wyślij zgłoszenie</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => { window.location.hash = "#home/home"; });
+  viewEl.querySelector("[data-mod-back]")?.addEventListener("click", () => { window.location.hash = `#${id}/kayaks`; });
+
+  const itemErrEl = viewEl.querySelector("#damageItemErr");
+  const itemListEl = viewEl.querySelector("#damageItemList");
+  const modalEl = viewEl.querySelector("#gearDamageModal");
+  const modalTitleEl = viewEl.querySelector("#gearDamageModalTitle");
+  const descriptionEl = viewEl.querySelector("#damageDescription");
+  const photoRowEl = viewEl.querySelector("#damagePhotoRow");
+  const photoInputEl = viewEl.querySelector("#damagePhotoInput");
+  const photoAddBtn = viewEl.querySelector("#damagePhotoAddBtn");
+  const authHintEl = viewEl.querySelector("#damageAuthHint");
+  const severityBtns = Array.from(viewEl.querySelectorAll("[data-severity]"));
+  const modalErrEl = viewEl.querySelector("#damageModalErr");
+  const modalOkEl = viewEl.querySelector("#damageModalOk");
+  const submitBtn = viewEl.querySelector("#damageSubmitBtn");
+
+  let activeCat = GEAR_TABS[0].id;
+  let modalCtx = null; // {category, itemId, itemLabel}
+  let selectedPhotos = []; // [{dataUrl, mimeType}]
+  let selectedSeverity = "usable";
+
+  const closeModal = () => {
+    modalEl.classList.add("hidden");
+    modalEl.setAttribute("aria-hidden", "true");
+  };
+
+  const setSeverity = (value) => {
+    selectedSeverity = value;
+    severityBtns.forEach((btn) => {
+      btn.classList.toggle("active", btn.getAttribute("data-severity") === value);
+    });
+  };
+
+  severityBtns.forEach((btn) => {
+    btn.addEventListener("click", () => setSeverity(btn.getAttribute("data-severity")));
+  });
+
+  const renderPhotoRow = () => {
+    photoRowEl.innerHTML = selectedPhotos.map((p, idx) => `
+      <div style="position:relative;">
+        <img src="${p.dataUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block;" />
+        <button type="button" data-remove-photo="${idx}" class="moduleNavBtn" style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:999px;">×</button>
+      </div>
+    `).join("");
+    photoRowEl.querySelectorAll("[data-remove-photo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedPhotos.splice(Number(btn.getAttribute("data-remove-photo")), 1);
+        renderPhotoRow();
+      });
+    });
+    photoAddBtn.style.display = selectedPhotos.length >= 2 ? "none" : "";
+  };
+
+  photoAddBtn.addEventListener("click", () => photoInputEl.click());
+
+  const openDamageModal = ({ category, itemId, itemLabel }) => {
+    modalCtx = { category, itemId, itemLabel };
+    selectedPhotos = [];
+    renderPhotoRow();
+    descriptionEl.value = "";
+    modalErrEl.textContent = "";
+    modalErrEl.classList.add("hidden");
+    modalOkEl.textContent = "";
+    modalOkEl.classList.add("hidden");
+    setSeverity("usable");
+    modalTitleEl.textContent = itemLabel;
+    // Podgląd dla wszystkich — wysyłka tylko dla uprawnionej roli (feedback
+    // użytkownika 07.09.2026). Reszta formularza zostaje interaktywna, żeby
+    // dało się faktycznie zobaczyć, jak wygląda zgłaszanie, nie tylko pusty ekran.
+    submitBtn.disabled = !canSubmitDamageReport;
+    submitBtn.textContent = "Wyślij zgłoszenie";
+    authHintEl.classList.toggle("hidden", canSubmitDamageReport);
+    modalEl.classList.remove("hidden");
+    modalEl.setAttribute("aria-hidden", "false");
+  };
+
+  viewEl.querySelectorAll("[data-damage-modal-close]").forEach((el) => {
+    el.addEventListener("click", closeModal);
+  });
+
+  photoInputEl.addEventListener("change", async () => {
+    const file = photoInputEl.files?.[0];
+    photoInputEl.value = "";
+    if (!file || selectedPhotos.length >= 2) return;
+    try {
+      selectedPhotos.push(await compressImageFile(file, 1280, 0.7));
+      renderPhotoRow();
+    } catch {
+      modalErrEl.textContent = "Nie udało się przetworzyć zdjęcia.";
+      modalErrEl.classList.remove("hidden");
+    }
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    if (!modalCtx) return;
+    const description = descriptionEl.value.trim();
+    if (!description) {
+      modalErrEl.textContent = "Opis jest wymagany.";
+      modalErrEl.classList.remove("hidden");
+      return;
+    }
+    const severity = selectedSeverity;
+
+    modalErrEl.classList.add("hidden");
+    modalOkEl.classList.add("hidden");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Wysyłanie...";
+
+    try {
+      await apiPostJson({
+        url: SUBMIT_DAMAGE_REPORT_URL,
+        idToken: ctx.idToken,
+        body: {
+          category: modalCtx.category,
+          itemId: modalCtx.itemId,
+          severity,
+          description,
+          photos: selectedPhotos.map((p) => ({ data: p.dataUrl, mimeType: p.mimeType })),
+        },
+      });
+      modalOkEl.textContent = "Zgłoszenie wysłane. Dziękujemy!";
+      modalOkEl.classList.remove("hidden");
+      submitBtn.textContent = "Wysłano";
+      // Zgłoszenie jest czysto informacyjne — nie zmienia dostępności sztuki (dostępność
+      // reguluje wyłącznie arkusz + sync), więc lista pozycji nie wymaga przeładowania.
+      setTimeout(closeModal, 900);
+    } catch (e) {
+      modalErrEl.textContent = mapUserFacingApiError(e, "Nie udało się wysłać zgłoszenia.");
+      modalErrEl.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Wyślij zgłoszenie";
+    }
+  });
+
+  const renderItems = (category, items) => {
+    if (!items.length) {
+      itemListEl.innerHTML = `<div class="hint">Brak sprzętu w tej kategorii.</div>`;
+      return;
+    }
+    itemListEl.innerHTML = `
+      <div class="clubEventItemList">
+        ${items.map((it) => `
+          <button type="button" class="clubEventItemRow gearDamageItemBtn" data-damage-item="${escapeAttr(String(it?.id || ""))}">
+            ${category === "paddles" ? paddleColorIconHtml(it?.color) : ""}
+            <span>${escapeHtml(formatDamageItemLabel(it))}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
+    itemListEl.querySelectorAll("[data-damage-item]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const itemId = btn.getAttribute("data-damage-item");
+        const it = items.find((x) => String(x?.id || "") === itemId);
+        openDamageModal({ category, itemId, itemLabel: formatDamageItemLabel(it || {}) });
+      });
+    });
+  };
+
+  const loadItems = async (category) => {
+    itemListEl.innerHTML = `<div class="hint">Ładuję...</div>`;
+    itemErrEl.classList.add("hidden");
+    try {
+      const url = `${GEAR_URL}?category=${encodeURIComponent(category)}`;
+      const resp = await apiGetJson({ url, idToken: ctx.idToken });
+      const items = category === "kayaks" ?
+        (Array.isArray(resp?.kayaks) ? resp.kayaks : []) :
+        (Array.isArray(resp?.items) ? resp.items : []);
+      renderItems(category, items);
+    } catch (e) {
+      itemErrEl.textContent = mapUserFacingApiError(e, "Nie udało się pobrać listy sprzętu.");
+      itemErrEl.classList.remove("hidden");
+      itemListEl.innerHTML = "";
+    }
+  };
+
+  viewEl.querySelectorAll("[data-damage-tab]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      activeCat = btn.getAttribute("data-damage-tab");
+      viewEl.querySelectorAll("[data-damage-tab]").forEach((b) => {
+        const isActive = b.getAttribute("data-damage-tab") === activeCat;
+        b.classList.toggle("active", isActive);
+        b.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      await loadItems(activeCat);
+    });
+  });
+
+  await loadItems(activeCat);
 }

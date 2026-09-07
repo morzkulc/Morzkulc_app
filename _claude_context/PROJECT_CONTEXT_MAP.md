@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-05T09:38:04`
+Generated at: `2026-09-07T09:34:31`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,12 +57,12 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `553`
+- Total scanned files: `564`
 - Python files: `42`
-- Script files JS/TS/GS/etc.: `363`
+- Script files JS/TS/GS/etc.: `372`
 - Config files: `22`
-- Markdown files: `97`
-- Internal dependency edges: `620`
+- Markdown files: `99`
+- Internal dependency edges: `625`
 
 ## Project tree
 
@@ -89,6 +89,8 @@ Excluded sensitive files:
     - 03.09_zmiana_kalendarza_rezerwacji_PLAN.md
     - 04.09_imprezy_klubowe_rezerwacja_PLAN.md
     - 04.09_imprezy_klubowe_wdrozenie_podsumowanie.md
+    - 05.09_prompt_kalendarz_rezerwacji_styl.md
+    - 06.09_prompt_design_system_nawigacja_kafelki.md
     - 10.06_session_summary.md
     - 10.07_audyt_kursant_błąd.md
     - 11.08_blachy_i_brakujące_pola_TO_DO.md
@@ -318,6 +320,7 @@ Excluded sensitive files:
         - adminNotifyPendingApprovals.js
         - basenGrantInstructorRewards.js
         - basenNotifySessionCancelled.js
+        - eventsNotifyKierownik.js
         - eventsNotifyNew.js
         - eventsNotifyUpcoming.js
         - eventsSyncCalendar.js
@@ -365,8 +368,12 @@ Excluded sensitive files:
     - auditInvokerDebug.js
     - backfillEntryFeePaidAt.js
     - checkBasenDailyLimit.js
+    - checkEventsKierownikSyncPreview.js
     - checkGearReport.js
+    - checkKierownikUidsExposure.js
     - checkKlubFinanceLeak.js
+    - checkLinkAplikacjiFirestore.js
+    - checkLinkAplikacjiVar.js
     - checkMemberActivity.js
     - checkUserGearReservations.js
     - checkUserGodzinkiHome.js
@@ -374,11 +381,13 @@ Excluded sensitive files:
     - deleteOrphanedBasenKarnety.js
     - deleteStuckJob.js
     - enqueueEventsNotifyUpcoming.js
+    - enqueueEventsSyncFromSheet.js
     - enqueueGodzinkiTransitionImport.js
     - enqueueGroupsDiagnose.js
     - enqueueListaPolicy.js
     - enqueueReconcileOpeningBalance.js
     - enqueueReconcileWorkspaceGroups.js
+    - enqueueSetupSyncFromSheet.js
     - fixGhostApprovals.js
     - investigateEventNotif.js
     - previewOpeningBalanceReconcile.js
@@ -391,6 +400,7 @@ Excluded sensitive files:
     - readUsersActive.js
     - removeEventsFromApp.js
     - runReconcileOpeningBalance.js
+    - updateLinkAplikacjiVar.js
     - verifyDeploy.js
     - waiveUserGearCharges.js
   - src/
@@ -501,6 +511,7 @@ Excluded sensitive files:
         - adminNotifyPendingApprovals.ts
         - basenGrantInstructorRewards.ts
         - basenNotifySessionCancelled.ts
+        - eventsNotifyKierownik.ts
         - eventsNotifyNew.ts
         - eventsNotifyUpcoming.ts
         - eventsSyncCalendar.ts
@@ -693,7 +704,6 @@ Excluded sensitive files:
 
 ## Internal dependency map
 
-- `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/calendar/events_service.js`
 - `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/api/adminGearReservationCancelHandler.js` -> `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
@@ -870,6 +880,7 @@ Excluded sensitive files:
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/adminNotifyPendingApprovals.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/basenGrantInstructorRewards.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/basenNotifySessionCancelled.js`
+- `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsNotifyKierownik.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsNotifyNew.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsNotifyUpcoming.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsSyncCalendar.js`
@@ -908,6 +919,8 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/adminNotifyPendingApprovals.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/adminNotifyPendingApprovals.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/basenGrantInstructorRewards.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
+- `functions/lib/service/tasks/eventsNotifyKierownik.js` -> `functions/lib/modules/setup/app_vars.js`
+- `functions/lib/service/tasks/eventsNotifyKierownik.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/eventsNotifyNew.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/eventsNotifyNew.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/eventsNotifyUpcoming.js` -> `functions/lib/modules/calendar/calendar_utils.js`
@@ -978,7 +991,6 @@ Excluded sensitive files:
 - `functions/scripts/checkKlubFinanceLeak.js` -> `functions/lib/api/getKlubInfoHandler.js`
 - `functions/scripts/checkMemberActivity.js` -> `functions/lib/api/getAdminMemberActivityHandler.js`
 - `functions/scripts/runReconcileOpeningBalance.js` -> `functions/lib/service/tasks/reconcileOpeningBalance.js`
-- `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/calendar/events_service.ts`
 - `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/api/adminGearReservationCancelHandler.ts` -> `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
@@ -1154,6 +1166,7 @@ Excluded sensitive files:
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/adminNotifyPendingApprovals.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/basenGrantInstructorRewards.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/basenNotifySessionCancelled.ts`
+- `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsNotifyKierownik.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsNotifyNew.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsNotifyUpcoming.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsSyncCalendar.ts`
@@ -1198,6 +1211,9 @@ Excluded sensitive files:
 - `functions/src/service/tasks/basenGrantInstructorRewards.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/service/tasks/basenGrantInstructorRewards.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/basenNotifySessionCancelled.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/eventsNotifyKierownik.ts` -> `functions/src/modules/setup/app_vars.ts`
+- `functions/src/service/tasks/eventsNotifyKierownik.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/service/tasks/eventsNotifyKierownik.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/eventsNotifyNew.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/eventsNotifyNew.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/eventsNotifyNew.ts` -> `functions/src/service/types.ts`
@@ -3375,14 +3391,12 @@ Excluded sensitive files:
 
 ### `functions/lib/api/adminApprovalHandler.js`
 
-- Lines: `252`
-- Size: `12295` bytes
+- Lines: `232`
+- Size: `10802` bytes
 - Internal dependencies:
-  - `functions/lib/modules/calendar/events_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
 - Imports:
-  - `import/require ../modules/calendar/events_service`
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
   - `import/require firebase-admin`
@@ -3597,8 +3611,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/gearBundleReservationCreateHandler.js`
 
-- Lines: `102`
-- Size: `4898` bytes
+- Lines: `104`
+- Size: `4993` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
@@ -3780,8 +3794,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getAdminPendingHandler.js`
 
-- Lines: `398`
-- Size: `25123` bytes
+- Lines: `400`
+- Size: `25578` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
@@ -4197,7 +4211,7 @@ Excluded sensitive files:
 ### `functions/lib/api/registerUserHandler.js`
 
 - Lines: `762`
-- Size: `41545` bytes
+- Size: `41599` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4524,8 +4538,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/calendar/events_service.js`
 
-- Lines: `229`
-- Size: `9946` bytes
+- Lines: `248`
+- Size: `11163` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
@@ -4534,20 +4548,21 @@ Excluded sensitive files:
   - `import/require ./calendar_utils`
 - Functions:
   - `createEvent`
-  - `findActiveKierownikConflict`
-  - `findActiveKierownikEvent`
+  - `findActiveKierownikEvents`
   - `isUrlOnly`
   - `isValidOrganizerKey`
+  - `kierownikUidsOf`
   - `listAllEvents`
   - `listRecentEvents`
   - `listUpcomingEvents`
   - `norm`
+  - `resolveKierownicyList`
   - `resolveKierownikCandidate`
 
 ### `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 
-- Lines: `1117`
-- Size: `60381` bytes
+- Lines: `1140`
+- Size: `61305` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4765,7 +4780,7 @@ Excluded sensitive files:
 ### `functions/lib/modules/setup/app_vars.js`
 
 - Lines: `26`
-- Size: `1126` bytes
+- Size: `1119` bytes
 - Functions:
   - `getAppVars`
   - `getVar`
@@ -4899,13 +4914,14 @@ Excluded sensitive files:
 
 ### `functions/lib/service/registry.js`
 
-- Lines: `81`
-- Size: `4848` bytes
+- Lines: `83`
+- Size: `4977` bytes
 - Internal dependencies:
   - `functions/lib/service/tasks/adminApprovalWriteBack.js`
   - `functions/lib/service/tasks/adminNotifyPendingApprovals.js`
   - `functions/lib/service/tasks/basenGrantInstructorRewards.js`
   - `functions/lib/service/tasks/basenNotifySessionCancelled.js`
+  - `functions/lib/service/tasks/eventsNotifyKierownik.js`
   - `functions/lib/service/tasks/eventsNotifyNew.js`
   - `functions/lib/service/tasks/eventsNotifyUpcoming.js`
   - `functions/lib/service/tasks/eventsSyncCalendar.js`
@@ -4939,6 +4955,7 @@ Excluded sensitive files:
   - `import/require ./tasks/adminNotifyPendingApprovals`
   - `import/require ./tasks/basenGrantInstructorRewards`
   - `import/require ./tasks/basenNotifySessionCancelled`
+  - `import/require ./tasks/eventsNotifyKierownik`
   - `import/require ./tasks/eventsNotifyNew`
   - `import/require ./tasks/eventsNotifyUpcoming`
   - `import/require ./tasks/eventsSyncCalendar`
@@ -5045,6 +5062,20 @@ Excluded sensitive files:
 - Functions:
   - `norm`
 
+### `functions/lib/service/tasks/eventsNotifyKierownik.js`
+
+- Lines: `82`
+- Size: `4834` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/app_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
+- Functions:
+  - `buildKierownikEmail`
+  - `dateRange`
+
 ### `functions/lib/service/tasks/eventsNotifyNew.js`
 
 - Lines: `85`
@@ -5096,8 +5127,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/eventsSyncFromSheet.js`
 
-- Lines: `596`
-- Size: `32592` bytes
+- Lines: `577`
+- Size: `31209` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/events_service.js`
   - `functions/lib/modules/shared/text_utils.js`
@@ -5514,8 +5545,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/triggers/onEventApproved.js`
 
-- Lines: `86`
-- Size: `3973` bytes
+- Lines: `125`
+- Size: `6341` bytes
 - Internal dependencies:
   - `functions/lib/service/service_config.js`
 - Imports:
@@ -5523,6 +5554,7 @@ Excluded sensitive files:
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2/firestore`
 - Functions:
+  - `jobIdForNotifyKierownik`
   - `jobIdForNotifyNew`
 
 ### `functions/lib/service/triggers/onUsersActiveCreated.js`
@@ -5627,6 +5659,25 @@ Excluded sensitive files:
 - Functions:
   - `tsToIso`
 
+### `functions/scripts/checkEventsKierownikSyncPreview.js`
+
+- Lines: `246`
+- Size: `11774` bytes
+- Imports:
+  - `import/require firebase-admin`
+  - `import/require googleapis`
+- Functions:
+  - `canonicalHeader`
+  - `cell`
+  - `exchangeJwtForAccessToken`
+  - `getDelegatedSheetsClient`
+  - `isApproved`
+  - `isUserStatusBlocked`
+  - `normalizeOrganizerToken`
+  - `parseOrganizerFromSheetCell`
+  - `resolveKierownikCandidate`
+  - `signJwtWithIamCredentials`
+
 ### `functions/scripts/checkGearReport.js`
 
 - Lines: `119`
@@ -5638,6 +5689,13 @@ Excluded sensitive files:
   - `import/require firebase-admin`
 - Functions:
   - `call`
+
+### `functions/scripts/checkKierownikUidsExposure.js`
+
+- Lines: `66`
+- Size: `2539` bytes
+- Imports:
+  - `import/require firebase-admin`
 
 ### `functions/scripts/checkKlubFinanceLeak.js`
 
@@ -5651,6 +5709,25 @@ Excluded sensitive files:
 - Functions:
   - `callKlub`
   - `hasFinanceFields`
+
+### `functions/scripts/checkLinkAplikacjiFirestore.js`
+
+- Lines: `11`
+- Size: `527` bytes
+- Imports:
+  - `import/require firebase-admin`
+
+### `functions/scripts/checkLinkAplikacjiVar.js`
+
+- Lines: `70`
+- Size: `3445` bytes
+- Imports:
+  - `import/require googleapis`
+- Functions:
+  - `exchangeJwtForAccessToken`
+  - `getDelegatedSheetsClient`
+  - `normalizeHeader`
+  - `signJwtWithIamCredentials`
 
 ### `functions/scripts/checkMemberActivity.js`
 
@@ -5714,6 +5791,13 @@ Excluded sensitive files:
 - Imports:
   - `import/require firebase-admin`
 
+### `functions/scripts/enqueueEventsSyncFromSheet.js`
+
+- Lines: `42`
+- Size: `1508` bytes
+- Imports:
+  - `import/require firebase-admin`
+
 ### `functions/scripts/enqueueGodzinkiTransitionImport.js`
 
 - Lines: `65`
@@ -5759,6 +5843,13 @@ Excluded sensitive files:
   - `projArg`
   - `sendNotifyEmails`
   - `signJwtWithIamCredentials`
+
+### `functions/scripts/enqueueSetupSyncFromSheet.js`
+
+- Lines: `41`
+- Size: `1444` bytes
+- Imports:
+  - `import/require firebase-admin`
 
 ### `functions/scripts/fixGhostApprovals.js`
 
@@ -5872,6 +5963,17 @@ Excluded sensitive files:
   - `import/require ../lib/service/tasks/reconcileOpeningBalance`
   - `import/require firebase-admin`
 
+### `functions/scripts/updateLinkAplikacjiVar.js`
+
+- Lines: `63`
+- Size: `2843` bytes
+- Imports:
+  - `import/require googleapis`
+- Functions:
+  - `exchangeJwtForAccessToken`
+  - `getDelegatedSheetsClient`
+  - `signJwtWithIamCredentials`
+
 ### `functions/scripts/verifyDeploy.js`
 
 - Lines: `40`
@@ -5892,14 +5994,12 @@ Excluded sensitive files:
 
 ### `functions/src/api/adminApprovalHandler.ts`
 
-- Lines: `244`
-- Size: `9924` bytes
+- Lines: `223`
+- Size: `8701` bytes
 - Internal dependencies:
-  - `functions/src/modules/calendar/events_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
 - Imports:
-  - `import/require ../modules/calendar/events_service`
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
   - `import/require express`
@@ -6076,8 +6176,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/gearBundleReservationCreateHandler.ts`
 
-- Lines: `126`
-- Size: `4583` bytes
+- Lines: `128`
+- Size: `4664` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
@@ -6271,8 +6371,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getAdminPendingHandler.ts`
 
-- Lines: `496`
-- Size: `20307` bytes
+- Lines: `498`
+- Size: `20645` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
@@ -6671,7 +6771,7 @@ Excluded sensitive files:
 ### `functions/src/api/registerUserHandler.ts`
 
 - Lines: `960`
-- Size: `38104` bytes
+- Size: `38172` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7003,8 +7103,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/calendar/events_service.ts`
 
-- Lines: `311`
-- Size: `10758` bytes
+- Lines: `343`
+- Size: `12679` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
@@ -7013,20 +7113,21 @@ Excluded sensitive files:
   - `import/require ./calendar_utils`
 - Functions:
   - `createEvent`
-  - `findActiveKierownikConflict`
-  - `findActiveKierownikEvent`
+  - `findActiveKierownikEvents`
   - `isUrlOnly`
   - `isValidOrganizerKey`
+  - `kierownikUidsOf`
   - `listAllEvents`
   - `listRecentEvents`
   - `listUpcomingEvents`
   - `norm`
+  - `resolveKierownicyList`
   - `resolveKierownikCandidate`
 
 ### `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 
-- Lines: `1322`
-- Size: `54813` bytes
+- Lines: `1348`
+- Size: `55935` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7254,7 +7355,7 @@ Excluded sensitive files:
 ### `functions/src/modules/setup/app_vars.ts`
 
 - Lines: `41`
-- Size: `1501` bytes
+- Size: `1494` bytes
 - Functions:
   - `getAppVars`
   - `getVar`
@@ -7387,13 +7488,14 @@ Excluded sensitive files:
 
 ### `functions/src/service/registry.ts`
 
-- Lines: `80`
-- Size: `3919` bytes
+- Lines: `82`
+- Size: `4023` bytes
 - Internal dependencies:
   - `functions/src/service/tasks/adminApprovalWriteBack.ts`
   - `functions/src/service/tasks/adminNotifyPendingApprovals.ts`
   - `functions/src/service/tasks/basenGrantInstructorRewards.ts`
   - `functions/src/service/tasks/basenNotifySessionCancelled.ts`
+  - `functions/src/service/tasks/eventsNotifyKierownik.ts`
   - `functions/src/service/tasks/eventsNotifyNew.ts`
   - `functions/src/service/tasks/eventsNotifyUpcoming.ts`
   - `functions/src/service/tasks/eventsSyncCalendar.ts`
@@ -7428,6 +7530,7 @@ Excluded sensitive files:
   - `import/require ./tasks/adminNotifyPendingApprovals`
   - `import/require ./tasks/basenGrantInstructorRewards`
   - `import/require ./tasks/basenNotifySessionCancelled`
+  - `import/require ./tasks/eventsNotifyKierownik`
   - `import/require ./tasks/eventsNotifyNew`
   - `import/require ./tasks/eventsNotifyUpcoming`
   - `import/require ./tasks/eventsSyncCalendar`
@@ -7547,6 +7650,22 @@ Excluded sensitive files:
 - Functions:
   - `norm`
 
+### `functions/src/service/tasks/eventsNotifyKierownik.ts`
+
+- Lines: `111`
+- Size: `4598` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/app_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/service/types.ts`
+- Imports:
+  - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require ../types`
+- Functions:
+  - `buildKierownikEmail`
+  - `dateRange`
+
 ### `functions/src/service/tasks/eventsNotifyNew.ts`
 
 - Lines: `111`
@@ -7604,8 +7723,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/eventsSyncFromSheet.ts`
 
-- Lines: `638`
-- Size: `26559` bytes
+- Lines: `620`
+- Size: `25794` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/events_service.ts`
   - `functions/src/modules/shared/text_utils.ts`
@@ -8066,8 +8185,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/triggers/onEventApproved.ts`
 
-- Lines: `58`
-- Size: `2036` bytes
+- Lines: `100`
+- Size: `4075` bytes
 - Internal dependencies:
   - `functions/src/service/service_config.ts`
 - Imports:
@@ -8075,6 +8194,7 @@ Excluded sensitive files:
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2/firestore`
 - Functions:
+  - `jobIdForNotifyKierownik`
   - `jobIdForNotifyNew`
 
 ### `functions/src/service/triggers/onUsersActiveCreated.ts`
@@ -8151,8 +8271,8 @@ Excluded sensitive files:
 
 ### `functions/test/events_core.test.ts`
 
-- Lines: `410`
-- Size: `18289` bytes
+- Lines: `418`
+- Size: `18699` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/events_service.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
@@ -8270,8 +8390,8 @@ Excluded sensitive files:
 
 ### `public/core/app_shell.js`
 
-- Lines: `300`
-- Size: `10524` bytes
+- Lines: `326`
+- Size: `11887` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/modules_registry.js`
@@ -8280,6 +8400,7 @@ Excluded sensitive files:
 - Functions:
   - `hardResetUi`
   - `showAuthError`
+  - `triggerHardReloadWithFeedback`
   - `updateSwBannerVisibility`
 
 ### `public/core/club_badges.js`
@@ -8368,8 +8489,8 @@ Excluded sensitive files:
 
 ### `public/core/render_shell.js`
 
-- Lines: `1867`
-- Size: `84622` bytes
+- Lines: `1874`
+- Size: `85115` bytes
 - Imports:
   - `import/require /core/access_control.js`
   - `import/require /core/api_client.js`
@@ -8451,9 +8572,10 @@ Excluded sensitive files:
 
 ### `public/core/sw_update.js`
 
-- Lines: `24`
-- Size: `972` bytes
+- Lines: `43`
+- Size: `1817` bytes
 - Functions:
+  - `delay`
   - `hardReloadApp`
 
 ### `public/core/text_format.js`
@@ -8489,8 +8611,8 @@ Excluded sensitive files:
 
 ### `public/modules/admin_pending_module.js`
 
-- Lines: `527`
-- Size: `29034` bytes
+- Lines: `531`
+- Size: `29324` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
@@ -8571,15 +8693,17 @@ Excluded sensitive files:
 
 ### `public/modules/gear_module.js`
 
-- Lines: `2548`
-- Size: `111424` bytes
+- Lines: `2619`
+- Size: `115436` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
   - `import/require /core/firebase_client.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
+  - `applyClubEventDates`
   - `applyFilter`
+  - `applySelectedEventToHeader`
   - `buildGenericGearTitle`
   - `buildHelmetLine2`
   - `buildHelmetLine3`
@@ -8601,6 +8725,8 @@ Excluded sensitive files:
   - `formatItemLabel`
   - `formatItemLabelFromParts`
   - `gearTabIcon`
+  - `getActiveKierownikEvents`
+  - `getSelectedClubEvent`
   - `heartSvg`
   - `invalidateAvailabilityAndRefresh`
   - `isDirty`
@@ -8643,6 +8769,7 @@ Excluded sensitive files:
   - `snapshotBaseline`
   - `startBundleForItem`
   - `submitBundleReservation`
+  - `switchEvent`
   - `toBool`
   - `toBoolOrNull`
   - `updateSummaryAndButton`
@@ -8705,8 +8832,8 @@ Excluded sensitive files:
 
 ### `public/modules/klub_module.js`
 
-- Lines: `250`
-- Size: `10933` bytes
+- Lines: `282`
+- Size: `13172` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/firebase_client.js`
@@ -8717,6 +8844,7 @@ Excluded sensitive files:
   - `escapeAttr`
   - `escapeHtml`
   - `formatNrb`
+  - `openMap`
   - `renderActiveTab`
   - `renderHeaderInfo`
   - `renderKluczeTable`
@@ -8726,15 +8854,14 @@ Excluded sensitive files:
 
 ### `public/modules/km_module.js`
 
-- Lines: `1512`
-- Size: `60177` bytes
+- Lines: `1386`
+- Size: `54796` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/text_format.js`
 - Functions:
   - `attachInfoTips`
   - `attachPlacesAutocomplete`
-  - `buildPopup`
   - `clearLocationDisplay`
   - `closeKmActivePopover`
   - `closeModal`
@@ -8746,7 +8873,6 @@ Excluded sensitive files:
   - `infoTip`
   - `injectKmLocStyles`
   - `loadCss`
-  - `loadLeaflet`
   - `loadRanking`
   - `loadScript`
   - `openMap`
@@ -8756,8 +8882,6 @@ Excluded sensitive files:
   - `renderKmView`
   - `renderKursantFormView`
   - `renderKursantRankingView`
-  - `renderMapView`
-  - `renderMarkers`
   - `renderMyLogsView`
   - `renderMyStatsView`
   - `renderRankingsView`
@@ -9079,8 +9203,8 @@ Excluded sensitive files:
 
 ### `firebase.json`
 
-- Lines: `534`
-- Size: `13374` bytes
+- Lines: `542`
+- Size: `13636` bytes
 - Detected top-level keys / sections:
   - `emulators`
   - `firestore`
@@ -9090,7 +9214,7 @@ Excluded sensitive files:
 ### `firestore.indexes.json`
 
 - Lines: `146`
-- Size: `4242` bytes
+- Size: `4248` bytes
 - Detected top-level keys / sections:
   - `fieldOverrides`
   - `indexes`
@@ -9717,8 +9841,8 @@ Excluded sensitive files:
 
 ### `DOCS/Sessions & TO DOs/04.09_imprezy_klubowe_wdrozenie_podsumowanie.md`
 
-- Lines: `230`
-- Size: `16361` bytes
+- Lines: `276`
+- Size: `19780` bytes
 - Headings:
   - `# Imprezy klubowe — kierownik rezerwuje sprzęt — podsumowanie wdrożenia`
   - `## Co działa (zweryfikowane live na prod)`
@@ -9731,7 +9855,41 @@ Excluded sensitive files:
   - `## Runda 6 (dzisiejszy feedback #5) — dwa błędy w widoku sprzętu`
   - `## Runda 7 (dzisiejszy feedback #6) — bez przycisku "Więcej" dla rzutek/fartuchów`
   - `## Runda 8 (05.09.2026) — mechanizm godzinkowy CAŁKOWICIE pomijany dla imprez klubowych`
+  - `## Runda 9 (05.09.2026) — wielu kierowników na jedną imprezę (z poziomu arkusza)`
   - `## Pliki zmienione (runda 2)`
+
+### `DOCS/Sessions & TO DOs/05.09_prompt_kalendarz_rezerwacji_styl.md`
+
+- Lines: `595`
+- Size: `20935` bytes
+- Headings:
+  - `# Prompt do odtworzenia stylu kalendarza rezerwacji w innym projekcie`
+  - `## Design tokeny (dostosuj nazwy zmiennych do istniejących, jeśli projekt już ma system motywów; jeśli nie — użyj tych)`
+  - `## Wygląd komponentu kalendarza`
+  - `## Logika interakcji (JS, framework-agnostic — poniżej referencyjna implementacja Vanilla JS do adaptacji)`
+  - `## Bonus: styl kart z listą do rezerwacji (jeśli robisz też listę pozycji obok kalendarza)`
+
+### `DOCS/Sessions & TO DOs/06.09_prompt_design_system_nawigacja_kafelki.md`
+
+- Lines: `624`
+- Size: `19870` bytes
+- Headings:
+  - `# Prompt do odtworzenia stylu (design system) w innym projekcie`
+  - `## Filozofia stylu`
+  - `## 1. Mechanizm przełączania motywu`
+  - `## 2. Tokeny (zmienne CSS) — kolory, odstępy, promienie, cienie`
+  - `## 3. Tło strony i typografia`
+  - `## 4. Karty (podstawowy kontener treści)`
+  - `## 5. Przyciski`
+  - `## 6. Pola formularza`
+  - `## 7. Nawigacja główna — pigułki na desktopie, dolny pasek na mobile`
+  - `## 8. Nagłówek ekranu/modułu (powtarzalny na każdym pod-ekranie)`
+  - `## 9. Kafelki z ikonką — DUŻY wariant (strona główna)`
+  - `## 10. Kafelki z ikonką — MAŁY wariant (sekcje wewnętrzne, np. pod-nawigacja ekranu)`
+  - `## 11. Chipy statystyk (mała plakietka klucz/wartość)`
+  - `## 12. Odznaki/plakietki (pill badge)`
+  - `## 13. Modal (okno dialogowe) — wyśrodkowany na desktopie, bottom-sheet na mobile`
+  - `## Podsumowanie zasad do zastosowania w nowych komponentach`
 
 ### `DOCS/Sessions & TO DOs/10.06_session_summary.md`
 
@@ -11770,7 +11928,7 @@ Excluded sensitive files:
 - `functions/.gitignore` — 10 lines, 153 bytes
 - `public/404.html` — 34 lines, 1808 bytes
 - `public/index.html` — 56 lines, 2344 bytes
-- `public/map.html` — 323 lines, 9987 bytes
+- `public/map.html` — 369 lines, 12601 bytes
 - `public/skrypt_kurs/chapters/ch01.html` — 6 lines, 547 bytes
 - `public/skrypt_kurs/chapters/ch02.html` — 201 lines, 11069 bytes
 - `public/skrypt_kurs/chapters/ch03.html` — 169 lines, 9113 bytes
@@ -11786,7 +11944,7 @@ Excluded sensitive files:
 - `public/styles/godzinki.css` — 194 lines, 3828 bytes
 - `public/styles/km.css` — 496 lines, 10234 bytes
 - `public/styles/kurs.css` — 430 lines, 7128 bytes
-- `public/styles/start.css` — 335 lines, 12694 bytes
+- `public/styles/start.css` — 349 lines, 13463 bytes
 - `tests/e2e/.gitignore` — 11 lines, 142 bytes
 - `tests/e2e/reports/events_e2e_run.txt` — 110 lines, 8703 bytes
 - `tests/e2e/reports/godzinki_e2e_run.txt` — 57 lines, 5149 bytes

@@ -32,6 +32,7 @@ import { reconcileWorkspaceGroupsTask } from "./tasks/reconcileWorkspaceGroups";
 import { eventsNotifyNewTask } from "./tasks/eventsNotifyNew";
 import { eventsNotifyUpcomingTask } from "./tasks/eventsNotifyUpcoming";
 import { eventsNotifyKierownikTask } from "./tasks/eventsNotifyKierownik";
+import { gearNotifyDamageReportTask } from "./tasks/gearNotifyDamageReport";
 
 const tasks: ServiceTask[] = [
   onUserRegisteredWelcomeTask,
@@ -69,6 +70,7 @@ const tasks: ServiceTask[] = [
   eventsNotifyNewTask,
   eventsNotifyUpcomingTask,
   eventsNotifyKierownikTask,
+  gearNotifyDamageReportTask,
 ];
 
 export function getTaskRegistry(): Map<string, ServiceTask> {

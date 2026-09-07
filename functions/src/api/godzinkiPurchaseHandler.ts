@@ -15,6 +15,7 @@ export type GodzinkiPurchaseDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   enqueueGodzinkiSheetWrite?: (recordId: string, uid: string) => Promise<void>;
+  godzinkiRoleKeys: string[];
 };
 
 /**
@@ -32,7 +33,7 @@ export type GodzinkiPurchaseDeps = {
  *   - Kwota nie może wynieść więcej niż |saldo|
  */
 export async function handleGodzinkiPurchase(req: Request, res: Response, deps: GodzinkiPurchaseDeps) {
-  const {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, enqueueGodzinkiSheetWrite} = deps;
+  const {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, enqueueGodzinkiSheetWrite, godzinkiRoleKeys} = deps;
 
   if (sendPreflight(req, res)) return;
   if (!requireAllowedHost(req, res)) return;
@@ -57,6 +58,12 @@ export async function handleGodzinkiPurchase(req: Request, res: Response, deps: 
       const statusKey = String((userSnap.data() as any)?.status_key || "");
       if (await isUserStatusBlocked(db, statusKey)) {
         res.status(403).json({ok: false, code: "forbidden", error: "Konto zawieszone."});
+        return;
+      }
+
+      const roleKey = String((userSnap.data() as any)?.role_key || "");
+      if (!godzinkiRoleKeys.includes(roleKey)) {
+        res.status(403).json({ok: false, code: "forbidden", error: "Wykup godzinek wymaga roli Kandydat lub Członek."});
         return;
       }
 

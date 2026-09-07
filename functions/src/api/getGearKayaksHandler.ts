@@ -150,7 +150,13 @@ export async function handleGetGearKayaks(req: Request, res: Response, deps: Get
         loadReservedKayakIdsNow(db),
       ]);
 
-      const kayaks = kayaksSnap.docs.map((d) => pickKayak({...d.data(), id: String(d.data()?.id || "") || d.id}, reservedKayakIdsNow));
+      const kayaks = kayaksSnap.docs
+        .map((d) => ({...d.data(), id: String(d.data()?.id || "") || d.id}))
+        .map((d) => pickKayak(d, reservedKayakIdsNow));
+
+      kayaks.sort((a, b) =>
+        String(a?.number || a?.id || "").localeCompare(String(b?.number || b?.id || ""), "pl", {numeric: true})
+      );
 
       res.status(200).json({ok: true, kayaks});
     } catch (err: any) {

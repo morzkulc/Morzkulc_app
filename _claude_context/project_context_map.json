@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-05T09:38:04",
+  "generated_at": "2026-09-07T09:34:31",
   "project_root": "C:\\Users\\kswitek\\Documents\\morzkulc_app",
   "settings": {
     "excluded_dirs": [
@@ -2362,9 +2362,9 @@
     {
       "path": "DOCS/Sessions & TO DOs/04.09_imprezy_klubowe_wdrozenie_podsumowanie.md",
       "extension": ".md",
-      "size_bytes": 16361,
-      "line_count": 230,
-      "sha1_short": "5b8d8b8189",
+      "size_bytes": 19780,
+      "line_count": 276,
+      "sha1_short": "c6d9d64ada",
       "kind": "markdown",
       "module_aliases": [],
       "imports": [],
@@ -2384,7 +2384,65 @@
         "## Runda 6 (dzisiejszy feedback #5) — dwa błędy w widoku sprzętu",
         "## Runda 7 (dzisiejszy feedback #6) — bez przycisku \"Więcej\" dla rzutek/fartuchów",
         "## Runda 8 (05.09.2026) — mechanizm godzinkowy CAŁKOWICIE pomijany dla imprez klubowych",
+        "## Runda 9 (05.09.2026) — wielu kierowników na jedną imprezę (z poziomu arkusza)",
         "## Pliki zmienione (runda 2)"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/05.09_prompt_kalendarz_rezerwacji_styl.md",
+      "extension": ".md",
+      "size_bytes": 20935,
+      "line_count": 595,
+      "sha1_short": "97c01f4a78",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Prompt do odtworzenia stylu kalendarza rezerwacji w innym projekcie",
+        "## Design tokeny (dostosuj nazwy zmiennych do istniejących, jeśli projekt już ma system motywów; jeśli nie — użyj tych)",
+        "## Wygląd komponentu kalendarza",
+        "## Logika interakcji (JS, framework-agnostic — poniżej referencyjna implementacja Vanilla JS do adaptacji)",
+        "## Bonus: styl kart z listą do rezerwacji (jeśli robisz też listę pozycji obok kalendarza)"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/06.09_prompt_design_system_nawigacja_kafelki.md",
+      "extension": ".md",
+      "size_bytes": 19870,
+      "line_count": 624,
+      "sha1_short": "74c8ccc3d4",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Prompt do odtworzenia stylu (design system) w innym projekcie",
+        "## Filozofia stylu",
+        "## 1. Mechanizm przełączania motywu",
+        "## 2. Tokeny (zmienne CSS) — kolory, odstępy, promienie, cienie",
+        "## 3. Tło strony i typografia",
+        "## 4. Karty (podstawowy kontener treści)",
+        "## 5. Przyciski",
+        "## 6. Pola formularza",
+        "## 7. Nawigacja główna — pigułki na desktopie, dolny pasek na mobile",
+        "## 8. Nagłówek ekranu/modułu (powtarzalny na każdym pod-ekranie)",
+        "## 9. Kafelki z ikonką — DUŻY wariant (strona główna)",
+        "## 10. Kafelki z ikonką — MAŁY wariant (sekcje wewnętrzne, np. pod-nawigacja ekranu)",
+        "## 11. Chipy statystyk (mała plakietka klucz/wartość)",
+        "## 12. Odznaki/plakietki (pill badge)",
+        "## 13. Modal (okno dialogowe) — wyśrodkowany na desktopie, bottom-sheet na mobile",
+        "## Podsumowanie zasad do zastosowania w nowych komponentach"
       ],
       "config_keys": [],
       "notes": []
@@ -5246,9 +5304,9 @@
     {
       "path": "firebase.json",
       "extension": ".json",
-      "size_bytes": 13374,
-      "line_count": 534,
-      "sha1_short": "297f8f238d",
+      "size_bytes": 13636,
+      "line_count": 542,
+      "sha1_short": "d88805364f",
       "kind": "config",
       "module_aliases": [],
       "imports": [],
@@ -5268,9 +5326,9 @@
     {
       "path": "firestore.indexes.json",
       "extension": ".json",
-      "size_bytes": 4242,
+      "size_bytes": 4248,
       "line_count": 146,
-      "sha1_short": "9e4ad8bcf9",
+      "sha1_short": "07e00ef25c",
       "kind": "config",
       "module_aliases": [],
       "imports": [],
@@ -5322,19 +5380,12 @@
     {
       "path": "functions/lib/api/adminApprovalHandler.js",
       "extension": ".js",
-      "size_bytes": 12295,
-      "line_count": 252,
-      "sha1_short": "6059a81a9b",
+      "size_bytes": 10802,
+      "line_count": 232,
+      "sha1_short": "3914cae49a",
       "kind": "script",
       "module_aliases": [],
       "imports": [
-        {
-          "raw": "import/require ../modules/calendar/events_service",
-          "module": "../modules/calendar/events_service",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
         {
           "raw": "import/require ../modules/hours/godzinki_service",
           "module": "../modules/hours/godzinki_service",
@@ -5365,7 +5416,6 @@
         }
       ],
       "internal_dependencies": [
-        "functions/lib/modules/calendar/events_service.js",
         "functions/lib/modules/hours/godzinki_service.js",
         "functions/lib/modules/hours/godzinki_vars.js"
       ],
@@ -6279,9 +6329,9 @@
     {
       "path": "functions/lib/api/gearBundleReservationCreateHandler.js",
       "extension": ".js",
-      "size_bytes": 4898,
-      "line_count": 102,
-      "sha1_short": "44766525b3",
+      "size_bytes": 4993,
+      "line_count": 104,
+      "sha1_short": "9f7fe5f3b0",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -7230,9 +7280,9 @@
     {
       "path": "functions/lib/api/getAdminPendingHandler.js",
       "extension": ".js",
-      "size_bytes": 25123,
-      "line_count": 398,
-      "sha1_short": "6e7e66e3b3",
+      "size_bytes": 25578,
+      "line_count": 400,
+      "sha1_short": "7c35ea9800",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9131,9 +9181,9 @@
     {
       "path": "functions/lib/api/registerUserHandler.js",
       "extension": ".js",
-      "size_bytes": 41545,
+      "size_bytes": 41599,
       "line_count": 762,
-      "sha1_short": "7dad99523f",
+      "sha1_short": "5539b9a170",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -10968,9 +11018,9 @@
     {
       "path": "functions/lib/modules/calendar/events_service.js",
       "extension": ".js",
-      "size_bytes": 9946,
-      "line_count": 229,
-      "sha1_short": "30f134850e",
+      "size_bytes": 11163,
+      "line_count": 248,
+      "sha1_short": "076dbb978f",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -11006,17 +11056,7 @@
           "doc": null
         },
         {
-          "name": "findActiveKierownikConflict",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
-          "name": "findActiveKierownikEvent",
+          "name": "findActiveKierownikEvents",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -11037,6 +11077,16 @@
         },
         {
           "name": "isValidOrganizerKey",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "kierownikUidsOf",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -11086,6 +11136,16 @@
           "doc": null
         },
         {
+          "name": "resolveKierownicyList",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "resolveKierownikCandidate",
           "type": "function",
           "line_start": null,
@@ -11104,9 +11164,9 @@
     {
       "path": "functions/lib/modules/equipment/bundle/gear_bundle_service.js",
       "extension": ".js",
-      "size_bytes": 60381,
-      "line_count": 1117,
-      "sha1_short": "275b399111",
+      "size_bytes": 61305,
+      "line_count": 1140,
+      "sha1_short": "48281f6b7a",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -12435,9 +12495,9 @@
     {
       "path": "functions/lib/modules/setup/app_vars.js",
       "extension": ".js",
-      "size_bytes": 1126,
+      "size_bytes": 1119,
       "line_count": 26,
-      "sha1_short": "10f64ee092",
+      "sha1_short": "3d825d5075",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
@@ -13122,9 +13182,9 @@
     {
       "path": "functions/lib/service/registry.js",
       "extension": ".js",
-      "size_bytes": 4848,
-      "line_count": 81,
-      "sha1_short": "a77e898a02",
+      "size_bytes": 4977,
+      "line_count": 83,
+      "sha1_short": "c9431cd1bd",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -13152,6 +13212,13 @@
         {
           "raw": "import/require ./tasks/basenNotifySessionCancelled",
           "module": "./tasks/basenNotifySessionCancelled",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/eventsNotifyKierownik",
+          "module": "./tasks/eventsNotifyKierownik",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -13358,6 +13425,7 @@
         "functions/lib/service/tasks/adminNotifyPendingApprovals.js",
         "functions/lib/service/tasks/basenGrantInstructorRewards.js",
         "functions/lib/service/tasks/basenNotifySessionCancelled.js",
+        "functions/lib/service/tasks/eventsNotifyKierownik.js",
         "functions/lib/service/tasks/eventsNotifyNew.js",
         "functions/lib/service/tasks/eventsNotifyUpcoming.js",
         "functions/lib/service/tasks/eventsSyncCalendar.js",
@@ -13706,6 +13774,62 @@
       "notes": []
     },
     {
+      "path": "functions/lib/service/tasks/eventsNotifyKierownik.js",
+      "extension": ".js",
+      "size_bytes": 4834,
+      "line_count": 82,
+      "sha1_short": "03ac1f4e9f",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/setup/app_vars",
+          "module": "../../modules/setup/app_vars",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/app_vars.js",
+        "functions/lib/modules/shared/text_utils.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "buildKierownikEmail",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "dateRange",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/service/tasks/eventsNotifyNew.js",
       "extension": ".js",
       "size_bytes": 4298,
@@ -13916,9 +14040,9 @@
     {
       "path": "functions/lib/service/tasks/eventsSyncFromSheet.js",
       "extension": ".js",
-      "size_bytes": 32592,
-      "line_count": 596,
-      "sha1_short": "bc1272e628",
+      "size_bytes": 31209,
+      "line_count": 577,
+      "sha1_short": "c05710b39d",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -15993,9 +16117,9 @@
     {
       "path": "functions/lib/service/triggers/onEventApproved.js",
       "extension": ".js",
-      "size_bytes": 3973,
-      "line_count": 86,
-      "sha1_short": "27616d7f03",
+      "size_bytes": 6341,
+      "line_count": 125,
+      "sha1_short": "9b87e2e16c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -16026,6 +16150,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "jobIdForNotifyKierownik",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "jobIdForNotifyNew",
           "type": "function",
@@ -16516,6 +16650,139 @@
       "notes": []
     },
     {
+      "path": "functions/scripts/checkEventsKierownikSyncPreview.js",
+      "extension": ".js",
+      "size_bytes": 11774,
+      "line_count": 246,
+      "sha1_short": "10f0ffe02a",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require googleapis",
+          "module": "googleapis",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "canonicalHeader",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "cell",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "exchangeJwtForAccessToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getDelegatedSheetsClient",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isApproved",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isUserStatusBlocked",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "normalizeOrganizerToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "parseOrganizerFromSheetCell",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "resolveKierownikCandidate",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "signJwtWithIamCredentials",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/scripts/checkGearReport.js",
       "extension": ".js",
       "size_bytes": 5325,
@@ -16555,6 +16822,31 @@
           "doc": null
         }
       ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/scripts/checkKierownikUidsExposure.js",
+      "extension": ".js",
+      "size_bytes": 2539,
+      "line_count": 66,
+      "sha1_short": "56eca71fe2",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
       "top_level_symbols": [],
       "headings": [],
       "config_keys": [],
@@ -16601,6 +16893,97 @@
         },
         {
           "name": "hasFinanceFields",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/scripts/checkLinkAplikacjiFirestore.js",
+      "extension": ".js",
+      "size_bytes": 527,
+      "line_count": 11,
+      "sha1_short": "f79b688270",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/scripts/checkLinkAplikacjiVar.js",
+      "extension": ".js",
+      "size_bytes": 3445,
+      "line_count": 70,
+      "sha1_short": "003c7e7403",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require googleapis",
+          "module": "googleapis",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "exchangeJwtForAccessToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getDelegatedSheetsClient",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "normalizeHeader",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "signJwtWithIamCredentials",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -16864,6 +17247,31 @@
       "notes": []
     },
     {
+      "path": "functions/scripts/enqueueEventsSyncFromSheet.js",
+      "extension": ".js",
+      "size_bytes": 1508,
+      "line_count": 42,
+      "sha1_short": "92dbbd2082",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/scripts/enqueueGodzinkiTransitionImport.js",
       "extension": ".js",
       "size_bytes": 2544,
@@ -17063,6 +17471,31 @@
           "doc": null
         }
       ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/scripts/enqueueSetupSyncFromSheet.js",
+      "extension": ".js",
+      "size_bytes": 1444,
+      "line_count": 41,
+      "sha1_short": "ea2b63bb88",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
       "top_level_symbols": [],
       "headings": [],
       "config_keys": [],
@@ -17553,6 +17986,62 @@
       "notes": []
     },
     {
+      "path": "functions/scripts/updateLinkAplikacjiVar.js",
+      "extension": ".js",
+      "size_bytes": 2843,
+      "line_count": 63,
+      "sha1_short": "33dd97fb9e",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require googleapis",
+          "module": "googleapis",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "exchangeJwtForAccessToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getDelegatedSheetsClient",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "signJwtWithIamCredentials",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/scripts/verifyDeploy.js",
       "extension": ".js",
       "size_bytes": 1898,
@@ -17636,19 +18125,12 @@
     {
       "path": "functions/src/api/adminApprovalHandler.ts",
       "extension": ".ts",
-      "size_bytes": 9924,
-      "line_count": 244,
-      "sha1_short": "d5d3d227a7",
+      "size_bytes": 8701,
+      "line_count": 223,
+      "sha1_short": "83ae5c0209",
       "kind": "script",
       "module_aliases": [],
       "imports": [
-        {
-          "raw": "import/require ../modules/calendar/events_service",
-          "module": "../modules/calendar/events_service",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
         {
           "raw": "import/require ../modules/hours/godzinki_service",
           "module": "../modules/hours/godzinki_service",
@@ -17686,7 +18168,6 @@
         }
       ],
       "internal_dependencies": [
-        "functions/src/modules/calendar/events_service.ts",
         "functions/src/modules/hours/godzinki_service.ts",
         "functions/src/modules/hours/godzinki_vars.ts"
       ],
@@ -18420,9 +18901,9 @@
     {
       "path": "functions/src/api/gearBundleReservationCreateHandler.ts",
       "extension": ".ts",
-      "size_bytes": 4583,
-      "line_count": 126,
-      "sha1_short": "605ec79bbb",
+      "size_bytes": 4664,
+      "line_count": 128,
+      "sha1_short": "7bd0bc4d36",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -19455,9 +19936,9 @@
     {
       "path": "functions/src/api/getAdminPendingHandler.ts",
       "extension": ".ts",
-      "size_bytes": 20307,
-      "line_count": 496,
-      "sha1_short": "2691eba478",
+      "size_bytes": 20645,
+      "line_count": 498,
+      "sha1_short": "c151092d77",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -21279,9 +21760,9 @@
     {
       "path": "functions/src/api/registerUserHandler.ts",
       "extension": ".ts",
-      "size_bytes": 38104,
+      "size_bytes": 38172,
       "line_count": 960,
-      "sha1_short": "a425269cbf",
+      "sha1_short": "77dde95c51",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -23148,9 +23629,9 @@
     {
       "path": "functions/src/modules/calendar/events_service.ts",
       "extension": ".ts",
-      "size_bytes": 10758,
-      "line_count": 311,
-      "sha1_short": "b8635346b7",
+      "size_bytes": 12679,
+      "line_count": 343,
+      "sha1_short": "4c7c6fcf02",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -23186,17 +23667,7 @@
           "doc": null
         },
         {
-          "name": "findActiveKierownikConflict",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
-          "name": "findActiveKierownikEvent",
+          "name": "findActiveKierownikEvents",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -23217,6 +23688,16 @@
         },
         {
           "name": "isValidOrganizerKey",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "kierownikUidsOf",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -23266,6 +23747,16 @@
           "doc": null
         },
         {
+          "name": "resolveKierownicyList",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "resolveKierownikCandidate",
           "type": "function",
           "line_start": null,
@@ -23284,9 +23775,9 @@
     {
       "path": "functions/src/modules/equipment/bundle/gear_bundle_service.ts",
       "extension": ".ts",
-      "size_bytes": 54813,
-      "line_count": 1322,
-      "sha1_short": "2a7d4c5518",
+      "size_bytes": 55935,
+      "line_count": 1348,
+      "sha1_short": "57de3e9d75",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -24640,9 +25131,9 @@
     {
       "path": "functions/src/modules/setup/app_vars.ts",
       "extension": ".ts",
-      "size_bytes": 1501,
+      "size_bytes": 1494,
       "line_count": 41,
-      "sha1_short": "5bebe7e5e1",
+      "sha1_short": "eeffa456ee",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
@@ -25317,9 +25808,9 @@
     {
       "path": "functions/src/service/registry.ts",
       "extension": ".ts",
-      "size_bytes": 3919,
-      "line_count": 80,
-      "sha1_short": "d05fad28e9",
+      "size_bytes": 4023,
+      "line_count": 82,
+      "sha1_short": "b1b15d4409",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -25347,6 +25838,13 @@
         {
           "raw": "import/require ./tasks/basenNotifySessionCancelled",
           "module": "./tasks/basenNotifySessionCancelled",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/eventsNotifyKierownik",
+          "module": "./tasks/eventsNotifyKierownik",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -25560,6 +26058,7 @@
         "functions/src/service/tasks/adminNotifyPendingApprovals.ts",
         "functions/src/service/tasks/basenGrantInstructorRewards.ts",
         "functions/src/service/tasks/basenNotifySessionCancelled.ts",
+        "functions/src/service/tasks/eventsNotifyKierownik.ts",
         "functions/src/service/tasks/eventsNotifyNew.ts",
         "functions/src/service/tasks/eventsNotifyUpcoming.ts",
         "functions/src/service/tasks/eventsSyncCalendar.ts",
@@ -25951,6 +26450,70 @@
       "notes": []
     },
     {
+      "path": "functions/src/service/tasks/eventsNotifyKierownik.ts",
+      "extension": ".ts",
+      "size_bytes": 4598,
+      "line_count": 111,
+      "sha1_short": "26d8bb3d1c",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/setup/app_vars",
+          "module": "../../modules/setup/app_vars",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../types",
+          "module": "../types",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/app_vars.ts",
+        "functions/src/modules/shared/text_utils.ts",
+        "functions/src/service/types.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "buildKierownikEmail",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "dateRange",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/service/tasks/eventsNotifyNew.ts",
       "extension": ".ts",
       "size_bytes": 3819,
@@ -26185,9 +26748,9 @@
     {
       "path": "functions/src/service/tasks/eventsSyncFromSheet.ts",
       "extension": ".ts",
-      "size_bytes": 26559,
-      "line_count": 638,
-      "sha1_short": "76d5d755de",
+      "size_bytes": 25794,
+      "line_count": 620,
+      "sha1_short": "1e6198a17b",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -28387,9 +28950,9 @@
     {
       "path": "functions/src/service/triggers/onEventApproved.ts",
       "extension": ".ts",
-      "size_bytes": 2036,
-      "line_count": 58,
-      "sha1_short": "4032fb32b2",
+      "size_bytes": 4075,
+      "line_count": 100,
+      "sha1_short": "6df4a4dc2e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -28420,6 +28983,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "jobIdForNotifyKierownik",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "jobIdForNotifyNew",
           "type": "function",
@@ -28742,9 +29315,9 @@
     {
       "path": "functions/test/events_core.test.ts",
       "extension": ".ts",
-      "size_bytes": 18289,
-      "line_count": 410,
-      "sha1_short": "7a5eb827f0",
+      "size_bytes": 18699,
+      "line_count": 418,
+      "sha1_short": "3cfce6d1fb",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -29861,9 +30434,9 @@
     {
       "path": "public/core/app_shell.js",
       "extension": ".js",
-      "size_bytes": 10524,
-      "line_count": 300,
-      "sha1_short": "a657440185",
+      "size_bytes": 11887,
+      "line_count": 326,
+      "sha1_short": "9810134e42",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -29911,6 +30484,16 @@
         },
         {
           "name": "showAuthError",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "triggerHardReloadWithFeedback",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -30514,9 +31097,9 @@
     {
       "path": "public/core/render_shell.js",
       "extension": ".js",
-      "size_bytes": 84622,
-      "line_count": 1867,
-      "sha1_short": "6460c8100f",
+      "size_bytes": 85115,
+      "line_count": 1874,
+      "sha1_short": "993272d736",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -31236,15 +31819,25 @@
     {
       "path": "public/core/sw_update.js",
       "extension": ".js",
-      "size_bytes": 972,
-      "line_count": 24,
-      "sha1_short": "b8fe927bc6",
+      "size_bytes": 1817,
+      "line_count": 43,
+      "sha1_short": "eaba14bf52",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
       "internal_dependencies": [],
       "classes": [],
       "functions": [
+        {
+          "name": "delay",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "hardReloadApp",
           "type": "function",
@@ -31494,9 +32087,9 @@
     {
       "path": "public/map.html",
       "extension": ".html",
-      "size_bytes": 9987,
-      "line_count": 323,
-      "sha1_short": "37ca32bd00",
+      "size_bytes": 12601,
+      "line_count": 369,
+      "sha1_short": "cc5400cc0b",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -31511,9 +32104,9 @@
     {
       "path": "public/modules/admin_pending_module.js",
       "extension": ".js",
-      "size_bytes": 29034,
-      "line_count": 527,
-      "sha1_short": "7883c5c155",
+      "size_bytes": 29324,
+      "line_count": 531,
+      "sha1_short": "adcf89ac20",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -32211,9 +32804,9 @@
     {
       "path": "public/modules/gear_module.js",
       "extension": ".js",
-      "size_bytes": 111424,
-      "line_count": 2548,
-      "sha1_short": "756e41c751",
+      "size_bytes": 115436,
+      "line_count": 2619,
+      "sha1_short": "381b5d329c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -32250,7 +32843,27 @@
       "classes": [],
       "functions": [
         {
+          "name": "applyClubEventDates",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "applyFilter",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "applySelectedEventToHeader",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -32461,6 +33074,26 @@
         },
         {
           "name": "gearTabIcon",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getActiveKierownikEvents",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getSelectedClubEvent",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -32881,6 +33514,16 @@
         },
         {
           "name": "submitBundleReservation",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "switchEvent",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33374,9 +34017,9 @@
     {
       "path": "public/modules/klub_module.js",
       "extension": ".js",
-      "size_bytes": 10933,
-      "line_count": 250,
-      "sha1_short": "cddc418f24",
+      "size_bytes": 13172,
+      "line_count": 282,
+      "sha1_short": "c89850c9cd",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33444,6 +34087,16 @@
         },
         {
           "name": "formatNrb",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "openMap",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33521,9 +34174,9 @@
     {
       "path": "public/modules/km_module.js",
       "extension": ".js",
-      "size_bytes": 60177,
-      "line_count": 1512,
-      "sha1_short": "1fe10bde85",
+      "size_bytes": 54796,
+      "line_count": 1386,
+      "sha1_short": "d4b6b50316",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33557,16 +34210,6 @@
         },
         {
           "name": "attachPlacesAutocomplete",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
-          "name": "buildPopup",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33686,16 +34329,6 @@
           "doc": null
         },
         {
-          "name": "loadLeaflet",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
           "name": "loadRanking",
           "type": "function",
           "line_start": null,
@@ -33777,26 +34410,6 @@
         },
         {
           "name": "renderKursantRankingView",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
-          "name": "renderMapView",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
-          "name": "renderMarkers",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -35204,9 +35817,9 @@
     {
       "path": "public/styles/start.css",
       "extension": ".css",
-      "size_bytes": 12694,
-      "line_count": 335,
-      "sha1_short": "9a61dc7034",
+      "size_bytes": 13463,
+      "line_count": 349,
+      "sha1_short": "a8b1ee57dd",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -35223,7 +35836,7 @@
       "extension": ".js",
       "size_bytes": 5447,
       "line_count": 157,
-      "sha1_short": "c4986c060e",
+      "sha1_short": "756ef738a4",
       "kind": "script",
       "module_aliases": [],
       "imports": [],

@@ -32,7 +32,7 @@ export type ReservationKind = "kayak_bundle" | "gear_only";
 // Constants
 // ──────────────────────────────────────────────────────────────────────────────
 
-const CATEGORY_COLLECTIONS: Record<string, string> = {
+export const CATEGORY_COLLECTIONS: Record<string, string> = {
   kayaks: "gear_kayaks",
   paddles: "gear_paddles",
   lifejackets: "gear_lifejackets",
@@ -1297,6 +1297,7 @@ export async function getItemsWithAvailability(
       brand,
       model,
       type: norm(d?.type),
+      terrainCategories: Array.isArray(d?.terrainCategories) ? d.terrainCategories : [],
       color: norm(d?.color),
       size: norm(d?.size),
       status: norm(d?.status),
@@ -1325,7 +1326,7 @@ export async function getItemsWithAvailability(
   }
 
   items.sort((a, b) =>
-    norm(a?.number || a?.id).localeCompare(norm(b?.number || b?.id), "pl")
+    norm(a?.number || a?.id).localeCompare(norm(b?.number || b?.id), "pl", {numeric: true})
   );
 
   return {items, blockStartIso, blockEndIso};

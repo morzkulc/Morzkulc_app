@@ -34,6 +34,8 @@ import {handleGetAdminMemberDues} from "./api/getAdminMemberDuesHandler";
 import {handleGetAdminUserActivity} from "./api/getAdminUserActivityHandler";
 import {handleAdminEventsSyncCalendar} from "./api/adminEventsSyncCalendarHandler";
 import {handleAdminApprove, handleAdminReject} from "./api/adminApprovalHandler";
+import {handleSubmitGearDamageReport} from "./api/submitGearDamageReportHandler";
+import {handleResolveGearDamageReport} from "./api/resolveGearDamageReportHandler";
 import {handleSubmitEvent} from "./api/submitEventHandler";
 import {handleGetBasenSessions} from "./api/getBasenSessionsHandler";
 import {handleBasenEnroll} from "./api/basenEnrollHandler";
@@ -73,6 +75,7 @@ setGlobalOptions({region: "us-central1"});
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ignoreUndefinedProperties: true});
+const gearDamageBucket = admin.storage().bucket();
 
 const svcCfg = getServiceConfig();
 const {adminRoleKeys, memberRoleKeys} = svcCfg;
@@ -659,6 +662,22 @@ export const getGearItemAvailability = onRequest({invoker: "private"}, async (re
 });
 
 /**
+ * POST /api/gear/damage-report (authenticated, memberRoleKeys — kandydat/czlonek/kr/zarzad)
+ */
+export const submitGearDamageReport = onRequest({invoker: "private"}, async (req, res) => {
+  return handleSubmitGearDamageReport(req, res, {
+    db,
+    bucket: gearDamageBucket,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+    memberRoleKeys,
+  });
+});
+
+/**
  * POST /api/gear/reservations/update (authenticated)
  */
 export const updateGearReservation = onRequest({invoker: "private"}, async (req, res) => {
@@ -984,6 +1003,7 @@ export const purchaseGodzinki = onRequest({invoker: "private"}, async (req, res)
     corsHandler,
     requireIdToken,
     enqueueGodzinkiSheetWrite,
+    godzinkiRoleKeys: svcCfg.godzinkiRoleKeys,
   });
 });
 
@@ -1210,6 +1230,21 @@ export const adminApprove = onRequest({invoker: "private"}, async (req, res) => 
  */
 export const adminReject = onRequest({invoker: "private"}, async (req, res) => {
   return handleAdminReject(req, res, {
+    db,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+    adminRoleKeys,
+  });
+});
+
+/**
+ * POST /api/admin/gear-damage/resolve (authenticated, role: zarzad/kr)
+ */
+export const resolveGearDamageReport = onRequest({invoker: "private"}, async (req, res) => {
+  return handleResolveGearDamageReport(req, res, {
     db,
     sendPreflight,
     requireAllowedHost,
@@ -1493,6 +1528,7 @@ export const kmAddLog = onRequest({invoker: "private"}, async (req, res) => {
     setCorsHeaders,
     corsHandler,
     requireIdToken,
+    memberRoleKeys,
   });
 });
 
