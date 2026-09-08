@@ -475,60 +475,10 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
         expiredKursants = {count: 0, items: [], error: "Sekcja chwilowo niedostępna"};
       }
 
-      // Zgłoszenia uszkodzeń sprzętu — reporterName i photoUrls (Firebase download-token
-      // URL, nie signed URL — patrz gear_damage_service.ts) są już zdenormalizowane
-      // na dokumencie w chwili zgłoszenia, więc bez dodatkowych lookupów tutaj.
-      type GearDamageReportItem = {
-        id: string;
-        category: string;
-        itemId: string;
-        itemNumber: string;
-        itemLabel: string;
-        severity: string;
-        description: string;
-        reporterName: string;
-        createdAt: string | null;
-        photoUrls: string[];
-      };
-      let gearDamageReports: {count: number; items: GearDamageReportItem[]; error: string | null} = {count: 0, items: [], error: null};
-      try {
-        const damageSnap = await db.collection("gear_damage_reports")
-          .where("status", "==", "open")
-          .get();
-        const items: GearDamageReportItem[] = damageSnap.docs.map((d) => {
-          const data = d.data() as any;
-          return {
-            id: d.id,
-            category: norm(data?.category),
-            itemId: norm(data?.itemId),
-            itemNumber: norm(data?.itemNumber),
-            itemLabel: norm(data?.itemLabel),
-            severity: norm(data?.severity),
-            description: norm(data?.description),
-            reporterName: norm(data?.reporterName),
-            createdAt: tsToIso(data?.createdAt),
-            photoUrls: Array.isArray(data?.photoUrls) ? data.photoUrls.map((u: any) => norm(u)).filter(Boolean) : [],
-          };
-        });
-        // Kolejność wg wagi: trup (💀) najpilniejsze, potem "to się wyklepie" (👎),
-        // "da się używać" (👍) na końcu — 3 poziomy od 07.09.2026 (dawniej 2).
-        const severityRank: Record<string, number> = {dead: 0, repair: 1, usable: 2};
-        items.sort((a, b) => {
-          const rankDiff = (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3);
-          if (rankDiff !== 0) return rankDiff;
-          return (a.createdAt || "").localeCompare(b.createdAt || "");
-        });
-        gearDamageReports = {count: items.length, items, error: null};
-      } catch (e: any) {
-        logger.error("getAdminPending: gearDamageReports read failed", {message: e?.message});
-        gearDamageReports = {count: 0, items: [], error: "Sekcja chwilowo niedostępna"};
-      }
-
       res.status(200).json({
         ok: true,
         meta: {godzinkiSheetUrl},
         expiredKursants,
-        gearDamageReports,
         godzinki: {count: godzinkiItems.length, items: godzinkiGrouped, pending: godzinkiPending, error: earnSnap.error || purchaseSnap.error},
         godzinkiRejected: {count: godzinkiRejected.length, items: godzinkiRejected},
         events: {count: eventsItems.length, items: eventsItems, error: eventsSnap.error},

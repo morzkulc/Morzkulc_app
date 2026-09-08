@@ -29,6 +29,7 @@ import {handleGetEvents} from "./api/getEventsHandler";
 import {handleGetAdminPending} from "./api/getAdminPendingHandler";
 import {handleGetAdminGearRentals} from "./api/getAdminGearRentalsHandler";
 import {handleGetAdminGearTopRentals} from "./api/getAdminGearTopRentalsHandler";
+import {handleGetAdminGearDamageReports} from "./api/getAdminGearDamageReportsHandler";
 import {handleGetAdminMemberActivity} from "./api/getAdminMemberActivityHandler";
 import {handleGetAdminMemberDues} from "./api/getAdminMemberDuesHandler";
 import {handleGetAdminUserActivity} from "./api/getAdminUserActivityHandler";
@@ -1134,6 +1135,22 @@ export const getAdminGearRentals = onRequest({invoker: "private"}, async (req, r
  */
 export const getAdminGearTopRentals = onRequest({invoker: "private"}, async (req, res) => {
   return handleGetAdminGearTopRentals(req, res, {
+    db,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+    adminRoleKeys,
+  });
+});
+
+/**
+ * GET /api/admin/reports/gear-damage (authenticated, role: zarzad/kr)
+ * Raport zgłoszeń uszkodzeń sprzętu (status "open"), posortowany wg wagi.
+ */
+export const getAdminGearDamageReports = onRequest({invoker: "private"}, async (req, res) => {
+  return handleGetAdminGearDamageReports(req, res, {
     db,
     sendPreflight,
     requireAllowedHost,

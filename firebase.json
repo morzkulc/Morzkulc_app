@@ -145,6 +145,13 @@
         }
       },
       {
+        "source": "/api/admin/reports/gear-damage",
+        "function": {
+          "functionId": "getAdminGearDamageReports",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/admin/reports/member-activity",
         "function": {
           "functionId": "getAdminMemberActivity",

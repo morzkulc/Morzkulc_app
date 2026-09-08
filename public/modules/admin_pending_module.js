@@ -11,7 +11,6 @@ const ADMIN_PENDING_URL = "/api/admin/pending";
 const ADMIN_SYNC_CALENDAR_URL = "/api/admin/events/sync-calendar";
 const ADMIN_APPROVE_URL = "/api/admin/approve";
 const ADMIN_REJECT_URL = "/api/admin/reject";
-const ADMIN_RESOLVE_GEAR_DAMAGE_URL = "/api/admin/gear-damage/resolve";
 
 // Folder Dysku "1_ZARZAD" > "APLIKACJA ARKUSZE" — wszystkie arkusze Google obsługujące
 // aplikację (App_SETUP, Sprzęt, Członkowie/Godzinki/Imprezy, Bilans otwarcia, Kilometrówka).
@@ -268,51 +267,6 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           html += `</div>`;
         }
 
-        // Sekcja: zgłoszone uszkodzenia sprzętu (członek/kandydat → gear_damage_reports).
-        // Czysto informacyjne — NIE blokuje rezerwacji sztuki (07.09.2026, usunięte:
-        // jedynym źródłem prawdy o sprawności sprzętu jest arkusz + sync, nie zgłoszenie
-        // z aplikacji). "Oznacz jako naprawione" tylko zdejmuje zgłoszenie z tej listy;
-        // fizyczną naprawę i status "Sprawny?" Zarząd aktualizuje osobno w arkuszu.
-        // Lista posortowana wg wagi zgłoszenia (trup najpierw, patrz backend).
-        const gearDamageReports = data?.gearDamageReports || { count: 0, items: [], error: null };
-        html += `<h3 style="margin:0 0 8px;">Zgłoszone uszkodzenia sprzętu (${escapeHtml(String(gearDamageReports.count))})</h3>`;
-        if (gearDamageReports.error) {
-          html += `<p class="err" style="margin-bottom:20px;">${escapeHtml(gearDamageReports.error)}</p>`;
-        } else if (!gearDamageReports.items?.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak zgłoszeń.</p>`;
-        } else {
-          html += `<div style="margin-bottom:20px;">`;
-          for (const item of gearDamageReports.items) {
-            // 3 poziomy (07.09.2026): "usable" (👍 da się używać) nie blokuje rezerwacji;
-            // "repair" (👎 to się wyklepie) i "dead" (💀 trup) obie blokują — patrz
-            // gear_damage_service.ts (isBlockingSeverity).
-            const severityBadge = item.severity === "dead"
-              ? `<span class="badge danger">Trup</span>`
-              : item.severity === "repair"
-                ? `<span class="badge danger">To się wyklepie</span>`
-                : `<span class="badge soft">Da się używać</span>`;
-            const dateStr = item.createdAt ? formatDatePL(item.createdAt.slice(0, 10)) : "—";
-            const photosHtml = (item.photoUrls || []).length
-              ? `<div style="display:flex;gap:6px;margin-top:6px;">${item.photoUrls.map((url) => `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Zdjęcie zgłoszenia" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block;" /></a>`).join("")}</div>`
-              : "";
-            html += `
-              <div class="gearCard" style="margin-bottom:8px;">
-                <div class="approvalCard">
-                  <div class="approvalCardMain">
-                    <div class="approvalCardTitle">${escapeHtml(item.itemLabel || "—")} (nr ${escapeHtml(item.itemNumber || "—")}) — ${severityBadge}</div>
-                    <div class="approvalCardSubtitle">${escapeHtml(item.description || "—")} · zgłosił: ${escapeHtml(item.reporterName || "—")} · ${escapeHtml(dateStr)}</div>
-                    ${photosHtml}
-                  </div>
-                  <div class="approvalCardActions">
-                    <button type="button" class="approveBtn" data-resolve-damage="${escapeHtml(item.id)}">Oznacz jako naprawione</button>
-                  </div>
-                </div>
-              </div>
-            `;
-          }
-          html += `</div>`;
-        }
-
         // Sekcja: prywatne kajaki — braki danych (email / data wejścia do klubu)
         html += `<h3 style="margin:0 0 8px;">Prywatne kajaki — braki danych właściciela (${escapeHtml(String(emailIssues.count))})</h3>`;
         if (!emailIssues.items?.length) {
@@ -499,23 +453,6 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
       // przeładowaniami — podmieniane jest tylko innerHTML).
       const KIND_LABEL = { godzinki: "godzinkę", event: "imprezę" };
       contentEl.addEventListener("click", async (ev) => {
-        const resolveDamageBtn = ev.target.closest?.("[data-resolve-damage]");
-        if (resolveDamageBtn) {
-          const reportId = resolveDamageBtn.getAttribute("data-resolve-damage");
-          if (!reportId) return;
-          setErr("");
-          const card = resolveDamageBtn.closest(".gearCard");
-          card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
-          try {
-            await apiPostJson({ url: ADMIN_RESOLVE_GEAR_DAMAGE_URL, idToken: ctx.idToken, body: { reportId } });
-            await load();
-          } catch (e) {
-            setErr(mapUserFacingApiError(e, "Nie udało się oznaczyć zgłoszenia jako naprawione."));
-            card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
-          }
-          return;
-        }
-
         const approveBtn = ev.target.closest?.("[data-approve]");
         const rejectBtn = ev.target.closest?.("[data-reject]");
         const btn = approveBtn || rejectBtn;
