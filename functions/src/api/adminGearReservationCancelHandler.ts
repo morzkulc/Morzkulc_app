@@ -1,6 +1,7 @@
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
 import {adminCancelReservation} from "../modules/equipment/kayaks/gear_kayaks_service";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -15,10 +16,6 @@ export type AdminGearReservationCancelDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 /** Kolejkuje job serwisowy (fire-and-forget z gwarancją zapisu joba). */
 async function enqueueJob(db: FirebaseFirestore.Firestore, taskId: string, payload: Record<string, any>): Promise<void> {

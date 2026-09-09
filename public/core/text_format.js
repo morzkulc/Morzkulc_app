@@ -5,14 +5,9 @@
 // wszystko bezpiecznie escapowane przeciw XSS. Kontener nadal potrzebuje CSS
 // `white-space: pre-line` — ta funkcja NIE zamienia `\n` na `<br>`.
 
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+// Ta funkcja historycznie escapowała też cudzysłowy (treść trafia do atrybutów,
+// nie tylko węzłów tekstowych) — stąd alias na escapeAttr, nie "podstawowy" escapeHtml.
+import { escapeAttr as escapeHtml } from "/core/html_utils.js";
 
 function normalizeBlankLines(raw) {
   return String(raw ?? "")

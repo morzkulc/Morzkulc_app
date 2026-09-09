@@ -2,12 +2,9 @@
 // Raport „Najbardziej aktywni" — ranking członków wg wypracowanych godzinek.
 import { apiGetJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
+import { escapeHtml } from "/core/html_utils.js";
 
 const REPORT_URL = "/api/admin/reports/member-activity";
-
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
 
 export const memberActivityReport = {
   id: "member-activity",

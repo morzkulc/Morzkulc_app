@@ -1,5 +1,7 @@
+import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {getAppVars} from "../../modules/setup/app_vars";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: gear.notifyReservationCancelledByAdmin
@@ -18,10 +20,6 @@ type Payload = {
   reservationId: string;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 const CATEGORY_NOUN: Record<string, string> = {
   kayaks: "Kajak",
   paddles: "Wiosło",
@@ -32,16 +30,16 @@ const CATEGORY_NOUN: Record<string, string> = {
 };
 
 function formatDatePL(iso: string): string {
-  const s = norm(iso);
+  const s = normNullish(iso);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s || "—";
   const [y, m, d] = s.split("-");
   return `${d}.${m}.${y}`;
 }
 
 function displayNameOf(u: any): string {
-  const firstName = norm(u?.profile?.firstName);
-  const lastName = norm(u?.profile?.lastName);
-  const nickname = norm(u?.profile?.nickname);
+  const firstName = normNullish(u?.profile?.firstName);
+  const lastName = normNullish(u?.profile?.lastName);
+  const nickname = normNullish(u?.profile?.nickname);
   return [firstName, lastName].filter(Boolean).join(" ") || nickname;
 }
 
@@ -49,17 +47,17 @@ function describeItems(r: any): string {
   if (Array.isArray(r?.items) && r.items.length) {
     return r.items
       .map((it: any) => {
-        const cat = norm(it?.category).toLowerCase();
+        const cat = normNullish(it?.category).toLowerCase();
         const noun = CATEGORY_NOUN[cat] || "Sprzęt";
-        const number = norm(it?.itemNumber);
-        const label = norm(it?.itemLabel);
+        const number = normNullish(it?.itemNumber);
+        const label = normNullish(it?.itemLabel);
         const head = [noun, number].filter(Boolean).join(" ");
         return label ? `${head} (${label})` : head;
       })
       .join(", ");
   }
   if (Array.isArray(r?.kayakIds) && r.kayakIds.length) {
-    return r.kayakIds.map((kid: any) => `Kajak ${norm(kid)}`).join(", ");
+    return r.kayakIds.map((kid: any) => `Kajak ${normNullish(kid)}`).join(", ");
   }
   return "sprzęt";
 }
@@ -73,20 +71,25 @@ export const gearNotifyReservationCancelledByAdminTask: ServiceTask<Payload> = {
   },
 
   run: async (payload, ctx) => {
-    const rSnap = await ctx.firestore.collection("gear_reservations").doc(payload.reservationId).get();
+    const rRef = ctx.firestore.collection("gear_reservations").doc(payload.reservationId);
+    const rSnap = await rRef.get();
     if (!rSnap.exists) {
       return {ok: false, message: `Reservation ${payload.reservationId} not found`};
     }
 
     const r = rSnap.data() as any;
-    const userUid = norm(r?.userUid);
-    let userEmail = norm(r?.userEmail).toLowerCase();
+    // Idempotencja przy retry jobu (patrz eventsNotifyUpcoming.ts po ten sam wzorzec) —
+    // bez tego jeden nieudany mail w parze user/zarząd oznacza cały task jako failed,
+    // a retry wysyła OBA maile ponownie, łącznie z tym już dostarczonym.
+    const alreadyNotified: string[] = Array.isArray(r?.cancelNotifiedTo) ? r.cancelNotifiedTo : [];
+    const userUid = normNullish(r?.userUid);
+    let userEmail = normNullish(r?.userEmail).toLowerCase();
     let userName = "";
 
     if (userUid) {
       const uSnap = await ctx.firestore.collection("users_active").doc(userUid).get();
       const u = uSnap.data() as any;
-      if (!userEmail) userEmail = norm(u?.email).toLowerCase();
+      if (!userEmail) userEmail = normNullish(u?.email).toLowerCase();
       userName = displayNameOf(u);
     }
 
@@ -95,20 +98,20 @@ export const gearNotifyReservationCancelledByAdminTask: ServiceTask<Payload> = {
     }
 
     // Kto dokonał anulowania (do audytu w mailu — user i zarząd mają widzieć to samo).
-    const adminUid = norm(r?.cancelledByUid);
+    const adminUid = normNullish(r?.cancelledByUid);
     let adminLabel = "Zarząd";
     if (adminUid) {
       const aSnap = await ctx.firestore.collection("users_active").doc(adminUid).get();
       const a = aSnap.data() as any;
       const adminName = displayNameOf(a);
-      const adminEmail = norm(a?.email).toLowerCase();
+      const adminEmail = normNullish(a?.email).toLowerCase();
       adminLabel = [adminName, adminEmail].filter(Boolean).join(" — ") || adminEmail || "Zarząd";
     }
 
     const term = `${formatDatePL(r?.startDate)} – ${formatDatePL(r?.endDate)}`;
     const itemsDesc = describeItems(r);
     const costHours = Number(r?.costHours || 0);
-    const reason = norm(r?.cancelReason) || "(nie podano)";
+    const reason = normNullish(r?.cancelReason) || "(nie podano)";
 
     const detailLines = [
       `Sprzęt: ${itemsDesc}`,
@@ -144,27 +147,32 @@ export const gearNotifyReservationCancelledByAdminTask: ServiceTask<Payload> = {
 
     const subject = "Anulowanie rezerwacji sprzętu przez Zarząd";
     const appVars = await getAppVars(ctx.firestore);
-    const boardEmail = norm(appVars.adminNotifyEmail).toLowerCase();
+    const boardEmail = normNullish(appVars.adminNotifyEmail).toLowerCase();
 
     let sent = 0;
     let errors = 0;
+    const sentTo: string[] = [];
 
-    try {
-      await ctx.workspace.sendGenericEmail(userEmail, subject, userBody);
-      sent++;
-    } catch (e: any) {
-      errors++;
-      ctx.logger.error("gearNotifyReservationCancelledByAdmin: send to user failed", {
-        reservationId: payload.reservationId,
-        email: userEmail,
-        message: e?.message,
-      });
+    if (!alreadyNotified.includes(userEmail)) {
+      try {
+        await ctx.workspace.sendGenericEmail(userEmail, subject, userBody);
+        sent++;
+        sentTo.push(userEmail);
+      } catch (e: any) {
+        errors++;
+        ctx.logger.error("gearNotifyReservationCancelledByAdmin: send to user failed", {
+          reservationId: payload.reservationId,
+          email: userEmail,
+          message: e?.message,
+        });
+      }
     }
 
-    if (boardEmail && boardEmail.includes("@") && boardEmail !== userEmail) {
+    if (boardEmail && boardEmail.includes("@") && boardEmail !== userEmail && !alreadyNotified.includes(boardEmail)) {
       try {
         await ctx.workspace.sendGenericEmail(boardEmail, subject, boardBody);
         sent++;
+        sentTo.push(boardEmail);
       } catch (e: any) {
         errors++;
         ctx.logger.error("gearNotifyReservationCancelledByAdmin: send to board failed", {
@@ -175,7 +183,17 @@ export const gearNotifyReservationCancelledByAdminTask: ServiceTask<Payload> = {
       }
     }
 
+    if (sentTo.length) {
+      await rRef.update({
+        cancelNotifiedTo: admin.firestore.FieldValue.arrayUnion(...sentTo),
+      });
+    }
+
     ctx.logger.info("gearNotifyReservationCancelledByAdmin: done", {reservationId: payload.reservationId, sent, errors});
-    return {ok: errors === 0, message: `sent=${sent}, errors=${errors}`, details: {sent, errors}};
+    return {
+      ok: errors === 0,
+      message: `sent=${sent}, errors=${errors}, alreadyNotified=${alreadyNotified.length}`,
+      details: {sent, errors, alreadyNotified: alreadyNotified.length},
+    };
   },
 };

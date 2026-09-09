@@ -3,6 +3,9 @@
 
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
+import {normNullish} from "../modules/shared/text_utils";
+import {resolveDateRange} from "../modules/shared/date_range_utils";
+import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
 
 type TokenCheck =
   | {error: string}
@@ -17,72 +20,6 @@ export type GetAdminMemberActivityDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-function isIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-function todayWarsawIso(): string {
-  return new Date().toLocaleDateString("en-CA", {timeZone: "Europe/Warsaw"});
-}
-function isoToDateUTC(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-}
-function dateUTCToIso(dt: Date): string {
-  return dt.toISOString().slice(0, 10);
-}
-function minusDays(iso: string, n: number): string {
-  const d = isoToDateUTC(iso);
-  d.setUTCDate(d.getUTCDate() - n);
-  return dateUTCToIso(d);
-}
-function minusMonths(iso: string, n: number): string {
-  const d = isoToDateUTC(iso);
-  d.setUTCMonth(d.getUTCMonth() - n);
-  return dateUTCToIso(d);
-}
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
-
-/** Zarejestrowany = ukończona rejestracja (profil z imieniem i nazwiskiem). */
-function isRegistered(u: any): boolean {
-  const p = u?.profile || {};
-  return Boolean(norm(p.firstName) && norm(p.lastName));
-}
-
-/** Zakres [from, to] (YYYY-MM-DD). Domyślnie semestr (6 mies. wstecz). Bez „current". */
-function resolveRange(range: string, fromQ: string, toQ: string):
-  | {ok: true; from: string; to: string; key: string}
-  | {ok: false; message: string} {
-  const today = todayWarsawIso();
-  switch (range) {
-  case "month":
-    return {ok: true, key: "month", from: minusDays(today, 30), to: today};
-  case "year":
-    return {ok: true, key: "year", from: minusMonths(today, 12), to: today};
-  case "custom": {
-    const from = norm(fromQ);
-    const to = norm(toQ);
-    if (!isIsoDate(from) || !isIsoDate(to)) {
-      return {ok: false, message: "Nieprawidłowy zakres dat (wymagany format YYYY-MM-DD)."};
-    }
-    if (from > to) return {ok: false, message: "Data „od\" jest późniejsza niż „do\"."};
-    return {ok: true, key: "custom", from, to};
-  }
-  case "semester":
-  default:
-    return {ok: true, key: "semester", from: minusMonths(today, 6), to: today};
-  }
-}
 
 export async function handleGetAdminMemberActivity(req: Request, res: Response, deps: GetAdminMemberActivityDeps) {
   const {sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, db, adminRoleKeys} = deps;
@@ -106,14 +43,16 @@ export async function handleGetAdminMemberActivity(req: Request, res: Response, 
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
 
-      const range = norm((req.query.range as string) || "semester").toLowerCase();
-      const rr = resolveRange(range, (req.query.from as string) || "", (req.query.to as string) || "");
+      const range = normNullish((req.query.range as string) || "semester").toLowerCase();
+      const rr = resolveDateRange(range, (req.query.from as string) || "", (req.query.to as string) || "", {
+        defaultKey: "semester",
+      });
       if (!rr.ok) {
         res.status(400).json({error: rr.message});
         return;
@@ -139,9 +78,9 @@ export async function handleGetAdminMemberActivity(req: Request, res: Response, 
       const hoursByUid = new Map<string, number>();
       snap.forEach((doc) => {
         const r = doc.data() as any;
-        if (norm(r.type) !== "earn") return;
+        if (normNullish(r.type) !== "earn") return;
         if (r.approved !== true) return;
-        const ruid = norm(r.uid);
+        const ruid = normNullish(r.uid);
         if (!ruid) return;
         hoursByUid.set(ruid, (hoursByUid.get(ruid) || 0) + Number(r.amount || 0));
       });
@@ -161,7 +100,7 @@ export async function handleGetAdminMemberActivity(req: Request, res: Response, 
             registered.add(d.id);
             nameByUid.set(d.id, fullName(u));
             nickByUid.set(d.id, nickname(u));
-            emailByUid.set(d.id, norm((u as any)?.email));
+            emailByUid.set(d.id, normNullish((u as any)?.email));
           }
         });
       }

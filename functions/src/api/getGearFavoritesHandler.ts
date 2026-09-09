@@ -2,6 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
+import {VALID_CATEGORIES} from "../modules/equipment/shared/gear_catalog_service";
 
 type TokenCheck =
   | {error: string}
@@ -15,10 +16,6 @@ export type GetGearFavoritesDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
-
-const VALID_CATEGORIES = new Set([
-  "kayaks", "paddles", "lifejackets", "helmets", "throwbags", "sprayskirts",
-]);
 
 export async function handleGetGearFavorites(
   req: Request, res: Response, deps: GetGearFavoritesDeps

@@ -4,6 +4,7 @@ import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {getServiceConfig} from "../service_config";
 import {listaRoleForUserRole, syncWorkspaceGroupsForUser, syncListaGroupForUser} from "../workspaceGroupSync";
+import {norm} from "../../modules/shared/text_utils";
 
 type Payload = {
   dry?: boolean;
@@ -14,10 +15,6 @@ type RoleMappingEntry = {
   label?: string;
   groups?: string[];
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 /**
  * Builds an inverted map: lowercase_label → code.

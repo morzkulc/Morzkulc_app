@@ -19,15 +19,12 @@ import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {getKmVars} from "../../modules/km/km_vars";
 import {computePoints} from "../../modules/km/km_scoring";
+import {normNullish} from "../../modules/shared/text_utils";
 
 type Payload = {
   uid: string;
   dry?: boolean;
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 export const kmRebuildUserStatsTask: ServiceTask<Payload> = {
   id: "km.rebuildUserStats",
@@ -38,7 +35,7 @@ export const kmRebuildUserStatsTask: ServiceTask<Payload> = {
   },
 
   run: async (payload, ctx) => {
-    const uid = norm(payload.uid);
+    const uid = normNullish(payload.uid);
     const dryRun = ctx.dryRun || Boolean(payload?.dry);
 
     ctx.logger.info("km.rebuildUserStats: start", {uid, dryRun});
@@ -67,8 +64,8 @@ export const kmRebuildUserStatsTask: ServiceTask<Payload> = {
     const fullName = [firstName, lastName].filter(Boolean).join(" ");
     // Fallback do userSnapshot z pierwszego logu (dla użytkowników historycznych bez konta)
     const firstLogSnapshot = (logsSnap.docs[0]?.data() as any)?.userSnapshot;
-    const displayName = fullName || norm(userData?.email) || norm(firstLogSnapshot?.displayName) || uid;
-    const nickname = norm(profile?.nickname) || norm(firstLogSnapshot?.nickname) || "";
+    const displayName = fullName || normNullish(userData?.email) || normNullish(firstLogSnapshot?.displayName) || uid;
+    const nickname = normNullish(profile?.nickname) || normNullish(firstLogSnapshot?.nickname) || "";
 
     // Akumuluj agregaty
     let allTimeKm = 0;

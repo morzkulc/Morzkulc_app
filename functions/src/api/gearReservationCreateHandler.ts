@@ -1,8 +1,8 @@
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
 import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {createBundleReservation} from "../modules/equipment/bundle/gear_bundle_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -18,10 +18,6 @@ export type GearReservationCreateDeps = {
   memberRoleKeys: string[];
 };
 
-function norm(v: any): string {
-  return String(v || "").trim();
-}
-
 function asStringArray(v: any): string[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => String(x || "").trim()).filter(Boolean);
@@ -36,6 +32,11 @@ export async function handleGearReservationCreate(req: Request, res: Response, d
 
   corsHandler(req, res, async () => {
     try {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
+
       const tokenCheck = await requireIdToken(req);
       if ("error" in tokenCheck) {
         res.status(401).json({error: tokenCheck.error});
@@ -52,13 +53,6 @@ export async function handleGearReservationCreate(req: Request, res: Response, d
       const userData = userSnap.data() as any;
       const roleKey = String(userData?.role_key || "");
       const statusKey = String(userData?.status_key || "");
-      logger.info("gearReservationCreate: user data check", {
-        uid,
-        role_key: userData?.role_key,
-        status_key: userData?.status_key,
-        statusKey,
-        userDocKeys: Object.keys(userData || {}),
-      });
       if (await isUserStatusBlocked(db, statusKey)) {
         res.status(403).json({ok: false, code: "forbidden", message: "Konto zawieszone."});
         return;

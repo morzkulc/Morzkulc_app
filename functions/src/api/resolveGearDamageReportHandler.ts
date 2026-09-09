@@ -4,6 +4,7 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {resolveDamageReport} from "../modules/equipment/damage/gear_damage_service";
+import {normNullish} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -18,10 +19,6 @@ export type ResolveGearDamageReportDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 /**
  * POST /api/admin/gear-damage/resolve (authenticated, rola_zarzad/rola_kr)
@@ -50,22 +47,22 @@ export async function handleResolveGearDamageReport(req: Request, res: Response,
 
       const userSnap = await db.collection("users_active").doc(uid).get();
       const userData = (userSnap.exists ? userSnap.data() : null) as any;
-      const roleKey = norm(userData?.role_key);
+      const roleKey = normNullish(userData?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
 
-      const reportId = norm((req.body as any)?.reportId);
+      const reportId = normNullish((req.body as any)?.reportId);
       if (!reportId) {
         res.status(400).json({ok: false, code: "validation_failed", message: "Brak reportId"});
         return;
       }
 
-      const nickname = norm(userData?.profile?.nickname);
-      const firstName = norm(userData?.profile?.firstName);
-      const lastName = norm(userData?.profile?.lastName);
-      const resolvedByName = nickname || [firstName, lastName].filter(Boolean).join(" ") || norm(userData?.email) || uid;
+      const nickname = normNullish(userData?.profile?.nickname);
+      const firstName = normNullish(userData?.profile?.firstName);
+      const lastName = normNullish(userData?.profile?.lastName);
+      const resolvedByName = nickname || [firstName, lastName].filter(Boolean).join(" ") || normNullish(userData?.email) || uid;
 
       const result = await resolveDamageReport(db, {reportId, resolvedByUid: uid, resolvedByName});
       if (!result.ok) {

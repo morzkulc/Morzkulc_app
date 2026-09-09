@@ -72,9 +72,7 @@ export async function handleGetKursantStats(req: Request, res: Response, deps: G
         nameByUid.set(d.id, name);
       });
 
-      const statsSnaps = await Promise.all(
-        kursantUids.map((kuid) => db.collection("km_user_stats").doc(kuid).get())
-      );
+      const statsSnaps = await db.getAll(...kursantUids.map((kuid) => db.collection("km_user_stats").doc(kuid)));
 
       const pointsByUid = new Map<string, number>();
       statsSnaps.forEach((s) => {

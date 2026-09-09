@@ -6,6 +6,9 @@
 // importu stąd do modułów (core świadomie nie zależy od modules/), moduły
 // importują stąd — zgodnie z resztą public/core/.
 
+import { escapeHtml } from "/core/html_utils.js";
+import { formatDatePL } from "/core/format_utils.js";
+
 const MONTHS_PL = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
 const WEEKDAYS_PL = ["Pon", "Wt", "Śr", "Czw", "Pt", "So", "Nd"];
 
@@ -34,13 +37,6 @@ function localTodayIso() {
   return isoFromParts(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function formatDatePL(iso) {
-  const s = String(iso || "").trim();
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return s;
-  return `${m[3]}.${m[2]}.${m[1]}`;
-}
-
 function daysInclusive(startIso, endIso) {
   const a = new Date(`${startIso}T00:00:00Z`);
   const b = new Date(`${endIso}T00:00:00Z`);
@@ -57,13 +53,6 @@ function expandRangeDays(startIso, endIso) {
     guard += 1;
   }
   return days;
-}
-
-function escapeHtml(s) {
-  return String(s == null ? "" : s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
 }
 
 function lockIconSvg() {

@@ -764,22 +764,6 @@ export async function refundHoursForReservationInTx(
 }
 
 /**
- * Zwraca godzinki za anulowaną rezerwację we własnej transakcji.
- * Wrapper na refundHoursForReservationInTx.
- */
-export async function refundHoursForReservation(
-  db: FirebaseFirestore.Firestore,
-  uid: string,
-  reservationId: string,
-  costHours: number,
-  now: Date = new Date()
-): Promise<{ok: boolean; code?: string; message?: string}> {
-  return db.runTransaction(async (tx) =>
-    refundHoursForReservationInTx(tx, db, uid, reservationId, costHours, now)
-  );
-}
-
-/**
  * Cofa część dedukcji godzinek przy SKRÓCENIU rezerwacji (delta < 0).
  *
  * Zamiast tworzyć nową pulę earn ze świeżą ważnością (stary przepływ

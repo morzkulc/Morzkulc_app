@@ -18,16 +18,13 @@
 
 import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
+import {normNullish} from "../../modules/shared/text_utils";
 
 type Payload = {
   uid: string;
   email: string;
   histUid: string;
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 export const godzinkiMergeHistoricalUserTask: ServiceTask<Payload> = {
   id: "godzinki.mergeHistoricalUser",
@@ -40,8 +37,8 @@ export const godzinkiMergeHistoricalUserTask: ServiceTask<Payload> = {
   },
 
   run: async (payload, ctx) => {
-    const uid = norm(payload.uid);
-    const histUid = norm(payload.histUid);
+    const uid = normNullish(payload.uid);
+    const histUid = normNullish(payload.histUid);
 
     ctx.logger.info("godzinki.mergeHistoricalUser: start", {uid, histUid});
 

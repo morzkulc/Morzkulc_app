@@ -4,6 +4,8 @@ import { setHash, parseHash } from "/core/router.js";
 import { apiPostJson, apiGetJson } from "/core/api_client.js";
 import { formatFreeText, isUrlOnly } from "/core/text_format.js";
 import { renderClubBadgeHtml } from "/core/club_badges.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { formatDatePL, buildKayakTitle, formatShortDate, countReservationDays, pluralizeDays } from "/core/format_utils.js";
 
 export function spinnerHtml(text = "Morzkulc myśli") {
   return `<div class="thinking">${escapeHtml(text)}<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>`;
@@ -192,7 +194,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
           </div>
 
           <div class="startTileGrid">
-            <button type="button" class="startTile2${dash.canReserveGear ? " primary" : ""}" data-home-action="reserve-gear"
+            <button type="button" class="startTile2" data-home-action="reserve-gear"
               title="${dash.canReserveGear ? "Rezerwuj sprzęt" : "Przeglądaj sprzęt"}">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4 8 8 7 12 7 C16 7 20 8 22 12 C20 16 16 17 12 17 C8 17 4 16 2 12 Z"/><ellipse cx="12" cy="11" rx="3.5" ry="1.5"/></svg>
               <span class="startTile2Title">Sprzęt</span>
@@ -726,11 +728,6 @@ function renderHomeProfile({ viewEl, ctx }) {
 // Świadomie BEZ cache: odpowiedź zawiera dane finansowe widoczne tylko dla
 // KR/Zarządu, a cache w sessionStorage groził wyciekiem między użytkownikami
 // w tej samej karcie (logout nie czyści sessionStorage). Pobieramy świeżo.
-
-// escapeHtml nie escape'uje cudzysłowów — do wartości w atrybutach używamy tego.
-function escapeAttr(s) {
-  return escapeHtml(s).replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
-}
 
 // Dopuszczamy tylko http(s) jako href (ochrona przed javascript: itp.).
 function safeUrl(u) {
@@ -1376,14 +1373,6 @@ function getReservationKayakTitles(rsv, kayakMap) {
   return kayakIds.map((id) => kayakMap.get(id) || `Kajak ID ${id}`);
 }
 
-function buildKayakTitle(k) {
-  const brand = String(k?.brand || "").trim();
-  const model = String(k?.model || "").trim();
-  const number = String(k?.number || "").trim();
-
-  const core = [brand, model].filter(Boolean).join(" ").trim() || "Kajak";
-  return number ? `${core} (nr ${number})` : core;
-}
 
 function renderProfileForm({ viewEl, ctx }) {
   viewEl.innerHTML = `
@@ -1670,26 +1659,6 @@ function getModuleRouteByType(ctx, moduleType) {
   };
 }
 
-function getModuleRouteByLabelOrId(ctx, names) {
-  const modules = Array.isArray(ctx?.modules) ? ctx.modules : [];
-  const normalized = Array.isArray(names) ? names.map((x) => String(x || "").trim().toLowerCase()) : [];
-
-  const found = modules.find((m) => {
-    const id = String(m?.id || "").trim().toLowerCase();
-    const label = String(m?.label || "").trim().toLowerCase();
-    return normalized.includes(id) || normalized.includes(label);
-  }) || null;
-
-  if (!found) {
-    return { moduleId: "home", routeId: "home" };
-  }
-
-  return {
-    moduleId: String(found.id || "home"),
-    routeId: String(found.defaultRoute || "home")
-  };
-}
-
 function getHelloName(ctx) {
   const sessionNickname = String(ctx?.session?.nickname || "").trim();
   if (sessionNickname) return sessionNickname;
@@ -1818,40 +1787,6 @@ function fieldErrorToPl(field, code) {
 }
 
 // Zwarty zakres dat rezerwacji: DD.MM.RR (2-cyfrowy rok) — mieści się w jednym wierszu.
-function formatShortDate(iso) {
-  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return iso || "—";
-  return `${m[3]}.${m[2]}.${m[1].slice(2)}`;
-}
-
-function countReservationDays(startDate, endDate) {
-  try {
-    const diff = Math.round((new Date(endDate + "T12:00:00") - new Date(startDate + "T12:00:00")) / 86400000) + 1;
-    return diff > 0 ? diff : 1;
-  } catch {
-    return 1;
-  }
-}
-
-function pluralizeDays(n) {
-  return n === 1 ? "1 dzień" : `${n} dni`;
-}
-
-function formatDatePL(iso) {
-  const s = String(iso || "").trim();
-  if (!s) return "-";
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return s;
-  return `${m[3]}.${m[2]}.${m[1]}`;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
 function heartSvg(filled) {
   const fill = filled ? "currentColor" : "none";
   return `<svg viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;

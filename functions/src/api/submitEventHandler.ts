@@ -5,6 +5,7 @@ import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {createEvent} from "../modules/calendar/events_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -20,10 +21,6 @@ export type SubmitEventDeps = {
   enqueueEventSheetWrite: (eventId: string, uid: string) => Promise<void>;
   memberRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 export async function handleSubmitEvent(req: Request, res: Response, deps: SubmitEventDeps) {
   const {

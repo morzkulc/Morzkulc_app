@@ -2,6 +2,8 @@ import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { setHash } from "/core/router.js";
 import { createReservationCalendar } from "/core/date_range_calendar.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { formatDatePL, buildKayakTitle, formatShortDate, countReservationDays, pluralizeDays } from "/core/format_utils.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -634,53 +636,3 @@ function getReservationKayakTitles(rsv, kayakMap) {
   return kayakIds.map((id) => kayakMap.get(id) || `Kajak ID ${id}`);
 }
 
-function buildKayakTitle(k) {
-  const brand = String(k?.brand || "").trim();
-  const model = String(k?.model || "").trim();
-  const number = String(k?.number || "").trim();
-
-  const core = [brand, model].filter(Boolean).join(" ").trim() || "Kajak";
-  return number ? `${core} (nr ${number})` : core;
-}
-
-// Zwarty zakres dat rezerwacji: DD.MM.RR (2-cyfrowy rok) — mieści się w jednym wierszu.
-function formatShortDate(iso) {
-  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return iso || "—";
-  return `${m[3]}.${m[2]}.${m[1].slice(2)}`;
-}
-
-function countReservationDays(startDate, endDate) {
-  try {
-    const diff = Math.round((new Date(endDate + "T12:00:00") - new Date(startDate + "T12:00:00")) / 86400000) + 1;
-    return diff > 0 ? diff : 1;
-  } catch {
-    return 1;
-  }
-}
-
-function pluralizeDays(n) {
-  return n === 1 ? "1 dzień" : `${n} dni`;
-}
-
-function formatDatePL(iso) {
-  const s = String(iso || "").trim();
-  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return s || "-";
-  const [yyyy, mm, dd] = s.split("-");
-  return `${dd}.${mm}.${yyyy}`;
-}
-
-function escapeAttr(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}

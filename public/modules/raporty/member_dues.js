@@ -2,12 +2,9 @@
 // Raport „Składki" — pełni członkowie: zaległości, opłacone, uprawnieni do głosowania.
 import { apiGetJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
+import { escapeHtml } from "/core/html_utils.js";
 
 const REPORT_URL = "/api/admin/reports/member-dues";
-
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
 
 // „składki opłacone do" → DD.MM.YYYY (akceptuje YYYY-MM-DD oraz DD-MM-YYYY / DD.MM.YYYY).
 function formatContribDate(raw) {

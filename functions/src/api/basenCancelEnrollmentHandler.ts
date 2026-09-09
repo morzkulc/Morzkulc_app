@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {cancelEnrollment, getBasenVars, BasenSlotLabel} from "../modules/basen/basen_service";
+import {cancelEnrollment, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -54,9 +54,7 @@ export async function handleBasenCancelEnrollment(req: Request, res: Response, d
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const clientErrors = ["nie istnieje", "już anulowany"];
-      const isClient = clientErrors.some((s) => msg.includes(s));
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

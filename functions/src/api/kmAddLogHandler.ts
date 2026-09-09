@@ -27,6 +27,7 @@ import type {Request, Response} from "express";
 import {getKmVars} from "../modules/km/km_vars";
 import {addKmLog} from "../modules/km/km_log_service";
 import {upsertKmPlace} from "../modules/km/km_places_service";
+import {normNullish} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -50,10 +51,6 @@ const WATER_TYPES_WITH_DIFFICULTY = new Set(["mountains", "lowlands"]);
 
 const VALID_DIFFICULTY_WW = new Set(["WW1", "WW2", "WW3", "WW4", "WW5"]);
 const VALID_DIFFICULTY_U = new Set(["U1", "U2", "U3"]);
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 function isIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -100,37 +97,37 @@ export async function handleKmAddLog(
         return;
       }
       const userData = userSnap.data() as any;
-      const roleKey = norm(userData?.role_key);
+      const roleKey = normNullish(userData?.role_key);
       if (!deps.memberRoleKeys.includes(roleKey)) {
         res.status(403).json({ok: false, code: "forbidden", error: "Dodawanie wpisów do kilometrówki wymaga roli Kandydat lub Członek."});
         return;
       }
       const profile = userData?.profile || {};
       const userSnapshot = {
-        displayName: norm(userData?.profile?.firstName + " " + userData?.profile?.lastName) ||
-          norm(tokenCheck.decoded.name) ||
-          norm(tokenCheck.decoded.email),
-        nickname: norm(profile?.nickname),
-        email: norm(userData?.email || tokenCheck.decoded.email),
+        displayName: normNullish(userData?.profile?.firstName + " " + userData?.profile?.lastName) ||
+          normNullish(tokenCheck.decoded.name) ||
+          normNullish(tokenCheck.decoded.email),
+        nickname: normNullish(profile?.nickname),
+        email: normNullish(userData?.email || tokenCheck.decoded.email),
       };
 
       // 3. Walidacja body
       const body = (req.body || {}) as any;
-      const date = norm(body.date);
-      const waterType = norm(body.waterType);
-      const placeName = norm(body.placeName).slice(0, 200);
-      const placeNameRaw = norm(body.placeNameRaw || body.placeName).slice(0, 200);
-      const placeId = norm(body.placeId) || undefined;
+      const date = normNullish(body.date);
+      const waterType = normNullish(body.waterType);
+      const placeName = normNullish(body.placeName).slice(0, 200);
+      const placeNameRaw = normNullish(body.placeNameRaw || body.placeName).slice(0, 200);
+      const placeId = normNullish(body.placeId) || undefined;
       const kmRaw = toSafeFloat(body.km);
       const hoursOnWaterRaw = body.hoursOnWater;
       const hoursOnWater = hoursOnWaterRaw != null ? toSafeFloat(hoursOnWaterRaw) : null;
-      const activityType = norm(body.activityType) || undefined;
-      const difficultyScale = norm(body.difficultyScale) || null;
-      const difficulty = norm(body.difficulty) || null;
-      const sectionDescription = norm(body.sectionDescription).slice(0, 500) || undefined;
-      const note = norm(body.note).slice(0, 1000) || undefined;
-      const eventId = norm(body.eventId).slice(0, 128) || undefined;
-      const eventName = norm(body.eventName).slice(0, 200) || undefined;
+      const activityType = normNullish(body.activityType) || undefined;
+      const difficultyScale = normNullish(body.difficultyScale) || null;
+      const difficulty = normNullish(body.difficulty) || null;
+      const sectionDescription = normNullish(body.sectionDescription).slice(0, 500) || undefined;
+      const note = normNullish(body.note).slice(0, 1000) || undefined;
+      const eventId = normNullish(body.eventId).slice(0, 128) || undefined;
+      const eventName = normNullish(body.eventName).slice(0, 200) || undefined;
 
       const capsizeRolls = {
         kabina: toSafeInt(body.capsizeRolls?.kabina),

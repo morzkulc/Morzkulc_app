@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {addSaunaToSession, getBasenVars, resolveBasenAdminGrant} from "../modules/basen/basen_service";
+import {addSaunaToSession, getBasenVars, resolveBasenAdminGrant, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -64,8 +64,7 @@ export async function handleBasenAddSauna(req: Request, res: Response, deps: Dep
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const isClient = msg.includes("nie istnieje") || msg.includes("już saunę") || msg.includes("przeszłości");
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

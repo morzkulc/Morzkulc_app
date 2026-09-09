@@ -1,5 +1,6 @@
 import {todayIsoUTC, isIsoDateYYYYMMDD} from "./calendar_utils";
 import {isUserStatusBlocked} from "../users/userStatusCheck";
+import {norm} from "../shared/text_utils";
 
 const COLLECTION = "events";
 
@@ -12,10 +13,6 @@ export type EventOrganizerKey = typeof EVENT_ORGANIZER_KEYS[number];
 
 export function isValidOrganizerKey(v: string): boolean {
   return (EVENT_ORGANIZER_KEYS as readonly string[]).includes(v);
-}
-
-function norm(s: any): string {
-  return String(s || "").trim();
 }
 
 // Pole "Miejsce" ma być nazwą miejsca, nie linkiem — użytkownicy notorycznie

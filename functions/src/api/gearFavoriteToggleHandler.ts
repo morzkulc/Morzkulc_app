@@ -3,6 +3,7 @@
 
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
+import {VALID_CATEGORIES} from "../modules/equipment/shared/gear_catalog_service";
 
 type TokenCheck =
   | {error: string}
@@ -16,10 +17,6 @@ export type GearFavoriteToggleDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
-
-const VALID_CATEGORIES = new Set([
-  "kayaks", "paddles", "lifejackets", "helmets", "throwbags", "sprayskirts",
-]);
 
 export async function handleGearFavoriteToggle(
   req: Request, res: Response, deps: GearFavoriteToggleDeps

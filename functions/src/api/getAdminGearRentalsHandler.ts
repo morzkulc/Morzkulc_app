@@ -3,6 +3,10 @@
 
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
+import {normNullish} from "../modules/shared/text_utils";
+import {resolveDateRange} from "../modules/shared/date_range_utils";
+import {fullName, nickname} from "../modules/shared/user_display";
+import {CATEGORY_LABELS} from "../modules/equipment/shared/gear_catalog_service";
 
 type TokenCheck =
   | {error: string}
@@ -17,87 +21,6 @@ export type GetAdminGearRentalsDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-// Etykiety PL kategorii sprzętu (kayaks obsługiwane osobno od pozostałych).
-const CATEGORY_LABELS: Record<string, string> = {
-  kayaks: "Kajaki",
-  paddles: "Wiosła",
-  lifejackets: "Kamizelki",
-  helmets: "Kaski",
-  throwbags: "Rzutki",
-  sprayskirts: "Fartuchy",
-};
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
-function isIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-
-/** Dzisiejsza data w strefie Europe/Warsaw jako YYYY-MM-DD. */
-function todayWarsawIso(): string {
-  return new Date().toLocaleDateString("en-CA", {timeZone: "Europe/Warsaw"});
-}
-
-function isoToDateUTC(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0)); // południe UTC — bezpieczne dla DST
-}
-
-function dateUTCToIso(dt: Date): string {
-  return dt.toISOString().slice(0, 10);
-}
-
-function minusDays(iso: string, n: number): string {
-  const d = isoToDateUTC(iso);
-  d.setUTCDate(d.getUTCDate() - n);
-  return dateUTCToIso(d);
-}
-
-function minusMonths(iso: string, n: number): string {
-  const d = isoToDateUTC(iso);
-  d.setUTCMonth(d.getUTCMonth() - n);
-  return dateUTCToIso(d);
-}
-
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
-
-/** Wylicza [from, to] (YYYY-MM-DD) dla wybranego zakresu. */
-function resolveRange(range: string, fromQ: string, toQ: string):
-  | {ok: true; from: string; to: string; key: string}
-  | {ok: false; message: string} {
-  const today = todayWarsawIso();
-  switch (range) {
-  case "month":
-    return {ok: true, key: "month", from: minusDays(today, 30), to: today};
-  case "semester":
-    return {ok: true, key: "semester", from: minusMonths(today, 6), to: today};
-  case "year":
-    return {ok: true, key: "year", from: minusMonths(today, 12), to: today};
-  case "custom": {
-    const from = norm(fromQ);
-    const to = norm(toQ);
-    if (!isIsoDate(from) || !isIsoDate(to)) {
-      return {ok: false, message: "Nieprawidłowy zakres dat (wymagany format YYYY-MM-DD)."};
-    }
-    if (from > to) return {ok: false, message: "Data „od\" jest późniejsza niż „do\"."};
-    return {ok: true, key: "custom", from, to};
-  }
-  case "current":
-  default:
-    return {ok: true, key: "current", from: today, to: today};
-  }
-}
 
 export async function handleGetAdminGearRentals(req: Request, res: Response, deps: GetAdminGearRentalsDeps) {
   const {sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, db, adminRoleKeys} = deps;
@@ -121,14 +44,18 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
 
-      const range = norm((req.query.range as string) || "current").toLowerCase();
-      const rr = resolveRange(range, (req.query.from as string) || "", (req.query.to as string) || "");
+      const range = normNullish((req.query.range as string) || "current").toLowerCase();
+      const rr = resolveDateRange(range, (req.query.from as string) || "", (req.query.to as string) || "", {
+        supportsCurrent: true,
+        defaultKey: "current",
+        monthMode: "days30",
+      });
       if (!rr.ok) {
         res.status(400).json({error: rr.message});
         return;
@@ -166,43 +93,43 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
 
       for (const doc of snap.docs) {
         const r = doc.data() as any;
-        if (norm(r.status) !== "active") continue;
-        const blockStartIso = norm(r.blockStartIso);
+        if (normNullish(r.status) !== "active") continue;
+        const blockStartIso = normNullish(r.blockStartIso);
         if (!blockStartIso || blockStartIso > to) continue; // brak nakładania
-        const startDate = norm(r.startDate);
+        const startDate = normNullish(r.startDate);
 
         // Pozycje: nowy format items[]; legacy fallback z kayakIds[].
         let items: Row["items"] = [];
         if (Array.isArray(r.items) && r.items.length) {
           items = r.items.map((it: any) => {
-            const cat = norm(it.category).toLowerCase();
+            const cat = normNullish(it.category).toLowerCase();
             return {
               category: cat,
-              categoryLabel: CATEGORY_LABELS[cat] || norm(it.category) || "Sprzęt",
-              number: norm(it.itemNumber) || norm(it.number),
-              label: norm(it.label),
+              categoryLabel: CATEGORY_LABELS[cat] || normNullish(it.category) || "Sprzęt",
+              number: normNullish(it.itemNumber) || normNullish(it.number),
+              label: normNullish(it.label),
             };
           });
         } else if (Array.isArray(r.kayakIds) && r.kayakIds.length) {
           items = r.kayakIds.map((kid: any) => ({
             category: "kayaks",
             categoryLabel: CATEGORY_LABELS.kayaks,
-            number: norm(kid),
+            number: normNullish(kid),
             label: "",
           }));
         }
 
-        const userUid = norm(r.userUid);
+        const userUid = normNullish(r.userUid);
         if (userUid) uids.add(userUid);
 
         rows.push({
-          id: norm(r.id) || doc.id,
+          id: normNullish(r.id) || doc.id,
           userUid,
           userName: "",
           userNick: "",
-          userEmail: norm(r.userEmail),
+          userEmail: normNullish(r.userEmail),
           startDate,
-          endDate: norm(r.endDate),
+          endDate: normNullish(r.endDate),
           costHours: Number(r.costHours || 0),
           items,
         });

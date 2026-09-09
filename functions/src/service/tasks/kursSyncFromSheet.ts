@@ -1,14 +1,11 @@
 import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
+import {norm} from "../../modules/shared/text_utils";
 
 type Payload = {
   dry?: boolean;
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 function normDate(v: any): string {
   const s = norm(v);

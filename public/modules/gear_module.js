@@ -2,6 +2,8 @@ import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { storageFetchKayakCoverUrl, storageFetchKayakGalleryUrls, storageFetchLifejacketUrl, storageFetchHelmetUrl, storageFetchHelmetFrontUrl } from "/core/firebase_client.js";
 import { createReservationCalendar } from "/core/date_range_calendar.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { formatDatePL as formatDatePLFromIso, buildKayakTitle } from "/core/format_utils.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -1661,7 +1663,6 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
   const number = String(k?.number || "").trim();
   const brand = String(k?.brand || "").trim();
   const model = String(k?.model || "").trim();
-  const type = String(k?.type || "").trim();
   const color = String(k?.color || "").trim();
 
   const storageVal = String(k?.storage || k?.storedAt || "").trim().toLowerCase();
@@ -1675,22 +1676,6 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
 
   const canReserve = working && (!isPrivate || privateRent) && !isPool && canUserReserve;
 
-  const workingBadge = working
-    ? `<span class="badge ok">sprawny</span>`
-    : `<span class="badge danger">niesprawny</span>`;
-
-  const availabilityBadge = reservedNow
-    ? `<span class="badge danger">rezerwacja</span>`
-    : `<span class="badge soft">wolny</span>`;
-
-  const poolBadge = isPool
-    ? `<span class="badge pool">Basen</span>`
-    : "";
-
-  const typeBadge = type
-    ? `<span class="badge soft">${escapeHtml(type)}</span>`
-    : "";
-
   const title = buildKayakTitle(k);
   const detailsRows = buildKayakDetailsRows(k);
 
@@ -1703,9 +1688,6 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
             <div class="gearTitleLine">
               <span class="gearTitle">${escapeHtml(brand || "Kajak")}</span><span class="gearModel"> ${escapeHtml(model || "")}</span>
             </div>
-            ${type ? `<div class="gearInlineMeta gearInlineMetaMain gearMiniType">${escapeHtml(type)}</div>` : ""}
-            <div class="gearInlineMeta gearInlineMetaMain"><strong>Kolor:</strong> ${escapeHtml(color || "-")}</div>
-            <div class="gearInlineMeta gearInlineMetaMain gearNr"><strong>Nr:</strong> ${escapeHtml(number || "-")}</div>
             <div class="gearNrColorMobile">Nr ${escapeHtml(number || "-")}${color ? ` (${escapeHtml(color)})` : ""}</div>
           </div>
 
@@ -1716,11 +1698,6 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
               data-gear-fav="${escapeAttr(String(k?.id || ""))}"
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
-            <div class="gearBadges gearBadgesStack">
-              ${workingBadge}
-              ${poolBadge || availabilityBadge}
-              ${typeBadge}
-            </div>
           </div>
         </div>
 
@@ -1742,20 +1719,6 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
               <div class="gearPhotoLoading hidden" aria-hidden="true"><div class="spinner"></div></div>
             </div>
           </button>
-        </div>
-
-        <div class="actions gearCardActions">
-          ${isPool
-            ? `<span class="badge pool gearPoolActionLabel">Basen</span>`
-            : `<button
-            type="button"
-            class="primary gearBundleReserveBtn"
-            data-gear-bundle-reserve="${escapeAttr(String(k?.id || ""))}"
-            data-gear-bundle-category="kayaks"
-            ${canReserve ? "" : "disabled"}>
-            Rezerwuj
-          </button>`}
-          <button type="button" class="ghost gearMoreBtn">Więcej</button>
         </div>
 
         <div class="gearMiniBar">
@@ -1837,7 +1800,6 @@ function renderHelmetCard(item, isFav = false, canUserReserve = true) {
               data-gear-fav="${escapeAttr(String(item?.id || ""))}"
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
-            ${isPool ? `<div class="gearBadges gearBadgesStack"><span class="badge pool">Basen</span></div>` : ""}
           </div>
         </div>
 
@@ -1925,7 +1887,6 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
             ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
-            ${isPool ? `<div class="gearBadges gearBadgesStack"><span class="badge pool">Basen</span></div>` : ""}
           </div>
         </div>
 
@@ -2064,15 +2025,6 @@ function buildKayakDetailsRows(k) {
   return rows.join("");
 }
 
-function buildKayakTitle(k) {
-  const brand = String(k?.brand || "").trim();
-  const model = String(k?.model || "").trim();
-  const number = String(k?.number || "").trim();
-
-  const core = [brand, model].filter(Boolean).join(" ").trim() || "Kajak";
-  return number ? `${core} (nr ${number})` : core;
-}
-
 function buildGenericGearTitle(item) {
   const brand = String(item?.brand || "").trim();
   const model = String(item?.model || "").trim();
@@ -2130,7 +2082,6 @@ function renderLifejacketCard(item, isFav = false, canUserReserve = true) {
               aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
             >${heartSvg(isFav)}</button>
             ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
-            ${isPool ? `<div class="gearBadges gearBadgesStack"><span class="badge pool">Basen</span></div>` : ""}
           </div>
         </div>
 
@@ -2214,21 +2165,6 @@ function toBoolOrNull(v) {
   return null;
 }
 
-function escapeAttr(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
 function heartSvg(filled) {
   const fill = filled ? "currentColor" : "none";
   return `<svg viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
@@ -2251,12 +2187,6 @@ function dotsIconSvg() {
 
 function refreshIconSvg() {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
-}
-
-function formatDatePLFromIso(iso) {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(String(iso))) return String(iso || "");
-  const [y, m, d] = String(iso).split("-");
-  return `${d}.${m}.${y}`;
 }
 
 function renderReservationsSimple(reservations) {

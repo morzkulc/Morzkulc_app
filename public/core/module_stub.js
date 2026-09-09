@@ -1,3 +1,4 @@
+import { escapeHtml } from "/core/html_utils.js";
 export function createGenericModule({ id, type, label, defaultRoute, order, enabled, access }) {
   return {
     id,
@@ -23,9 +24,3 @@ export function createGenericModule({ id, type, label, defaultRoute, order, enab
   };
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}

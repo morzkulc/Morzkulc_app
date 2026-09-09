@@ -4,6 +4,9 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {computeBalance, GodzinkiRecord} from "../modules/hours/godzinki_service";
+import {normNullish} from "../modules/shared/text_utils";
+import {todayWarsawIso} from "../modules/shared/date_range_utils";
+import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
 
 type TokenCheck =
   | {error: string}
@@ -22,33 +25,9 @@ export type GetAdminMemberDuesDeps = {
 // Populacja raportu = pełni członkowie (głosujący). Kandydaci/sympatycy/kursanci poza.
 const MEMBER_ROLE_KEYS = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-function todayWarsawIso(): string {
-  return new Date().toLocaleDateString("en-CA", {timeZone: "Europe/Warsaw"});
-}
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
-
-/**
- * Zarejestrowany = ukończył rejestrację w aplikacji (ma profil z imieniem i nazwiskiem).
- * Odsiewa puste konta SSO (zalogowane raz, bez ukończonej rejestracji).
- */
-function isRegistered(u: any): boolean {
-  const p = u?.profile || {};
-  return Boolean(norm(p.firstName) && norm(p.lastName));
-}
-
 /** Parsuje „składki opłacone do" (YYYY-MM-DD | DD-MM-YYYY | DD.MM.YYYY) → Date (UTC) lub null. */
 function parseContrib(raw: any): Date | null {
-  const s = norm(raw);
+  const s = normNullish(raw);
   if (!s) return null;
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
@@ -79,7 +58,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
@@ -97,7 +76,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
       const recsByUid = new Map<string, GodzinkiRecord[]>();
       ledgerSnap.forEach((doc) => {
         const r = doc.data() as any;
-        const ruid = norm(r.uid);
+        const ruid = normNullish(r.uid);
         if (!ruid) return;
         const arr = recsByUid.get(ruid);
         if (arr) arr.push(r as GodzinkiRecord);
@@ -124,7 +103,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
 
       const rows: Row[] = memberDocs.map((d) => {
         const u = d.data() as any;
-        const contribRaw = norm(u?.contributionsPaidUntil ?? u?.admin?.contributions);
+        const contribRaw = normNullish(u?.contributionsPaidUntil ?? u?.admin?.contributions);
         const contribDate = parseContrib(contribRaw);
         const paid = Boolean(contribDate && contribDate.getTime() >= todayMidnight.getTime());
         const balance = computeBalance(recsByUid.get(d.id) || [], now);
@@ -132,8 +111,8 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
           userUid: d.id,
           userName: fullName(u),
           userNick: nickname(u),
-          userEmail: norm(u?.email),
-          roleKey: norm(u?.role_key),
+          userEmail: normNullish(u?.email),
+          roleKey: normNullish(u?.role_key),
           contributionsPaidUntil: contribRaw,
           paid,
           balance,

@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-07T19:48:56`
+Generated at: `2026-09-09T12:22:22`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,12 +57,12 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `573`
+- Total scanned files: `576`
 - Python files: `42`
-- Script files JS/TS/GS/etc.: `380`
+- Script files JS/TS/GS/etc.: `383`
 - Config files: `22`
 - Markdown files: `100`
-- Internal dependency edges: `640`
+- Internal dependency edges: `643`
 
 ## Project tree
 
@@ -234,6 +234,7 @@ Excluded sensitive files:
       - gearReservationCancelHandler.js
       - gearReservationCreateHandler.js
       - gearReservationUpdateHandler.js
+      - getAdminGearDamageReportsHandler.js
       - getAdminGearRentalsHandler.js
       - getAdminGearTopRentalsHandler.js
       - getAdminMemberActivityHandler.js
@@ -433,6 +434,7 @@ Excluded sensitive files:
       - gearReservationCancelHandler.ts
       - gearReservationCreateHandler.ts
       - gearReservationUpdateHandler.ts
+      - getAdminGearDamageReportsHandler.ts
       - getAdminGearRentalsHandler.ts
       - getAdminGearTopRentalsHandler.ts
       - getAdminMemberActivityHandler.ts
@@ -598,6 +600,7 @@ Excluded sensitive files:
     - user_error_messages.js
   - modules/
     - raporty/
+      - gear_damage_reports.js
       - gear_rentals.js
       - member_activity.js
       - member_dues.js
@@ -816,6 +819,7 @@ Excluded sensitive files:
 - `functions/lib/index.js` -> `functions/lib/api/gearReservationCancelHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/gearReservationCreateHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/gearReservationUpdateHandler.js`
+- `functions/lib/index.js` -> `functions/lib/api/getAdminGearDamageReportsHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/getAdminGearRentalsHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/getAdminGearTopRentalsHandler.js`
 - `functions/lib/index.js` -> `functions/lib/api/getAdminMemberActivityHandler.js`
@@ -1105,6 +1109,7 @@ Excluded sensitive files:
 - `functions/src/index.ts` -> `functions/src/api/gearReservationCancelHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/gearReservationCreateHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/gearReservationUpdateHandler.ts`
+- `functions/src/index.ts` -> `functions/src/api/getAdminGearDamageReportsHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/getAdminGearRentalsHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/getAdminGearTopRentalsHandler.ts`
 - `functions/src/index.ts` -> `functions/src/api/getAdminMemberActivityHandler.ts`
@@ -1349,6 +1354,7 @@ Excluded sensitive files:
 - `functions/test/setup_consolidation.test.ts` -> `functions/src/service/tasks/godzinkiArchiveSheetRows.ts`
 - `functions/test/sync_core.test.ts` -> `functions/src/service/tasks/godzinkiSyncFromSheet.ts`
 - `functions/test/workspace_group_sync.test.ts` -> `functions/src/service/workspaceGroupSync.ts`
+- `public/modules/raporty/registry.js` -> `public/modules/raporty/gear_damage_reports.js`
 - `public/modules/raporty/registry.js` -> `public/modules/raporty/gear_rentals.js`
 - `public/modules/raporty/registry.js` -> `public/modules/raporty/member_activity.js`
 - `public/modules/raporty/registry.js` -> `public/modules/raporty/member_dues.js`
@@ -3740,6 +3746,17 @@ Excluded sensitive files:
   - `handleGearReservationUpdate`
   - `norm`
 
+### `functions/lib/api/getAdminGearDamageReportsHandler.js`
+
+- Lines: `82`
+- Size: `4316` bytes
+- Imports:
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `handleGetAdminGearDamageReports`
+  - `norm`
+  - `tsToIso`
+
 ### `functions/lib/api/getAdminGearRentalsHandler.js`
 
 - Lines: `202`
@@ -3820,8 +3837,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getAdminPendingHandler.js`
 
-- Lines: `437`
-- Size: `28130` bytes
+- Lines: `400`
+- Size: `25578` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
@@ -4350,8 +4367,8 @@ Excluded sensitive files:
 
 ### `functions/lib/index.js`
 
-- Lines: `1738`
-- Size: `75851` bytes
+- Lines: `1754`
+- Size: `76506` bytes
 - Internal dependencies:
   - `functions/lib/api/adminApprovalHandler.js`
   - `functions/lib/api/adminEventsSyncCalendarHandler.js`
@@ -4374,6 +4391,7 @@ Excluded sensitive files:
   - `functions/lib/api/gearReservationCancelHandler.js`
   - `functions/lib/api/gearReservationCreateHandler.js`
   - `functions/lib/api/gearReservationUpdateHandler.js`
+  - `functions/lib/api/getAdminGearDamageReportsHandler.js`
   - `functions/lib/api/getAdminGearRentalsHandler.js`
   - `functions/lib/api/getAdminGearTopRentalsHandler.js`
   - `functions/lib/api/getAdminMemberActivityHandler.js`
@@ -4443,6 +4461,7 @@ Excluded sensitive files:
   - `import/require ./api/gearReservationCancelHandler`
   - `import/require ./api/gearReservationCreateHandler`
   - `import/require ./api/gearReservationUpdateHandler`
+  - `import/require ./api/getAdminGearDamageReportsHandler`
   - `import/require ./api/getAdminGearRentalsHandler`
   - `import/require ./api/getAdminGearTopRentalsHandler`
   - `import/require ./api/getAdminMemberActivityHandler`
@@ -6376,6 +6395,18 @@ Excluded sensitive files:
   - `handleGearReservationUpdate`
   - `norm`
 
+### `functions/src/api/getAdminGearDamageReportsHandler.ts`
+
+- Lines: `111`
+- Size: `3859` bytes
+- Imports:
+  - `import/require express`
+  - `import/require firebase-functions/v2`
+- Functions:
+  - `handleGetAdminGearDamageReports`
+  - `norm`
+  - `tsToIso`
+
 ### `functions/src/api/getAdminGearRentalsHandler.ts`
 
 - Lines: `245`
@@ -6460,8 +6491,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getAdminPendingHandler.ts`
 
-- Lines: `548`
-- Size: `23018` bytes
+- Lines: `498`
+- Size: `20645` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
@@ -6980,8 +7011,8 @@ Excluded sensitive files:
 
 ### `functions/src/index.ts`
 
-- Lines: `1916`
-- Size: `64526` bytes
+- Lines: `1933`
+- Size: `65058` bytes
 - Internal dependencies:
   - `functions/src/api/adminApprovalHandler.ts`
   - `functions/src/api/adminEventsSyncCalendarHandler.ts`
@@ -7004,6 +7035,7 @@ Excluded sensitive files:
   - `functions/src/api/gearReservationCancelHandler.ts`
   - `functions/src/api/gearReservationCreateHandler.ts`
   - `functions/src/api/gearReservationUpdateHandler.ts`
+  - `functions/src/api/getAdminGearDamageReportsHandler.ts`
   - `functions/src/api/getAdminGearRentalsHandler.ts`
   - `functions/src/api/getAdminGearTopRentalsHandler.ts`
   - `functions/src/api/getAdminMemberActivityHandler.ts`
@@ -7073,6 +7105,7 @@ Excluded sensitive files:
   - `import/require ./api/gearReservationCancelHandler`
   - `import/require ./api/gearReservationCreateHandler`
   - `import/require ./api/gearReservationUpdateHandler`
+  - `import/require ./api/getAdminGearDamageReportsHandler`
   - `import/require ./api/getAdminGearRentalsHandler`
   - `import/require ./api/getAdminGearTopRentalsHandler`
   - `import/require ./api/getAdminMemberActivityHandler`
@@ -8767,8 +8800,8 @@ Excluded sensitive files:
 
 ### `public/modules/admin_pending_module.js`
 
-- Lines: `590`
-- Size: `33049` bytes
+- Lines: `527`
+- Size: `29002` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
@@ -8849,8 +8882,8 @@ Excluded sensitive files:
 
 ### `public/modules/gear_module.js`
 
-- Lines: `3207`
-- Size: `145570` bytes
+- Lines: `3267`
+- Size: `148779` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
@@ -8860,6 +8893,8 @@ Excluded sensitive files:
   - `applyClubEventDates`
   - `applyFilter`
   - `applySelectedEventToHeader`
+  - `buildGenericGearLine2`
+  - `buildGenericGearLine3`
   - `buildGenericGearTitle`
   - `buildHelmetLine2`
   - `buildHelmetLine3`
@@ -8886,6 +8921,8 @@ Excluded sensitive files:
   - `getActiveKierownikEvents`
   - `getSelectedClubEvent`
   - `heartSvg`
+  - `helmetColorIconHtml`
+  - `helmetColorSvg`
   - `invalidateAvailabilityAndRefresh`
   - `isDirty`
   - `isWorking`
@@ -9120,6 +9157,20 @@ Excluded sensitive files:
   - `submitCancelReservation`
   - `submitUpdateReservation`
 
+### `public/modules/raporty/gear_damage_reports.js`
+
+- Lines: `93`
+- Size: `4292` bytes
+- Imports:
+  - `import/require /core/api_client.js`
+  - `import/require /core/user_error_messages.js`
+- Functions:
+  - `escapeHtml`
+  - `formatDatePL`
+  - `load`
+  - `renderItems`
+  - `severityBadgeHtml`
+
 ### `public/modules/raporty/gear_rentals.js`
 
 - Lines: `281`
@@ -9166,15 +9217,17 @@ Excluded sensitive files:
 
 ### `public/modules/raporty/registry.js`
 
-- Lines: `16`
-- Size: `539` bytes
+- Lines: `18`
+- Size: `634` bytes
 - Internal dependencies:
+  - `public/modules/raporty/gear_damage_reports.js`
   - `public/modules/raporty/gear_rentals.js`
   - `public/modules/raporty/member_activity.js`
   - `public/modules/raporty/member_dues.js`
   - `public/modules/raporty/top_rentals.js`
   - `public/modules/raporty/user_activity.js`
 - Imports:
+  - `import/require ./gear_damage_reports.js`
   - `import/require ./gear_rentals.js`
   - `import/require ./member_activity.js`
   - `import/require ./member_dues.js`
@@ -9375,8 +9428,8 @@ Excluded sensitive files:
 
 ### `firebase.json`
 
-- Lines: `556`
-- Size: `14000` bytes
+- Lines: `563`
+- Size: `14188` bytes
 - Detected top-level keys / sections:
   - `emulators`
   - `firestore`
@@ -12138,11 +12191,11 @@ Excluded sensitive files:
 - `public/styles/basen.css` — 815 lines, 17080 bytes
 - `public/styles/dashboard.css` — 162 lines, 2708 bytes
 - `public/styles/events.css` — 284 lines, 5064 bytes
-- `public/styles/gear.css` — 1836 lines, 36414 bytes
+- `public/styles/gear.css` — 1823 lines, 36002 bytes
 - `public/styles/godzinki.css` — 194 lines, 3828 bytes
 - `public/styles/km.css` — 496 lines, 10234 bytes
 - `public/styles/kurs.css` — 430 lines, 7128 bytes
-- `public/styles/start.css` — 349 lines, 13463 bytes
+- `public/styles/start.css` — 359 lines, 13899 bytes
 - `tests/e2e/.gitignore` — 11 lines, 142 bytes
 - `tests/e2e/reports/events_e2e_run.txt` — 110 lines, 8703 bytes
 - `tests/e2e/reports/godzinki_e2e_run.txt` — 57 lines, 5149 bytes

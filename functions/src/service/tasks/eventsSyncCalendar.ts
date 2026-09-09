@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {GoogleCalendarProvider, CalendarEventData} from "../providers/googleCalendarProvider";
 import {getServiceConfig} from "../service_config";
+import {norm} from "../../modules/shared/text_utils";
 
 /**
  * Task: events.syncCalendar
@@ -16,10 +17,6 @@ import {getServiceConfig} from "../service_config";
 type Payload = {
   dry?: boolean;
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 export const eventsSyncCalendarTask: ServiceTask<Payload> = {
   id: "events.syncCalendar",

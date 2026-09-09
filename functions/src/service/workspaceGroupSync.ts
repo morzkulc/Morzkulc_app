@@ -1,4 +1,5 @@
 import {GoogleWorkspaceProvider} from "./providers/googleWorkspaceProvider";
+import {norm} from "../modules/shared/text_utils";
 
 /**
  * Wspólne źródło prawdy dla synchronizacji ról użytkowników z członkostwem w grupach
@@ -16,10 +17,6 @@ export type SimpleLogger = {
   warn: (...args: any[]) => void;
   error: (...args: any[]) => void;
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 /** Docelowa rola w lista@ dla danej roli klubowej. null = brak dostępu (kursant). */
 export function listaRoleForUserRole(roleKey: string): "MANAGER" | "MEMBER" | null {

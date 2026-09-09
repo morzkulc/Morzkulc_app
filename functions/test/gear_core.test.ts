@@ -46,9 +46,9 @@ describe("quoteKayaksCostHours", () => {
     expect(quoteKayaksCostHours(vars(), "rola_czlonek", "2026-06-01", "2026-06-03", 0)).toBe(0);
   });
 
-  it("zarząd/KR darmowo tylko przy boardDoesNotPay=true", () => {
-    expect(quoteKayaksCostHours(vars({boardDoesNotPay: true}), "rola_zarzad", "2026-06-01", "2026-06-02", 1)).toBe(0);
-    expect(quoteKayaksCostHours(vars({boardDoesNotPay: true}), "rola_kr", "2026-06-01", "2026-06-02", 1)).toBe(0);
+  it("zarząd/KR: quoteKayaksCostHours zawsze liczy realny koszt — zwolnienie (waived) obsługuje gear_bundle_service, nie ta funkcja", () => {
+    expect(quoteKayaksCostHours(vars({boardDoesNotPay: true}), "rola_zarzad", "2026-06-01", "2026-06-02", 1)).toBe(20);
+    expect(quoteKayaksCostHours(vars({boardDoesNotPay: true}), "rola_kr", "2026-06-01", "2026-06-02", 1)).toBe(20);
     expect(quoteKayaksCostHours(vars({boardDoesNotPay: false}), "rola_zarzad", "2026-06-01", "2026-06-02", 1)).toBe(20);
   });
 

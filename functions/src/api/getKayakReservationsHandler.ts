@@ -103,9 +103,7 @@ export async function handleGetKayakReservations(
 
       const nameMap: Record<string, string> = {};
       if (uids.length) {
-        const userSnaps = await Promise.all(
-          uids.map((uid) => db.collection("users_active").doc(uid).get())
-        );
+        const userSnaps = await db.getAll(...uids.map((uid) => db.collection("users_active").doc(uid)));
         for (const userSnap of userSnaps) {
           if (!userSnap.exists) continue;
           const data = userSnap.data() as any;
@@ -122,9 +120,7 @@ export async function handleGetKayakReservations(
       const eventIds = [...new Set(docs.map((r) => String(r?.eventId || "")).filter(Boolean))];
       const eventNameMap: Record<string, string> = {};
       if (eventIds.length) {
-        const eventSnaps = await Promise.all(
-          eventIds.map((id) => db.collection("events").doc(id).get())
-        );
+        const eventSnaps = await db.getAll(...eventIds.map((id) => db.collection("events").doc(id)));
         for (const eventSnap of eventSnaps) {
           if (!eventSnap.exists) continue;
           eventNameMap[eventSnap.id] = String((eventSnap.data() as any)?.name || "");

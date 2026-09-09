@@ -7,6 +7,7 @@ import {getServiceConfig} from "../service/service_config";
 import {parseSchoolYear, getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {computeNegativeBalances, NegativeBalanceEntry} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -26,10 +27,6 @@ function tsToIso(v: any): string | null {
   if (!v) return null;
   if (typeof v?.toDate === "function") return v.toDate().toISOString();
   return null;
-}
-
-function norm(v: any): string {
-  return String(v || "").trim();
 }
 
 type PrivateKayakEmailIssue = {
@@ -213,15 +210,13 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
       const godzinkiUids = [...new Set(godzinkiItems.map((i) => i.uid).filter(Boolean))];
       const uidToName = new Map<string, string>();
       if (godzinkiUids.length > 0) {
-        await Promise.all(
-          godzinkiUids.map(async (submitterUid) => {
-            const snap = await db.collection("users_active").doc(submitterUid).get();
-            const d = snap.data() as any;
-            const nickname = norm(d?.profile?.nickname);
-            const firstName = norm(d?.profile?.firstName);
-            uidToName.set(submitterUid, nickname || firstName || norm(d?.email) || submitterUid);
-          })
-        );
+        const snaps = await db.getAll(...godzinkiUids.map((submitterUid) => db.collection("users_active").doc(submitterUid)));
+        snaps.forEach((snap) => {
+          const d = snap.data() as any;
+          const nickname = norm(d?.profile?.nickname);
+          const firstName = norm(d?.profile?.firstName);
+          uidToName.set(snap.id, nickname || firstName || norm(d?.email) || snap.id);
+        });
       }
 
       // Group by uid — one entry per person with aggregated total
@@ -263,14 +258,33 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
       const privateKayakEmailIssues: PrivateKayakEmailIssue[] = [];
       const privateKayakUnpaidContributions: PrivateKayakUnpaidContributions[] = [];
 
-      for (const kayakDoc of privateKayaksSnap.docs) {
-        const kayak = kayakDoc.data() as any;
-        // gear.syncAllFromSheet zapisuje pole "storedAt"; starsze rekordy "storage" — czytamy oba.
-        const storage = norm(kayak?.storage || kayak?.storedAt).toLowerCase();
+      const eligibleKayaks = privateKayaksSnap.docs
+        .map((kayakDoc) => {
+          const kayak = kayakDoc.data() as any;
+          // gear.syncAllFromSheet zapisuje pole "storedAt"; starsze rekordy "storage" — czytamy oba.
+          const storage = norm(kayak?.storage || kayak?.storedAt).toLowerCase();
+          return {kayakDoc, kayak, storage};
+        })
+        .filter(({kayak, storage}) => storage === "klub" && kayak?.isPrivateRentable !== true);
 
-        if (storage !== "klub") continue;
-        if (kayak?.isPrivateRentable === true) continue;
+      // Rozwiązanie właścicieli WSADOWO (batche po 30 — limit Firestore "in") zamiast
+      // osobnego zapytania per kajak w pętli — N+1 przy każdym otwarciu panelu.
+      const ownerEmails = [...new Set(
+        eligibleKayaks
+          .map(({kayak}) => norm(kayak?.ownerContact).toLowerCase())
+          .filter((email) => email && email.includes("@"))
+      )];
+      const ownerByEmail = new Map<string, any>();
+      for (let i = 0; i < ownerEmails.length; i += 30) {
+        const chunk = ownerEmails.slice(i, i + 30);
+        const chunkSnap = await db.collection("users_active").where("email", "in", chunk).get();
+        for (const d of chunkSnap.docs) {
+          const email = norm((d.data() as any)?.email).toLowerCase();
+          if (email && !ownerByEmail.has(email)) ownerByEmail.set(email, d.data());
+        }
+      }
 
+      for (const {kayakDoc, kayak} of eligibleKayaks) {
         const kayakId = norm(kayak?.id || kayakDoc.id);
         const number = norm(kayak?.number);
         const ownerContact = norm(kayak?.ownerContact);
@@ -302,12 +316,9 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
           });
         }
 
-        const ownerSnap = await db.collection("users_active")
-          .where("email", "==", ownerContact.toLowerCase())
-          .limit(1)
-          .get();
+        const ownerData = ownerByEmail.get(ownerContact.toLowerCase());
 
-        if (ownerSnap.empty) {
+        if (!ownerData) {
           privateKayakEmailIssues.push({
             kayakId,
             number,
@@ -318,7 +329,6 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
         }
 
         // Owner found — check contributions
-        const ownerData = ownerSnap.docs[0].data() as any;
         const contributions = norm(ownerData?.admin?.contributions);
         const firstName = norm(ownerData?.profile?.firstName);
         const lastName = norm(ownerData?.profile?.lastName);

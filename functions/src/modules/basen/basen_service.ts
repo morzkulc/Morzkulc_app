@@ -1,6 +1,21 @@
 import * as admin from "firebase-admin";
 import {resolveFunctionRoleEmail} from "../setup/function_roles_service";
 import {computeBasenGodzinyBalance, blockBasenGodzinyInTx, refundBasenGodzinyInTx} from "./basen_godziny_service";
+import {norm} from "../shared/text_utils";
+
+/**
+ * Błąd walidacji/reguły biznesowej (zły input, kolizja, stan konfliktowy) — zawsze 400
+ * dla klienta. W odróżnieniu od nieoczekiwanych błędów (Firestore, sieć), które NIE są
+ * ClientError i mają zostać 500. Handlery basen* rozróżniają `err instanceof ClientError`
+ * zamiast (jak wcześniej) dopasowywania podłańcuchów treści komunikatu — kruche, bo zmiana
+ * treści komunikatu PL po polsku cicho przełączała kod odpowiedzi bez ostrzeżenia (P4).
+ */
+export class ClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ClientError";
+  }
+}
 
 // Maksymalna liczba uczestników jednego instruktora na jednym slocie — ustalone
 // z użytkownikiem: instruktor może dopisać sobie max 2 osoby szukające instruktora
@@ -117,11 +132,7 @@ export function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function norm(v: any): string {
-  return String(v || "").trim();
-}
-
-function parseVarValue(v: any): any {
+export function parseVarValue(v: any): any {
   if (v === null || v === undefined) return null;
   if (typeof v === "object" && "value" in v) return v.value;
   return v;
@@ -358,7 +369,7 @@ export async function createSession(
   await db.runTransaction(async (tx) => {
     const existing = await tx.get(ref);
     if (existing.exists) {
-      throw new Error("Termin na ten dzień już istnieje — odśwież kalendarz i sprawdź istniejący termin zamiast tworzyć nowy.");
+      throw new ClientError("Termin na ten dzień już istnieje — odśwież kalendarz i sprawdź istniejący termin zamiast tworzyć nowy.");
     }
     tx.set(ref, {
       id: ref.id,
@@ -390,11 +401,11 @@ export async function addSaunaToSession(
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(sessionRef);
-    if (!snap.exists) throw new Error("Termin nie istnieje.");
+    if (!snap.exists) throw new ClientError("Termin nie istnieje.");
     const session = snap.data() as BasenSession;
 
-    if (session.date < todayIso()) throw new Error("Nie można modyfikować terminu z przeszłości.");
-    if (session.slots?.SAUNA) throw new Error("Ten termin ma już saunę.");
+    if (session.date < todayIso()) throw new ClientError("Nie można modyfikować terminu z przeszłości.");
+    if (session.slots?.SAUNA) throw new ClientError("Ten termin ma już saunę.");
 
     tx.update(sessionRef, {
       "slots.SAUNA": {
@@ -471,21 +482,21 @@ export async function enrollInSlot(
       tx.get(dailyLimitQuery),
     ]);
 
-    if (!sessionSnap.exists) throw new Error("Termin nie istnieje.");
+    if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
     const session = sessionSnap.data() as BasenSession;
-    if (session.date < todayIso()) throw new Error("Nie można zapisać się na przeszły termin.");
+    if (session.date < todayIso()) throw new ClientError("Nie można zapisać się na przeszły termin.");
 
     const slotData = session.slots?.[args.slot];
-    if (!slotData) throw new Error("Slot nie istnieje dla tego terminu.");
-    if (slotData.status === "cancelled") throw new Error("Slot jest anulowany.");
+    if (!slotData) throw new ClientError("Slot nie istnieje dla tego terminu.");
+    if (slotData.status === "cancelled") throw new ClientError("Slot jest anulowany.");
 
     if (existingEnrollSnap && existingEnrollSnap.exists) {
       const existing = existingEnrollSnap.data() as BasenEnrollment;
-      if (existing.status === "active") throw new Error("Jesteś już zapisany/a na ten slot.");
+      if (existing.status === "active") throw new ClientError("Jesteś już zapisany/a na ten slot.");
     }
 
     if (dailyLimitSnap.docs.length >= 2) {
-      throw new Error("Masz już wykorzystany dzienny limit 2 slotów basenowych (baseny, sauna i instruktorowanie liczą się łącznie) — nie możesz zapisać się na kolejny slot tego dnia.");
+      throw new ClientError("Masz już wykorzystany dzienny limit 2 slotów basenowych (baseny, sauna i instruktorowanie liczą się łącznie) — nie możesz zapisać się na kolejny slot tego dnia.");
     }
 
     let availability: SlotAvailability | null = null;
@@ -496,14 +507,14 @@ export async function enrollInSlot(
     let isFreeForKursant = false;
     if (args.mode !== "instructor") {
       availability = computeSlotAvailability(slotData, args.isKursant);
-      if (availability.isFull) throw new Error("Slot jest już pełny.");
+      if (availability.isFull) throw new ClientError("Slot jest już pełny.");
 
       isFreeForKursant = args.isKursant && availability.viaReservedPool === true;
       if (!isFreeForKursant) {
         const godzinyRecords = godzinyLedgerSnap.docs.map((d) => d.data() as any);
         const balance = computeBasenGodzinyBalance(godzinyRecords);
         if (balance < 1) {
-          throw new Error("Brak dostępnych godzin basenowych. Skontaktuj się z opiekunem basenu, aby dopisać godziny.");
+          throw new ClientError("Brak dostępnych godzin basenowych. Skontaktuj się z opiekunem basenu, aby dopisać godziny.");
         }
       }
     }
@@ -517,17 +528,17 @@ export async function enrollInSlot(
         (instructorEnrollSnap.data() as BasenEnrollment) :
         null;
       if (!instrData || instrData.status !== "active" || instrData.type !== "instructor") {
-        throw new Error("Wybrany instruktor nie jest już dostępny na ten slot.");
+        throw new ClientError("Wybrany instruktor nie jest już dostępny na ten slot.");
       }
       // Samoobsługowy wybór (nie claimWaitingStudent) — instruktor z już przypisaną
       // osobą jest tu niedostępny, druga osoba to wyłącznie jego decyzja.
       if (instructorStudentsSnap && instructorStudentsSnap.size >= SELF_SELECT_INSTRUCTOR_MAX_STUDENTS) {
-        throw new Error("Ten instruktor ma już przypisaną osobę — dopisanie kolejnej to decyzja instruktora (może Cię dopisać sam z listy uczestników).");
+        throw new ClientError("Ten instruktor ma już przypisaną osobę — dopisanie kolejnej to decyzja instruktora (może Cię dopisać sam z listy uczestników).");
       }
     }
 
     if (allocationRef && allocationSnap && allocationSnap.exists) {
-      throw new Error("Ten kajak jest już zajęty dla tej godziny.");
+      throw new ClientError("Ten kajak jest już zajęty dla tej godziny.");
     }
 
     // ── zapisy ──
@@ -612,11 +623,11 @@ export async function cancelEnrollment(
 
   await db.runTransaction(async (tx) => {
     const [enrollSnap, sessionSnap] = await Promise.all([tx.get(enrollRef), tx.get(sessionRef)]);
-    if (!enrollSnap.exists) throw new Error("Zapis nie istnieje.");
+    if (!enrollSnap.exists) throw new ClientError("Zapis nie istnieje.");
 
     const enrollment = enrollSnap.data() as BasenEnrollment;
-    if (enrollment.status === "cancelled") throw new Error("Zapis jest już anulowany.");
-    if (!sessionSnap.exists) throw new Error("Termin nie istnieje.");
+    if (enrollment.status === "cancelled") throw new ClientError("Zapis jest już anulowany.");
+    if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
 
     const session = sessionSnap.data() as BasenSession;
     const slotData = session.slots?.[args.slot] || null;
@@ -722,26 +733,26 @@ export async function setEnrollmentInstructor(
       instructorStudentsQuery ? tx.get(instructorStudentsQuery) : Promise.resolve(null),
     ]);
 
-    if (!enrollSnap.exists) throw new Error("Zapis nie istnieje.");
+    if (!enrollSnap.exists) throw new ClientError("Zapis nie istnieje.");
     const enrollment = enrollSnap.data() as BasenEnrollment;
-    if (enrollment.status !== "active") throw new Error("Zapis jest anulowany.");
-    if (enrollment.type === "instructor") throw new Error("Instruktor nie paruje się sam ze sobą.");
+    if (enrollment.status !== "active") throw new ClientError("Zapis jest anulowany.");
+    if (enrollment.type === "instructor") throw new ClientError("Instruktor nie paruje się sam ze sobą.");
 
     if (args.instructorUid) {
-      if (args.instructorUid === args.uid) throw new Error("Nie możesz wybrać samego siebie jako instruktora.");
+      if (args.instructorUid === args.uid) throw new ClientError("Nie możesz wybrać samego siebie jako instruktora.");
       if (instructorStudentsSnap) {
         // Samoobsługowy wybór — jak w enrollInSlot, instruktor z już przypisaną osobą
         // jest tu niedostępny (druga osoba to jego decyzja, przez claimWaitingStudent).
         const currentCount = instructorStudentsSnap.docs.filter((d) => d.id !== eid).length;
         if (currentCount >= SELF_SELECT_INSTRUCTOR_MAX_STUDENTS) {
-          throw new Error("Ten instruktor ma już przypisaną osobę — dopisanie kolejnej to decyzja instruktora (może Cię dopisać sam z listy uczestników).");
+          throw new ClientError("Ten instruktor ma już przypisaną osobę — dopisanie kolejnej to decyzja instruktora (może Cię dopisać sam z listy uczestników).");
         }
       }
       const instrData = instructorEnrollSnap && instructorEnrollSnap.exists ?
         (instructorEnrollSnap.data() as BasenEnrollment) :
         null;
       if (!instrData || instrData.status !== "active" || instrData.type !== "instructor") {
-        throw new Error("Wybrany instruktor nie jest już dostępny na ten slot.");
+        throw new ClientError("Wybrany instruktor nie jest już dostępny na ten slot.");
       }
     }
 
@@ -765,13 +776,13 @@ export async function cancelSession(
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   const sessionSnapPre = await sessionRef.get();
-  if (!sessionSnapPre.exists) throw new Error("Termin nie istnieje.");
+  if (!sessionSnapPre.exists) throw new ClientError("Termin nie istnieje.");
   const sessionPre = sessionSnapPre.data() as BasenSession;
 
   const allLabels = Object.keys(sessionPre.slots || {}) as BasenSlotLabel[];
 
   if (allLabels.every((l) => sessionPre.slots?.[l]?.status === "cancelled")) {
-    throw new Error("Termin jest już anulowany.");
+    throw new ClientError("Termin jest już anulowany.");
   }
 
   const activeLabels = allLabels.filter((l) => {
@@ -800,7 +811,7 @@ export async function cancelSession(
 
   await db.runTransaction(async (tx) => {
     const sessionSnap = await tx.get(sessionRef);
-    if (!sessionSnap.exists) throw new Error("Termin nie istnieje.");
+    if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
 
     // ── zapisy ──
     const slotUpdate: Record<string, any> = {updatedAt: now};
@@ -859,15 +870,15 @@ export async function setEnrollmentKayak(
       newAllocationRef ? tx.get(newAllocationRef) : Promise.resolve(null),
     ]);
 
-    if (!enrollSnap.exists) throw new Error("Zapis nie istnieje.");
+    if (!enrollSnap.exists) throw new ClientError("Zapis nie istnieje.");
     const enrollment = enrollSnap.data() as BasenEnrollment;
-    if (enrollment.status !== "active") throw new Error("Zapis jest anulowany.");
+    if (enrollment.status !== "active") throw new ClientError("Zapis jest anulowany.");
 
     const currentKayakId = enrollment.kayakId || null;
     if (currentKayakId === nextKayakId) return; // no-op
 
     if (newAllocationRef && newAllocationSnap && newAllocationSnap.exists) {
-      throw new Error("Ten kajak jest już zajęty dla tej godziny.");
+      throw new ClientError("Ten kajak jest już zajęty dla tej godziny.");
     }
 
     if (currentKayakId && currentKayakId !== "PRIVATE") {
@@ -1072,7 +1083,7 @@ export async function claimWaitingStudent(
   db: FirebaseFirestore.Firestore,
   args: { sessionId: string; slot: BasenSlotLabel; instructorUid: string; targetUid: string }
 ): Promise<void> {
-  if (args.instructorUid === args.targetUid) throw new Error("Nie możesz przypisać samego siebie.");
+  if (args.instructorUid === args.targetUid) throw new ClientError("Nie możesz przypisać samego siebie.");
 
   const instructorRef = db.collection("basen_enrollments").doc(enrollmentId(args.sessionId, args.slot, args.instructorUid));
   const targetRef = db.collection("basen_enrollments").doc(enrollmentId(args.sessionId, args.slot, args.targetUid));
@@ -1092,18 +1103,18 @@ export async function claimWaitingStudent(
 
     const instructorData = instructorSnap.exists ? (instructorSnap.data() as BasenEnrollment) : null;
     if (!instructorData || instructorData.status !== "active" || instructorData.type !== "instructor") {
-      throw new Error("Nie jesteś zapisany/a jako instruktor na ten slot.");
+      throw new ClientError("Nie jesteś zapisany/a jako instruktor na ten slot.");
     }
 
-    if (!targetSnap.exists) throw new Error("Zapis nie istnieje.");
+    if (!targetSnap.exists) throw new ClientError("Zapis nie istnieje.");
     const target = targetSnap.data() as BasenEnrollment;
-    if (target.status !== "active") throw new Error("Zapis jest anulowany.");
+    if (target.status !== "active") throw new ClientError("Zapis jest anulowany.");
     if (target.type !== "training" || target.instructorUid) {
-      throw new Error("Ta osoba nie szuka już instruktora.");
+      throw new ClientError("Ta osoba nie szuka już instruktora.");
     }
 
     if (instructorStudentsSnap.size >= MAX_STUDENTS_PER_INSTRUCTOR) {
-      throw new Error(`Masz już maksymalną liczbę uczestników (${MAX_STUDENTS_PER_INSTRUCTOR}).`);
+      throw new ClientError(`Masz już maksymalną liczbę uczestników (${MAX_STUDENTS_PER_INSTRUCTOR}).`);
     }
 
     tx.update(targetRef, {instructorUid: args.instructorUid, updatedAt: now});

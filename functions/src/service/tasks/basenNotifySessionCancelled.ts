@@ -1,13 +1,11 @@
+import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
+import {norm} from "../../modules/shared/text_utils";
 
 type Payload = {
   sessionId: string;
   reason?: string; // opcjonalny powód podany przez admina przy anulowaniu
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
   id: "basen.notifySessionCancelled",
@@ -18,10 +16,8 @@ export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
   },
 
   run: async (payload, ctx) => {
-    const sessionSnap = await ctx.firestore
-      .collection("basen_sessions")
-      .doc(payload.sessionId)
-      .get();
+    const sessionRef = ctx.firestore.collection("basen_sessions").doc(payload.sessionId);
+    const sessionSnap = await sessionRef.get();
 
     if (!sessionSnap.exists) {
       return {ok: false, message: `Session ${payload.sessionId} not found`};
@@ -29,6 +25,12 @@ export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
 
     const session = sessionSnap.data() as any;
     const dateStr = norm(session?.date);
+
+    // Idempotencja przy retry jobu (patrz eventsNotifyUpcoming.ts po ten sam wzorzec):
+    // bez tego jeden nieudany mail w partii oznacza cały task jako failed → retry wysyła
+    // ponownie do WSZYSTKICH odbiorców, łącznie z tymi, którzy już dostali powiadomienie.
+    const alreadyNotified: string[] = Array.isArray(session?.cancelNotifiedEmails) ?
+      session.cancelNotifiedEmails : [];
 
     const enrollmentsSnap = await ctx.firestore
       .collection("basen_enrollments")
@@ -63,13 +65,17 @@ export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
       }
     }
 
+    const newRecipients = Array.from(recipients).filter((email) => !alreadyNotified.includes(email));
+
     let sent = 0;
     let errors = 0;
+    const sentEmails: string[] = [];
 
-    for (const to of recipients) {
+    for (const to of newRecipients) {
       try {
         await ctx.workspace.sendGenericEmail(to, subject, body);
         sent++;
+        sentEmails.push(to);
         ctx.logger.info("basenNotifySessionCancelled: sent", {to, sessionId: payload.sessionId});
       } catch (e: any) {
         errors++;
@@ -80,10 +86,16 @@ export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
       }
     }
 
+    if (sentEmails.length) {
+      await sessionRef.update({
+        cancelNotifiedEmails: admin.firestore.FieldValue.arrayUnion(...sentEmails),
+      });
+    }
+
     return {
       ok: errors === 0,
-      message: `sent=${sent}, errors=${errors}, recipients=${recipients.size}`,
-      details: {sent, errors, recipients: recipients.size},
+      message: `sent=${sent}, errors=${errors}, recipients=${newRecipients.length}, alreadyNotified=${alreadyNotified.length}`,
+      details: {sent, errors, recipients: newRecipients.length, alreadyNotified: alreadyNotified.length},
     };
   },
 };

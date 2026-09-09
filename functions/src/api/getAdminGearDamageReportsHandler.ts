@@ -3,6 +3,7 @@
 
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -17,10 +18,6 @@ export type GetAdminGearDamageReportsDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 function tsToIso(v: any): string | null {
   if (!v) return null;

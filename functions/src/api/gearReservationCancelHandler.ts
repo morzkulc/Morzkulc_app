@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {cancelReservation} from "../modules/equipment/kayaks/gear_kayaks_service";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -14,10 +15,6 @@ export type GearReservationCancelDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
 
-function norm(v: any): string {
-  return String(v || "").trim();
-}
-
 export async function handleGearReservationCancel(req: Request, res: Response, deps: GearReservationCancelDeps) {
   const {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken} = deps;
 
@@ -27,6 +24,11 @@ export async function handleGearReservationCancel(req: Request, res: Response, d
 
   corsHandler(req, res, async () => {
     try {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
+
       const tokenCheck = await requireIdToken(req);
       if ("error" in tokenCheck) {
         res.status(401).json({error: tokenCheck.error});

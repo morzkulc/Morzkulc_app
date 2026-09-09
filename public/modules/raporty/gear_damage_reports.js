@@ -5,18 +5,11 @@
 // + sync). "Oznacz jako naprawione" tylko zdejmuje zgłoszenie z tej listy.
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
+import { escapeHtml } from "/core/html_utils.js";
+import { formatDatePL } from "/core/format_utils.js";
 
 const REPORT_URL = "/api/admin/reports/gear-damage";
 const RESOLVE_URL = "/api/admin/gear-damage/resolve";
-
-function escapeHtml(s) {
-  return String(s == null ? "" : s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-function formatDatePL(iso) {
-  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}.${m[2]}.${m[1]}` : "—";
-}
 
 function severityBadgeHtml(severity) {
   if (severity === "dead") return `<span class="badge danger">Trup</span>`;

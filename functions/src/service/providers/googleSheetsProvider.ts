@@ -557,11 +557,4 @@ export class GoogleSheetsProvider {
 
     return {action: "appended", rowNumber: newRowNumber};
   }
-
-  async upsertMemberRowByEmail(
-    _cfg: MembersSheetConfig,
-    _rowPatch: Record<string, any>
-  ): Promise<UpsertResult> {
-    throw new Error("upsertMemberRowByEmail is deprecated. Provide \"ID\" and use upsertMemberRowById.");
-  }
 }

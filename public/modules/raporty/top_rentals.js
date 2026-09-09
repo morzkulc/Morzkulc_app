@@ -2,12 +2,9 @@
 // Raport „Najczęściej wypożyczane" — ranking sprzętu wg sumy dni wypożyczenia.
 import { apiGetJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
+import { escapeHtml } from "/core/html_utils.js";
 
 const REPORT_URL = "/api/admin/reports/gear-top-rentals";
-
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
 
 export const topRentalsReport = {
   id: "gear-top-rentals",

@@ -5,6 +5,7 @@ import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
 import {logger} from "firebase-functions/v2";
 import {createDamageReport, isSupportedDamageCategory} from "../modules/equipment/damage/gear_damage_service";
+import {normNullish} from "../modules/shared/text_utils";
 
 /** Kolejkuje job serwisowy (fire-and-forget z gwarancją zapisu joba) — ten sam
  * wzorzec co adminGearReservationCancelHandler.ts. */
@@ -36,10 +37,6 @@ export type SubmitGearDamageReportDeps = {
   memberRoleKeys: string[];
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 /**
  * POST /api/gear/damage-report (authenticated, memberRoleKeys — kandydat/czlonek/kr/zarzad)
  * Body: {category, itemId, severity: "usable"|"repair"|"dead", description, photos?: [{data, mimeType}]}
@@ -67,31 +64,31 @@ export async function handleSubmitGearDamageReport(req: Request, res: Response, 
 
       const userSnap = await db.collection("users_active").doc(uid).get();
       const userData = (userSnap.exists ? userSnap.data() : null) as any;
-      const roleKey = norm(userData?.role_key);
+      const roleKey = normNullish(userData?.role_key);
 
       const body = (req.body || {}) as any;
-      const category = norm(body.category).toLowerCase();
+      const category = normNullish(body.category).toLowerCase();
       if (!isSupportedDamageCategory(category)) {
         res.status(400).json({ok: false, code: "validation_failed", message: `Nieobsługiwana kategoria: ${category}`});
         return;
       }
 
-      const itemId = norm(body.itemId);
-      const severity = norm(body.severity); // walidacja/domyślna wartość w createDamageReport
-      const description = norm(body.description);
+      const itemId = normNullish(body.itemId);
+      const severity = normNullish(body.severity); // walidacja/domyślna wartość w createDamageReport
+      const description = normNullish(body.description);
       const photosRaw = Array.isArray(body.photos) ? body.photos : [];
-      const photos = photosRaw.slice(0, 2).map((p: any) => ({data: norm(p?.data), mimeType: norm(p?.mimeType)}));
+      const photos = photosRaw.slice(0, 2).map((p: any) => ({data: normNullish(p?.data), mimeType: normNullish(p?.mimeType)}));
 
-      const nickname = norm(userData?.profile?.nickname);
-      const firstName = norm(userData?.profile?.firstName);
-      const lastName = norm(userData?.profile?.lastName);
-      const reporterName = nickname || [firstName, lastName].filter(Boolean).join(" ") || norm(userData?.email);
+      const nickname = normNullish(userData?.profile?.nickname);
+      const firstName = normNullish(userData?.profile?.firstName);
+      const lastName = normNullish(userData?.profile?.lastName);
+      const reporterName = nickname || [firstName, lastName].filter(Boolean).join(" ") || normNullish(userData?.email);
 
       const result = await createDamageReport(db, bucket, memberRoleKeys, {
         uid,
         roleKey,
         reporterName,
-        reporterEmail: norm(userData?.email || tokenCheck.decoded.email),
+        reporterEmail: normNullish(userData?.email || tokenCheck.decoded.email),
         category,
         itemId,
         severity,

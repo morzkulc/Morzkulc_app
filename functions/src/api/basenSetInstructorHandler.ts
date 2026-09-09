@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {setEnrollmentInstructor, BasenSlotLabel} from "../modules/basen/basen_service";
+import {setEnrollmentInstructor, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -52,9 +52,7 @@ export async function handleBasenSetInstructor(req: Request, res: Response, deps
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const clientErrors = ["nie istnieje", "anulowany", "dostępny", "samego siebie", "sam ze sobą", "maksymalną", "przypisaną"];
-      const isClient = clientErrors.some((s) => msg.includes(s));
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

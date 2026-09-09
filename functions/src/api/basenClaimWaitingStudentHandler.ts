@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {claimWaitingStudent, BasenSlotLabel} from "../modules/basen/basen_service";
+import {claimWaitingStudent, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -58,9 +58,7 @@ export async function handleBasenClaimWaitingStudent(req: Request, res: Response
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const clientErrors = ["nie istnieje", "anulowany", "instruktor", "szuka", "samego siebie", "maksymalną"];
-      const isClient = clientErrors.some((s) => msg.includes(s));
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

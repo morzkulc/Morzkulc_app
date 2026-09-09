@@ -230,6 +230,9 @@ type OpeningMatch = {
   matchMethod: "email" | "name" | null;
   obDocId: string | null;
   obEmail: string | null;
+  // Snapshot już pobrany przez findOpeningBalance — pozwala emailExistsInOtherObRow
+  // reużyć go zamiast robić drugi pełny odczyt tej samej (rosnącej) kolekcji.
+  allDocs: FirebaseFirestore.QueryDocumentSnapshot[];
 };
 
 async function findOpeningBalance(
@@ -253,7 +256,7 @@ async function findOpeningBalance(
     // 1. Dopasowanie po e-mailu (priorytet) — odczyt nagłówka niewrażliwy na wielkość liter
     if (normalizedEmail && normalizedEmail.includes("@")) {
       if (rowEmail && rowEmail === normalizedEmail) {
-        return {openingMatch: true, obData: data, matchMethod: "email", obDocId: doc.id, obEmail: rowEmail};
+        return {openingMatch: true, obData: data, matchMethod: "email", obDocId: doc.id, obEmail: rowEmail, allDocs: snap.docs};
       }
     }
 
@@ -262,28 +265,29 @@ async function findOpeningBalance(
       const rowFirst = normalizeStr(obValueExact(data, "imię", "imie") || "").toLowerCase();
       const rowLast = normalizeStr(obValueExact(data, "nazwisko") || "").toLowerCase();
       if (rowFirst && rowLast && rowFirst === normalizedFirst && rowLast === normalizedLast) {
-        nameMatch = {openingMatch: true, obData: data, matchMethod: "name", obDocId: doc.id, obEmail: rowEmail || null};
+        nameMatch = {openingMatch: true, obData: data, matchMethod: "name", obDocId: doc.id, obEmail: rowEmail || null, allDocs: snap.docs};
       }
     }
   }
 
   if (nameMatch) return nameMatch;
-  return {openingMatch: false, obData: null, matchMethod: null, obDocId: null, obEmail: null};
+  return {openingMatch: false, obData: null, matchMethod: null, obDocId: null, obEmail: null, allDocs: snap.docs};
 }
 
 /**
  * Czy podany e-mail występuje już w INNYM wierszu bilansu otwarcia (kolizja przy
  * aktualizacji maila po dopasowaniu po nazwisku). exceptDocId pomijamy (to nasz wiersz).
+ * Przyjmuje `docs` już pobrane przez findOpeningBalance zamiast robić drugi pełny odczyt
+ * tej samej kolekcji.
  */
 async function emailExistsInOtherObRow(
-  db: FirebaseFirestore.Firestore,
+  docs: FirebaseFirestore.QueryDocumentSnapshot[],
   email: string,
   exceptDocId: string | null
 ): Promise<boolean> {
   const e = String(email || "").trim().toLowerCase();
   if (!e || !e.includes("@")) return false;
-  const snap = await db.collection("users_opening_balance_26").get();
-  for (const doc of snap.docs) {
+  for (const doc of docs) {
     if (exceptDocId && doc.id === exceptDocId) continue;
     const rowEmail = String(obValueExact(doc.data(), "e-mail", "email") || "").trim().toLowerCase();
     if (rowEmail && rowEmail === e) return true;
@@ -543,6 +547,11 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
 
   corsHandler(req, res, async () => {
     try {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
+
       const tokenCheck = await requireIdToken(req);
       if ("error" in tokenCheck) {
         res.status(401).json({error: tokenCheck.error});
@@ -632,7 +641,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
                 // Wstrzymaj — front pokaże osobny krok potwierdzenia.
                 openingNameMatchPendingConfirm = true;
                 obEmailForConfirm = nameFound.obEmail;
-              } else if (await emailExistsInOtherObRow(db, email, nameFound.obDocId)) {
+              } else if (await emailExistsInOtherObRow(nameFound.allDocs, email, nameFound.obDocId)) {
                 // Kolizja: mail loginu istnieje w innym wierszu bilansu — nie nadpisujemy.
                 openingEmailCollision = true;
               } else {
@@ -803,7 +812,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
       // NEW USER (BOOTSTRAP FROM BO26)
       // =========================
       const found: OpeningMatch = incomingProfile.iAmKursant === true ?
-        {openingMatch: false, obData: null, matchMethod: null, obDocId: null, obEmail: null} :
+        {openingMatch: false, obData: null, matchMethod: null, obDocId: null, obEmail: null, allDocs: []} :
         await findOpeningBalance(db, email, incomingProfile.firstName, incomingProfile.lastName);
 
       let roleKey: string = newUserRoleCode;
@@ -821,7 +830,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           if (!confirmOpeningEmailUpdate) {
             openingNameMatchPendingConfirm = true;
             obEmailForConfirm = found.obEmail;
-          } else if (await emailExistsInOtherObRow(db, email, found.obDocId)) {
+          } else if (await emailExistsInOtherObRow(found.allDocs, email, found.obDocId)) {
             openingEmailCollision = true;
           } else {
             await updateObEmail(db, found.obDocId, found.obData, email);

@@ -1,4 +1,5 @@
 import {overlapsIso} from "../../calendar/calendar_utils";
+import {norm} from "../../shared/text_utils";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Limit rezerwacji liczony PER KATEGORIA (zamyka lukę S2).
@@ -11,10 +12,6 @@ import {overlapsIso} from "../../calendar/calendar_utils";
 //
 // Te helpery są mirrorowane w tests/test_bundle_reservations.py.
 // ──────────────────────────────────────────────────────────────────────────────
-
-function norm(s: any): string {
-  return String(s || "").trim();
-}
 
 /**
  * Zlicza sztuki sprzętu PER KATEGORIA w aktywnych, nakładających się

@@ -11,14 +11,9 @@
 // część logotypów (np. Przewrotka) słabo czyta się samodzielnie w małym
 // rozmiarze.
 
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+// Ta funkcja historycznie escapowała też cudzysłowy (treść trafia do atrybutów,
+// nie tylko węzłów tekstowych) — stąd alias na escapeAttr, nie "podstawowy" escapeHtml.
+import { escapeAttr as escapeHtml } from "/core/html_utils.js";
 
 export const CLUB_ORGANIZER_KEYS = ["morzkulc", "bystrze", "panta_rei", "habazie", "przewrotka"];
 

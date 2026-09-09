@@ -23,6 +23,7 @@
 
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
+import {normNullish} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -37,10 +38,6 @@ export type KmAdminMergePlacesDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 async function batchUpdateLogs(
   db: FirebaseFirestore.Firestore,
@@ -103,7 +100,7 @@ export async function handleKmAdminMergePlaces(
       const uid = tokenCheck.decoded.uid;
 
       const userSnap = await deps.db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!deps.adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden — wymagana rola administratora."});
         return;
@@ -111,7 +108,7 @@ export async function handleKmAdminMergePlaces(
 
       // 2. Walidacja body
       const body = (req.body || {}) as any;
-      const keepPlaceId = norm(body.keepPlaceId).slice(0, 128);
+      const keepPlaceId = normNullish(body.keepPlaceId).slice(0, 128);
       const mergeIdsRaw: unknown = body.mergeIds;
 
       if (!keepPlaceId) {
@@ -123,7 +120,7 @@ export async function handleKmAdminMergePlaces(
         return;
       }
       const mergeIds: string[] = mergeIdsRaw
-        .map((v) => norm(v).slice(0, 128))
+        .map((v) => normNullish(v).slice(0, 128))
         .filter(Boolean);
 
       if (mergeIds.length === 0) {
@@ -147,7 +144,7 @@ export async function handleKmAdminMergePlaces(
         return;
       }
       const keepData = keepSnap.data() as any;
-      const keepName: string = norm(keepData.name);
+      const keepName: string = normNullish(keepData.name);
       const existingAliases: string[] = Array.isArray(keepData.aliases) ? keepData.aliases : [];
       let accumulatedUseCount = 0;
       const newAliases = new Set<string>(existingAliases);
@@ -166,7 +163,7 @@ export async function handleKmAdminMergePlaces(
         }
 
         const mergeData = mergeSnap.data() as any;
-        const mergeName = norm(mergeData.name);
+        const mergeName = normNullish(mergeData.name);
         accumulatedUseCount += Number(mergeData.useCount || 0);
 
         // Dodaj alias z nazwy i dotychczasowych aliasów scalanego miejsca

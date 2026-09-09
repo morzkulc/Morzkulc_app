@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {cancelSession, resolveBasenAdminGrant} from "../modules/basen/basen_service";
+import {cancelSession, resolveBasenAdminGrant, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -72,8 +72,7 @@ export async function handleBasenCancelSession(req: Request, res: Response, deps
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const isClient = msg.includes("już anulowan") || msg.includes("nie istnieje");
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

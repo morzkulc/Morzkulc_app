@@ -14,7 +14,7 @@
  * Stary cache jest automatycznie czyszczony w activate.
  */
 
-const CACHE_VERSION = "mts70mvl";
+const CACHE_VERSION = "mtu5a1me";
 const STATIC_CACHE  = `morzkulc-static-${CACHE_VERSION}`;
 
 // Pliki precachowane przy instalacji SW
@@ -37,6 +37,10 @@ const PRECACHE_URLS = [
   "/core/module_stub.js",
   "/core/user_error_messages.js",
   "/core/text_format.js",
+  "/core/html_utils.js",
+  "/core/format_utils.js",
+  "/core/club_badges.js",
+  "/core/date_range_calendar.js",
   "/modules/gear_module.js",
   "/modules/my_reservations_module.js",
   "/modules/godzinki_module.js",
@@ -44,7 +48,17 @@ const PRECACHE_URLS = [
   "/modules/basen_module.js",
   "/modules/admin_pending_module.js",
   "/modules/km_module.js",
-  "/styles/app.css",
+  "/modules/klub_module.js",
+  "/modules/kurs_module.js",
+  "/modules/kurs_godzinki_module.js",
+  "/modules/raporty/registry.js",
+  "/modules/raporty/reports_panel.js",
+  "/modules/raporty/gear_rentals.js",
+  "/modules/raporty/top_rentals.js",
+  "/modules/raporty/gear_damage_reports.js",
+  "/modules/raporty/member_activity.js",
+  "/modules/raporty/member_dues.js",
+  "/modules/raporty/user_activity.js",
   "/styles/base.css",
   "/styles/dashboard.css",
   "/styles/gear.css",
@@ -52,6 +66,8 @@ const PRECACHE_URLS = [
   "/styles/events.css",
   "/styles/basen.css",
   "/styles/km.css",
+  "/styles/godzinki.css",
+  "/styles/kurs.css",
 ];
 
 // ── Instalacja ────────────────────────────────────────────────────────────────

@@ -306,6 +306,7 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
       : "";
 
     if (!sessions.length) {
+      innerEl._basenSessions = [];
       innerEl.innerHTML = balanceHtml + `<div class="hint" style="margin-top:16px;">Brak nadchodzących terminów basenowych.</div>`;
       return;
     }
@@ -319,7 +320,9 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
       ${renderClaimStudentModalHtml()}
     `;
 
-    bindSessionActions(innerEl, ctx, canEnroll, sessions);
+    // Delegacja zdarzeń bindowana RAZ w render() (patrz bindSessionActionsDelegation) —
+    // tu tylko odświeżamy dane, które ten jeden nasłuchiwacz czyta przy każdym kliknięciu.
+    innerEl._basenSessions = sessions;
     scrollToHomeTarget(innerEl);
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się załadować terminów.")}</div>`;
@@ -350,83 +353,66 @@ async function refreshSessionsView(innerEl, ctx, canEnroll) {
   await renderSessionsView(innerEl, ctx, canEnroll);
 }
 
-function bindSessionActions(innerEl, ctx, canEnroll, sessions) {
-  // Klik na kafelek osoby "szukającej instruktora" (widoczny od razu na karcie slotu,
-  // tylko dla widza który sam jest instruktorem na tym slocie) → od razu przypisuje.
-  innerEl.querySelectorAll(".basenClaimTagBtn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const sessionId = btn.getAttribute("data-session-id");
-      const slot = btn.getAttribute("data-slot");
-      const targetUid = btn.getAttribute("data-target-uid");
-      btn.disabled = true;
+// Delegacja WSZYSTKICH akcji karty terminu — bindowana RAZ na cały czas życia #basenInner
+// (ten sam incydent i ten sam wzorzec naprawy co bindModalCloseDelegation, patrz komentarz
+// przy jej wywołaniu w render(): poprzednio te 8 nasłuchiwaczy było spinane od nowa przy
+// KAŻDYM renderSessionsView — czyli po każdym zapisie/anulowaniu/przypisaniu w tej samej
+// sesji, bo #basenInner samo w sobie nigdy nie jest zastępowane). `sessions` (jedyna dana
+// potrzebna tu spoza atrybutów klikniętego elementu — .basenClaimEditBtn) zmienia się przy
+// każdym renderze, więc czyta ją z `innerEl._basenSessions` (patrz renderSessionsView), nie
+// z domknięcia.
+function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
+  innerEl.addEventListener("click", async (ev) => {
+    // Klik na kafelek osoby "szukającej instruktora" (widoczny od razu na karcie slotu,
+    // tylko dla widza który sam jest instruktorem na tym slocie) → od razu przypisuje.
+    const claimTagBtn = ev.target.closest(".basenClaimTagBtn");
+    if (claimTagBtn) {
+      const sessionId = claimTagBtn.getAttribute("data-session-id");
+      const slot = claimTagBtn.getAttribute("data-slot");
+      const targetUid = claimTagBtn.getAttribute("data-target-uid");
+      claimTagBtn.disabled = true;
       try {
         await apiPostJson({ url: CLAIM_URL, idToken: ctx.idToken, body: { sessionId, slot, targetUid } });
         await refreshSessionsView(innerEl, ctx, canEnroll);
       } catch (e) {
-        btn.disabled = false;
+        claimTagBtn.disabled = false;
         alert(e?.message || "Nie udało się przypisać.");
       }
-    });
-  });
+      return;
+    }
 
-  // "Edytuj" na karcie instruktora — bardziej odkrywalna droga do tego samego co
-  // .basenClaimTagBtn wyżej (klikalny kafelek na liście), przez osobny modal z
-  // wyborem osoby szukającej instruktora na ten slot.
-  innerEl.querySelectorAll(".basenClaimEditBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const sessionId = btn.getAttribute("data-session-id");
-      const slot = btn.getAttribute("data-slot");
-      const session = (sessions || []).find((s) => s.id === sessionId);
+    // "Edytuj" na karcie instruktora — bardziej odkrywalna droga do tego samego co
+    // .basenClaimTagBtn wyżej (klikalny kafelek na liście), przez osobny modal z
+    // wyborem osoby szukającej instruktora na ten slot.
+    const claimEditBtn = ev.target.closest(".basenClaimEditBtn");
+    if (claimEditBtn) {
+      const sessionId = claimEditBtn.getAttribute("data-session-id");
+      const slot = claimEditBtn.getAttribute("data-slot");
+      const sessions = innerEl._basenSessions || [];
+      const session = sessions.find((s) => s.id === sessionId);
       const attendees = Array.isArray(session?.slots?.[slot]?.attendees) ? session.slots[slot].attendees : [];
       const waitingStudents = attendees.filter((a) => a.type === "training" && !a.instructorUid);
       openClaimStudentModal(innerEl, ctx, sessionId, slot, waitingStudents, () => refreshSessionsView(innerEl, ctx, canEnroll));
-    });
-  });
+      return;
+    }
 
-  // "Zapisz się z instruktorem" checkbox → lazy-load instructor list
-  innerEl.querySelectorAll(".basenWithInstructorCheck").forEach((cb) => {
-    cb.addEventListener("change", async () => {
-      const form = cb.closest(".basenEnrollForm");
-      const wrap = form.querySelector(".basenInstructorPickerWrap");
-      if (!wrap) return;
-      wrap.classList.toggle("hidden", !cb.checked);
-      if (!cb.checked) return;
-
-      const select = wrap.querySelector(".basenInstructorSelect");
-      if (select.getAttribute("data-loaded") === "1") return;
-
-      const sessionId = form.getAttribute("data-session-id");
-      const slot = form.getAttribute("data-slot");
-      try {
-        const data = await apiGetJson({ url: `${ATTENDEES_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slot)}`, idToken: ctx.idToken });
-        const instructors = Array.isArray(data?.instructors) ? data.instructors : [];
-        select.innerHTML = instructors.length
-          ? `<option value="">Bez wyboru — dopasujemy później</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`
-          : `<option value="">Brak dostępnych instruktorów — zapiszesz się na listę oczekujących</option>`;
-        select.setAttribute("data-loaded", "1");
-      } catch (e) {
-        select.innerHTML = `<option value="">Błąd ładowania</option>`;
-      }
-    });
-  });
-
-  // "Zapisz się" (pierwszy klik) → rozwiń formularz (kajak/instruktor), ukryj przycisk-wyzwalacz
-  innerEl.querySelectorAll(".basenEnrollRevealBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const form = btn.closest(".basenEnrollForm");
+    // "Zapisz się" (pierwszy klik) → rozwiń formularz (kajak/instruktor), ukryj przycisk-wyzwalacz
+    const revealBtn = ev.target.closest(".basenEnrollRevealBtn");
+    if (revealBtn) {
+      const form = revealBtn.closest(".basenEnrollForm");
       const expanded = form?.querySelector(".basenEnrollExpanded");
       if (!expanded) return;
-      btn.classList.add("hidden");
+      revealBtn.classList.add("hidden");
       expanded.classList.remove("hidden");
-    });
-  });
+      return;
+    }
 
-  // "Anuluj" w rozwiniętym formularzu → zwiń z powrotem, resetując wybory
-  innerEl.querySelectorAll(".basenEnrollCancelBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const form = btn.closest(".basenEnrollForm");
+    // "Anuluj" w rozwiniętym formularzu → zwiń z powrotem, resetując wybory
+    const enrollCancelBtn = ev.target.closest(".basenEnrollCancelBtn");
+    if (enrollCancelBtn) {
+      const form = enrollCancelBtn.closest(".basenEnrollForm");
       if (!form) return;
-      const revealBtn = form.querySelector(".basenEnrollRevealBtn");
+      const revealBtnEl = form.querySelector(".basenEnrollRevealBtn");
       const expanded = form.querySelector(".basenEnrollExpanded");
       const check = form.querySelector(".basenWithInstructorCheck");
       const pickerWrap = form.querySelector(".basenInstructorPickerWrap");
@@ -437,117 +423,147 @@ function bindSessionActions(innerEl, ctx, canEnroll, sessions) {
       if (instructorSelect) instructorSelect.removeAttribute("data-loaded");
       if (kayakSelect) kayakSelect.value = "";
       expanded?.classList.add("hidden");
-      revealBtn?.classList.remove("hidden");
-    });
-  });
+      revealBtnEl?.classList.remove("hidden");
+      return;
+    }
 
-  // Enroll (regular/training)
-  innerEl.querySelectorAll(".basenEnrollForm").forEach((form) => {
-    form.addEventListener("submit", async (ev) => {
-      ev.preventDefault();
-      const sessionId = form.getAttribute("data-session-id");
-      const slot = form.getAttribute("data-slot");
-      const cardEl = form.closest(".basenSlotCard");
-      const msgEl = cardEl?.querySelector("[data-slot-msg]");
-      const withInstructor = form.querySelector(".basenWithInstructorCheck")?.checked === true;
-      const instructorUid = withInstructor ? (form.querySelector(".basenInstructorSelect")?.value || "") : "";
-      const kayakId = form.querySelector(".basenKayakSelect")?.value || "";
-
-      const btn = form.querySelector(".basenEnrollBtn");
-      btn.disabled = true;
-      btn.textContent = "Zapisuję…";
-      if (msgEl) { msgEl.textContent = ""; msgEl.classList.add("hidden"); }
-
-      try {
-        await apiPostJson({
-          url: ENROLL_URL,
-          idToken: ctx.idToken,
-          body: {
-            sessionId,
-            slot,
-            mode: withInstructor ? "training" : "regular",
-            instructorUid: withInstructor ? instructorUid : undefined,
-            kayakId: kayakId || undefined,
-          },
-        });
-        await refreshSessionsView(innerEl, ctx, canEnroll);
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = "Zapisz się";
-        if (msgEl) {
-          msgEl.textContent = e?.message || "Nie udało się zapisać.";
-          msgEl.classList.remove("hidden");
-        }
-      }
-    });
-  });
-
-  // Instructor self sign-up
-  innerEl.querySelectorAll(".basenInstructorBtn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const sessionId = btn.getAttribute("data-session-id");
-      const slot = btn.getAttribute("data-slot");
-      const cardEl = btn.closest(".basenSlotCard");
+    // Instructor self sign-up
+    const instructorBtn = ev.target.closest(".basenInstructorBtn");
+    if (instructorBtn) {
+      const sessionId = instructorBtn.getAttribute("data-session-id");
+      const slot = instructorBtn.getAttribute("data-slot");
+      const cardEl = instructorBtn.closest(".basenSlotCard");
       const msgEl = cardEl?.querySelector("[data-slot-msg]");
 
-      btn.disabled = true;
-      btn.textContent = "Zapisuję…";
+      instructorBtn.disabled = true;
+      instructorBtn.textContent = "Zapisuję…";
 
       try {
         await apiPostJson({ url: ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot, mode: "instructor" } });
         await refreshSessionsView(innerEl, ctx, canEnroll);
       } catch (e) {
-        btn.disabled = false;
-        btn.textContent = "Będę instruktorem";
+        instructorBtn.disabled = false;
+        instructorBtn.textContent = "Będę instruktorem";
         if (msgEl) {
           msgEl.textContent = e?.message || "Nie udało się zapisać.";
           msgEl.classList.remove("hidden");
         }
       }
-    });
-  });
+      return;
+    }
 
-  // Cancel enrollment (regular/training/instructor)
-  innerEl.querySelectorAll(".basenCancelBtn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const sessionId = btn.getAttribute("data-session-id");
-      const slot = btn.getAttribute("data-slot");
-      const cardEl = btn.closest(".basenSlotCard");
+    // Cancel enrollment (regular/training/instructor)
+    const cancelBtn = ev.target.closest(".basenCancelBtn");
+    if (cancelBtn) {
+      const sessionId = cancelBtn.getAttribute("data-session-id");
+      const slot = cancelBtn.getAttribute("data-slot");
+      const cardEl = cancelBtn.closest(".basenSlotCard");
       const msgEl = cardEl?.querySelector("[data-slot-msg]");
 
-      const withinWindow = btn.getAttribute("data-within-window") === "1";
+      const withinWindow = cancelBtn.getAttribute("data-within-window") === "1";
       const confirmMsg = withinWindow
         ? "Rezygnujesz mniej niż 24h przed zajęciami — mimo anulowania nadal obowiązuje pełna opłata za tę godzinę basenową. Kontynuować?"
         : "Anulować ten zapis?";
       if (!confirm(confirmMsg)) return;
 
-      btn.disabled = true;
-      btn.textContent = "Anuluję…";
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = "Anuluję…";
 
       try {
         await apiPostJson({ url: CANCEL_ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot } });
         await refreshSessionsView(innerEl, ctx, canEnroll);
       } catch (e) {
-        btn.disabled = false;
-        btn.innerHTML = CANCEL_BTN_HTML;
+        cancelBtn.disabled = false;
+        cancelBtn.innerHTML = CANCEL_BTN_HTML;
         if (msgEl) {
           msgEl.textContent = e?.message || "Nie udało się anulować.";
           msgEl.classList.remove("hidden");
         }
       }
-    });
+      return;
+    }
+
+    // Modyfikuj zapis (kajak + instruktor) — otwiera wspólny modal
+    const modifyBtn = ev.target.closest(".basenModifyBtn");
+    if (modifyBtn) {
+      const sessionId = modifyBtn.getAttribute("data-session-id");
+      const slot = modifyBtn.getAttribute("data-slot");
+      const currentKayakId = modifyBtn.getAttribute("data-current-kayak-id") || "";
+      const currentInstructorUid = modifyBtn.getAttribute("data-current-instructor-uid") || "";
+      const currentType = modifyBtn.getAttribute("data-current-type") || "";
+      openModifyModal(innerEl, ctx, sessionId, slot, {currentKayakId, currentInstructorUid, currentType}, () => refreshSessionsView(innerEl, ctx, canEnroll));
+      return;
+    }
   });
 
-  // Modyfikuj zapis (kajak + instruktor) — otwiera wspólny modal
-  innerEl.querySelectorAll(".basenModifyBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const sessionId = btn.getAttribute("data-session-id");
-      const slot = btn.getAttribute("data-slot");
-      const currentKayakId = btn.getAttribute("data-current-kayak-id") || "";
-      const currentInstructorUid = btn.getAttribute("data-current-instructor-uid") || "";
-      const currentType = btn.getAttribute("data-current-type") || "";
-      openModifyModal(innerEl, ctx, sessionId, slot, {currentKayakId, currentInstructorUid, currentType}, () => refreshSessionsView(innerEl, ctx, canEnroll));
-    });
+  // "Zapisz się z instruktorem" checkbox → lazy-load instructor list
+  innerEl.addEventListener("change", async (ev) => {
+    const cb = ev.target.closest(".basenWithInstructorCheck");
+    if (!cb) return;
+
+    const form = cb.closest(".basenEnrollForm");
+    const wrap = form.querySelector(".basenInstructorPickerWrap");
+    if (!wrap) return;
+    wrap.classList.toggle("hidden", !cb.checked);
+    if (!cb.checked) return;
+
+    const select = wrap.querySelector(".basenInstructorSelect");
+    if (select.getAttribute("data-loaded") === "1") return;
+
+    const sessionId = form.getAttribute("data-session-id");
+    const slot = form.getAttribute("data-slot");
+    try {
+      const data = await apiGetJson({ url: `${ATTENDEES_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slot)}`, idToken: ctx.idToken });
+      const instructors = Array.isArray(data?.instructors) ? data.instructors : [];
+      select.innerHTML = instructors.length
+        ? `<option value="">Bez wyboru — dopasujemy później</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`
+        : `<option value="">Brak dostępnych instruktorów — zapiszesz się na listę oczekujących</option>`;
+      select.setAttribute("data-loaded", "1");
+    } catch (e) {
+      select.innerHTML = `<option value="">Błąd ładowania</option>`;
+    }
+  });
+
+  // Enroll (regular/training)
+  innerEl.addEventListener("submit", async (ev) => {
+    const form = ev.target.closest(".basenEnrollForm");
+    if (!form) return;
+    ev.preventDefault();
+
+    const sessionId = form.getAttribute("data-session-id");
+    const slot = form.getAttribute("data-slot");
+    const cardEl = form.closest(".basenSlotCard");
+    const msgEl = cardEl?.querySelector("[data-slot-msg]");
+    const withInstructor = form.querySelector(".basenWithInstructorCheck")?.checked === true;
+    const instructorUid = withInstructor ? (form.querySelector(".basenInstructorSelect")?.value || "") : "";
+    const kayakId = form.querySelector(".basenKayakSelect")?.value || "";
+
+    const btn = form.querySelector(".basenEnrollBtn");
+    btn.disabled = true;
+    btn.textContent = "Zapisuję…";
+    if (msgEl) { msgEl.textContent = ""; msgEl.classList.add("hidden"); }
+
+    try {
+      await apiPostJson({
+        url: ENROLL_URL,
+        idToken: ctx.idToken,
+        body: {
+          sessionId,
+          slot,
+          mode: withInstructor ? "training" : "regular",
+          instructorUid: withInstructor ? instructorUid : undefined,
+          kayakId: kayakId || undefined,
+        },
+      });
+      await refreshSessionsView(innerEl, ctx, canEnroll);
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "Zapisz się";
+      if (msgEl) {
+        msgEl.textContent = e?.message || "Nie udało się zapisać.";
+        msgEl.classList.remove("hidden");
+      }
+    }
   });
 }
 
@@ -1506,6 +1522,7 @@ export function createBasenModule({ id, type, label, defaultRoute, order, enable
       // kliknięciu, więc jednorazowe bindowanie tutaj jest w pełni bezpieczne.
       bindModalCloseDelegation(innerEl);
       bindCalendarModalCloseDelegation(innerEl);
+      bindSessionActionsDelegation(innerEl, ctx, canEnroll);
 
       viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => {
         window.location.hash = "#home/home";

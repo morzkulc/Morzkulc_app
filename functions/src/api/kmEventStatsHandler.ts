@@ -9,6 +9,7 @@
  */
 
 import type {Request, Response} from "express";
+import {normNullish} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -22,10 +23,6 @@ export type KmEventStatsDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 export async function handleKmEventStats(
   req: Request,
@@ -49,7 +46,7 @@ export async function handleKmEventStats(
         return;
       }
 
-      const eventId = norm(req.query.eventId).slice(0, 128);
+      const eventId = normNullish(req.query.eventId).slice(0, 128);
       if (!eventId) {
         res.status(400).json({ok: false, code: "missing_eventId", message: "Brak parametru eventId."});
         return;
@@ -79,15 +76,15 @@ export async function handleKmEventStats(
         const log = doc.data() as any;
         if (!eventName && log.eventName) eventName = String(log.eventName);
 
-        const uid = norm(log.uid);
+        const uid = normNullish(log.uid);
         if (!uid || uid === "historical_unmatched") continue;
 
         if (!byUid[uid]) {
           const snap = log.userSnapshot || {};
           byUid[uid] = {
             uid,
-            displayName: norm(snap.displayName) || norm(log.displayName) || uid,
-            nickname: norm(snap.nickname) || norm(log.nickname) || "",
+            displayName: normNullish(snap.displayName) || normNullish(log.displayName) || uid,
+            nickname: normNullish(snap.nickname) || normNullish(log.nickname) || "",
             capsizeKabina: 0,
             capsizeRolka: 0,
             capsizeDziubek: 0,

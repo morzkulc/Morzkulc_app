@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: setup.syncFromSheet
@@ -52,17 +53,13 @@ type Payload = {
   requestedBy?: string;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 function toBool(v: any): boolean {
-  const s = norm(v).toLowerCase();
+  const s = normNullish(v).toLowerCase();
   return s === "true" || s === "tak" || s === "1" || s === "yes";
 }
 
 function toNumberOrNull(v: any): number | null {
-  const s = norm(v);
+  const s = normNullish(v);
   if (!s) return null;
   const n = Number(s);
   return isFinite(n) ? n : null;
@@ -78,11 +75,11 @@ function normalizeHeader(h: string): string {
 }
 
 function splitList(s: string): string[] {
-  const raw = norm(s);
+  const raw = normNullish(s);
   if (!raw) return [];
   const seen: Record<string, boolean> = {};
   const out: string[] = [];
-  for (const part of raw.split(/[,;\n]/g).map((x) => norm(x)).filter(Boolean)) {
+  for (const part of raw.split(/[,;\n]/g).map((x) => normNullish(x)).filter(Boolean)) {
     const key = part.toLowerCase();
     if (seen[key]) continue;
     seen[key] = true;
@@ -105,7 +102,7 @@ function rolesAllowedFromFlags(flags: {zarzadKr: boolean; czlonek: boolean; kand
 }
 
 function parseSetupValue(raw: string): {type: string; value: any} {
-  const s = norm(raw);
+  const s = normNullish(raw);
   if (!s) return {type: "string", value: ""};
   const low = s.toLowerCase();
   if (low === "true" || low === "false") return {type: "boolean", value: low === "true"};
@@ -144,7 +141,7 @@ async function readAppSetupModules(
     throw new Error(`App_SETUP headers mismatch. Missing: ${JSON.stringify(missing)} Found: ${JSON.stringify(Object.keys(hmap))}`);
   }
 
-  const g = (row: Record<string, string>, normKey: string): string => norm(row[hmap[normKey]] ?? "");
+  const g = (row: Record<string, string>, normKey: string): string => normNullish(row[hmap[normKey]] ?? "");
 
   const modules: Record<string, any> = {};
   for (const row of table.rows) {
@@ -206,7 +203,7 @@ async function readAppSetupRoles(
     throw new Error(`App_SETUP (role) headers mismatch. Missing: ${JSON.stringify(missing)} Found: ${JSON.stringify(Object.keys(hmap))}`);
   }
 
-  const g = (row: Record<string, string>, normKey: string): string => norm(row[hmap[normKey]] ?? "");
+  const g = (row: Record<string, string>, normKey: string): string => normNullish(row[hmap[normKey]] ?? "");
 
   const roles: Record<string, {label: string; groups: string[]}> = {};
   for (const row of table.rows) {
@@ -239,7 +236,7 @@ async function readSetupVars(
     throw new Error(`${tabName} headers mismatch in ${spreadsheetId}. Missing: ${JSON.stringify(missing)} Found: ${JSON.stringify(Object.keys(hmap))}`);
   }
 
-  const g = (row: Record<string, string>, normKey: string): string => norm(row[hmap[normKey]] ?? "");
+  const g = (row: Record<string, string>, normKey: string): string => normNullish(row[hmap[normKey]] ?? "");
 
   const out: Record<string, any> = {};
   for (const row of table.rows) {
@@ -268,7 +265,7 @@ export const setupSyncFromSheetTask: ServiceTask<Payload> = {
     const {firestore, logger} = ctx;
     const cfg = getServiceConfig();
     const dryRun = ctx.dryRun || Boolean(payload?.dry);
-    const who = norm(payload?.requestedBy).toLowerCase();
+    const who = normNullish(payload?.requestedBy).toLowerCase();
 
     const spreadsheetId = cfg.setup.spreadsheetId;
 

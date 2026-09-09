@@ -2,13 +2,10 @@ import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
+import {norm} from "../../modules/shared/text_utils";
 
 export interface MembersSyncToSheetPayload {
   uid: string;
-}
-
-function norm(v: any): string {
-  return String(v || "").trim();
 }
 
 const ROLE_LABEL_FALLBACK: Record<string, string> = {

@@ -3,6 +3,7 @@ import { apiGetJson } from "/core/api_client.js";
 import { setHash } from "/core/router.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { storageFetchKlubVideoUrl } from "/core/firebase_client.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -44,14 +45,6 @@ function openMap() {
   } else {
     window.open(mapUrl, "_blank", "noopener");
   }
-}
-
-function escapeHtml(s) {
-  return String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s).replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
 }
 
 // Dopuszczamy tylko http(s) jako href (ochrona przed javascript: itp.).

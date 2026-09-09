@@ -3,6 +3,7 @@ import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
 import {parseSchoolYear} from "../../modules/equipment/bundle/gear_bundle_service";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -24,10 +25,6 @@ type Payload = {
   requestedBy?: string;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 function normalizeHeader(h: string): string {
   return String(h == null ? "" : h).trim().toLowerCase()
     .split(" ").join("_").split("-").join("_")
@@ -38,7 +35,7 @@ function normalizeHeader(h: string): string {
 
 function normalizeBoolish(v: any): boolean {
   if (typeof v === "boolean") return v;
-  const s = norm(v).toLowerCase();
+  const s = normNullish(v).toLowerCase();
   if (!s) return false;
   if (s === "true" || s === "tak" || s === "yes" || s === "1") return true;
   return false;
@@ -54,7 +51,7 @@ function normalizeBoolish(v: any): boolean {
  * zamieniamy na kropkę.
  */
 function toNumberOrNull(v: any): number | null {
-  const raw = norm(v);
+  const raw = normNullish(v);
   if (!raw) return null;
   let s = raw.replace(/[^\d,.-]/g, "");
   if (!s) return null;
@@ -68,7 +65,7 @@ function toNumberOrNull(v: any): number | null {
 }
 
 function normalizeDateString(v: any): string {
-  const s = norm(v);
+  const s = normNullish(v);
   if (!s) return "";
   // DD.MM.YYYY → YYYY-MM-DD (FORMATTED_VALUE z arkusza)
   const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
@@ -77,7 +74,7 @@ function normalizeDateString(v: any): string {
 }
 
 function mapRoleDisplayToKey(label: string): string {
-  const s = norm(label).toLowerCase();
+  const s = normNullish(label).toLowerCase();
   if (s === "zarząd" || s === "zarzad") return "rola_zarzad";
   if (s === "kr") return "rola_kr";
   if (s === "członek" || s === "czlonek") return "rola_czlonek";
@@ -88,7 +85,7 @@ function mapRoleDisplayToKey(label: string): string {
 }
 
 function mapStatusDisplayToKey(label: string): string {
-  const s = norm(label).toLowerCase();
+  const s = normNullish(label).toLowerCase();
   if (s === "aktywny") return "status_aktywny";
   if (s === "zawieszony") return "status_zawieszony";
   if (s === "skreślony" || s === "skreslony") return "status_skreslony";
@@ -132,7 +129,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
     const {firestore, logger} = ctx;
     const cfg = getServiceConfig();
     const dryRun = ctx.dryRun || Boolean(payload?.dry);
-    const who = norm(payload?.requestedBy).toLowerCase();
+    const who = normNullish(payload?.requestedBy).toLowerCase();
 
     const spreadsheetId = cfg.sheets.membersSpreadsheetId;
     const tabName = cfg.sheets.membersTabName;
@@ -152,7 +149,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
     if (missing.length) {
       throw new Error(`Users sheet headers mismatch. Missing: ${JSON.stringify(missing)} Found: ${JSON.stringify(Object.keys(hmap))}`);
     }
-    const g = (row: Record<string, string>, normKey: string): string => norm(row[hmap[normKey]] ?? "");
+    const g = (row: Record<string, string>, normKey: string): string => normNullish(row[hmap[normKey]] ?? "");
 
     // ── WYMUSZENIE KOMPLETU DANYCH: każdy kandydat musi mieć opiekuna stażu ──
     // Walidacja pre-flight (przed jakimkolwiek zapisem). Jeśli choć jeden kandydat
@@ -457,15 +454,15 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       // się wpisowego oraz przy ZMIANIE wartości kolumny (odnowienie po 12 mc).
       // Niezmieniona wartość → nie ruszamy (istniejące konta uzupełnia jednorazowy backfill,
       // żeby nie nadpisać daty wpłaty bieżącym miesiącem).
-      const incomingFee = norm(sheetUser.admin.entryFeeYear);
-      const existingFee = norm(getPath(data, "admin.entryFeeYear"));
+      const incomingFee = normNullish(sheetUser.admin.entryFeeYear);
+      const existingFee = normNullish(getPath(data, "admin.entryFeeYear"));
       if (incomingFee && existingFee !== incomingFee) {
         patch["admin.entryFeePaidAt"] = now.slice(0, 7); // YYYY-MM
       }
 
       // Wykryj zmianę roli/statusu (faktyczny sync robi users.syncRolesFromSheet)
-      const roleChanged = roleKey !== norm(data?.role_key);
-      const statusChanged = statusKey !== norm(data?.status_key);
+      const roleChanged = roleKey !== normNullish(data?.role_key);
+      const statusChanged = statusKey !== normNullish(data?.status_key);
       if (roleChanged || statusChanged) roleStatusChanged++;
 
       const changedPaths = Object.keys(patch);
@@ -493,7 +490,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         const granted = Boolean(patch["admin.hasAkademikAccess"]);
         const name = sheetUser.profile.nickname ||
           [sheetUser.profile.firstName, sheetUser.profile.lastName].filter(Boolean).join(" ").trim();
-        const targetEmail = sheetUser.email || norm(data?.email);
+        const targetEmail = sheetUser.email || normNullish(data?.email);
         if (targetEmail) {
           const jobRef = firestore.collection("service_jobs").doc();
           await jobRef.set({

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T19:48:56",
+  "generated_at": "2026-09-09T12:22:22",
   "project_root": "C:\\Users\\kswitek\\Documents\\morzkulc_app",
   "settings": {
     "excluded_dirs": [
@@ -5342,9 +5342,9 @@
     {
       "path": "firebase.json",
       "extension": ".json",
-      "size_bytes": 14000,
-      "line_count": 556,
-      "sha1_short": "32ff3b1b65",
+      "size_bytes": 14188,
+      "line_count": 563,
+      "sha1_short": "378eae1c33",
       "kind": "config",
       "module_aliases": [],
       "imports": [],
@@ -6794,6 +6794,62 @@
       "notes": []
     },
     {
+      "path": "functions/lib/api/getAdminGearDamageReportsHandler.js",
+      "extension": ".js",
+      "size_bytes": 4316,
+      "line_count": 82,
+      "sha1_short": "029eef44ad",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "handleGetAdminGearDamageReports",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "tsToIso",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/api/getAdminGearRentalsHandler.js",
       "extension": ".js",
       "size_bytes": 8728,
@@ -7318,9 +7374,9 @@
     {
       "path": "functions/lib/api/getAdminPendingHandler.js",
       "extension": ".js",
-      "size_bytes": 28130,
-      "line_count": 437,
-      "sha1_short": "8e6f1317e8",
+      "size_bytes": 25578,
+      "line_count": 400,
+      "sha1_short": "7c35ea9800",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9813,9 +9869,9 @@
     {
       "path": "functions/lib/index.js",
       "extension": ".js",
-      "size_bytes": 75851,
-      "line_count": 1738,
-      "sha1_short": "7cf4a96712",
+      "size_bytes": 76506,
+      "line_count": 1754,
+      "sha1_short": "06565c3f78",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9962,6 +10018,13 @@
         {
           "raw": "import/require ./api/gearReservationUpdateHandler",
           "module": "./api/gearReservationUpdateHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./api/getAdminGearDamageReportsHandler",
+          "module": "./api/getAdminGearDamageReportsHandler",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -10353,6 +10416,7 @@
         "functions/lib/api/gearReservationCancelHandler.js",
         "functions/lib/api/gearReservationCreateHandler.js",
         "functions/lib/api/gearReservationUpdateHandler.js",
+        "functions/lib/api/getAdminGearDamageReportsHandler.js",
         "functions/lib/api/getAdminGearRentalsHandler.js",
         "functions/lib/api/getAdminGearTopRentalsHandler.js",
         "functions/lib/api/getAdminMemberActivityHandler.js",
@@ -19713,6 +19777,69 @@
       "notes": []
     },
     {
+      "path": "functions/src/api/getAdminGearDamageReportsHandler.ts",
+      "extension": ".ts",
+      "size_bytes": 3859,
+      "line_count": 111,
+      "sha1_short": "5fc7444a0f",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require express",
+          "module": "express",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "handleGetAdminGearDamageReports",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "norm",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "tsToIso",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/api/getAdminGearRentalsHandler.ts",
       "extension": ".ts",
       "size_bytes": 8309,
@@ -20265,9 +20392,9 @@
     {
       "path": "functions/src/api/getAdminPendingHandler.ts",
       "extension": ".ts",
-      "size_bytes": 23018,
-      "line_count": 548,
-      "sha1_short": "b572a26863",
+      "size_bytes": 20645,
+      "line_count": 498,
+      "sha1_short": "c151092d77",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -22732,9 +22859,9 @@
     {
       "path": "functions/src/index.ts",
       "extension": ".ts",
-      "size_bytes": 64526,
-      "line_count": 1916,
-      "sha1_short": "f5d4836899",
+      "size_bytes": 65058,
+      "line_count": 1933,
+      "sha1_short": "b0aca6fdc4",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -22881,6 +23008,13 @@
         {
           "raw": "import/require ./api/gearReservationUpdateHandler",
           "module": "./api/gearReservationUpdateHandler",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./api/getAdminGearDamageReportsHandler",
+          "module": "./api/getAdminGearDamageReportsHandler",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -23279,6 +23413,7 @@
         "functions/src/api/gearReservationCancelHandler.ts",
         "functions/src/api/gearReservationCreateHandler.ts",
         "functions/src/api/gearReservationUpdateHandler.ts",
+        "functions/src/api/getAdminGearDamageReportsHandler.ts",
         "functions/src/api/getAdminGearRentalsHandler.ts",
         "functions/src/api/getAdminGearTopRentalsHandler.ts",
         "functions/src/api/getAdminMemberActivityHandler.ts",
@@ -32746,9 +32881,9 @@
     {
       "path": "public/modules/admin_pending_module.js",
       "extension": ".js",
-      "size_bytes": 33049,
-      "line_count": 590,
-      "sha1_short": "49b1fe5b8e",
+      "size_bytes": 29002,
+      "line_count": 527,
+      "sha1_short": "4ec77b38af",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33446,9 +33581,9 @@
     {
       "path": "public/modules/gear_module.js",
       "extension": ".js",
-      "size_bytes": 145570,
-      "line_count": 3207,
-      "sha1_short": "5c8ccebae2",
+      "size_bytes": 148779,
+      "line_count": 3267,
+      "sha1_short": "afdf2aaa80",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33506,6 +33641,26 @@
         },
         {
           "name": "applySelectedEventToHeader",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "buildGenericGearLine2",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "buildGenericGearLine3",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33766,6 +33921,26 @@
         },
         {
           "name": "heartSvg",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "helmetColorIconHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "helmetColorSvg",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -35730,6 +35905,89 @@
       "notes": []
     },
     {
+      "path": "public/modules/raporty/gear_damage_reports.js",
+      "extension": ".js",
+      "size_bytes": 4292,
+      "line_count": 93,
+      "sha1_short": "eb5fb887cd",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require /core/api_client.js",
+          "module": "/core/api_client.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require /core/user_error_messages.js",
+          "module": "/core/user_error_messages.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "escapeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDatePL",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "load",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "renderItems",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "severityBadgeHtml",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "public/modules/raporty/gear_rentals.js",
       "extension": ".js",
       "size_bytes": 12608,
@@ -36001,12 +36259,19 @@
     {
       "path": "public/modules/raporty/registry.js",
       "extension": ".js",
-      "size_bytes": 539,
-      "line_count": 16,
-      "sha1_short": "8c5d806d95",
+      "size_bytes": 634,
+      "line_count": 18,
+      "sha1_short": "944597d8a5",
       "kind": "script",
       "module_aliases": [],
       "imports": [
+        {
+          "raw": "import/require ./gear_damage_reports.js",
+          "module": "./gear_damage_reports.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
         {
           "raw": "import/require ./gear_rentals.js",
           "module": "./gear_rentals.js",
@@ -36044,6 +36309,7 @@
         }
       ],
       "internal_dependencies": [
+        "public/modules/raporty/gear_damage_reports.js",
         "public/modules/raporty/gear_rentals.js",
         "public/modules/raporty/member_activity.js",
         "public/modules/raporty/member_dues.js",
@@ -36551,9 +36817,9 @@
     {
       "path": "public/styles/gear.css",
       "extension": ".css",
-      "size_bytes": 36414,
-      "line_count": 1836,
-      "sha1_short": "32559aa2d8",
+      "size_bytes": 36002,
+      "line_count": 1823,
+      "sha1_short": "47d4db4e3b",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -36619,9 +36885,9 @@
     {
       "path": "public/styles/start.css",
       "extension": ".css",
-      "size_bytes": 13463,
-      "line_count": 349,
-      "sha1_short": "a8b1ee57dd",
+      "size_bytes": 13899,
+      "line_count": 359,
+      "sha1_short": "c0dadd4d6b",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -36638,7 +36904,7 @@
       "extension": ".js",
       "size_bytes": 5447,
       "line_count": 157,
-      "sha1_short": "e232acd633",
+      "sha1_short": "b26321964c",
       "kind": "script",
       "module_aliases": [],
       "imports": [],

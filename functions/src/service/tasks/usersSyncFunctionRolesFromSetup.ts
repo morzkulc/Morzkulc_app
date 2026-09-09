@@ -509,15 +509,20 @@ export const usersSyncFunctionRolesFromSetupTask: ServiceTask<Payload> = {
         throw e; // fatal — jobProcessor zrobi retry
       }
 
-      newStatePartial[role] = {
+      const roleState = {
         mailbox,
         email: target,
         lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
       };
-    }
+      newStatePartial[role] = roleState;
 
-    if (!dryRun) {
-      await stateRef.set(newStatePartial, {merge: true});
+      // Zapis PER ROLA, od razu po przetworzeniu — nie zbiorczo po całej pętli. Jeśli kolejna
+      // rola rzuci (np. przejściowy błąd Directory API), retry jobu widzi tę rolę jako już
+      // zsynchronizowaną (decideCase → "no-op") zamiast wykonywać onboarding/offboarding i
+      // wysyłkę maili do niej ponownie od zera.
+      if (!dryRun) {
+        await stateRef.set({[role]: roleState}, {merge: true});
+      }
     }
 
     logger.info("syncFunctionRoles: done", {details, dryRun});

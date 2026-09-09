@@ -5,24 +5,7 @@ import {deductHoursInTx, refundHoursForReservationInTx, reverseDeductHoursInTx} 
 import {getGodzinkiVars} from "../../hours/godzinki_vars";
 import {isUserStatusBlocked} from "../../users/userStatusCheck";
 import {countMyOverlappingItemsByCategory, countItemsByCategory, findCategoryOverLimit} from "../shared/reservation_limits";
-
-function norm(s: any): string {
-  return String(s || "").trim();
-}
-
-export async function listKayaks(db: FirebaseFirestore.Firestore) {
-  const snap = await db.collection("gear_kayaks").where("isActive", "==", true).get();
-  const out: any[] = [];
-
-  for (const doc of snap.docs) {
-    const d = doc.data() as any;
-    if (d?.gearScrapped === true) continue;
-    out.push({...d, id: String(d?.id || doc.id)});
-  }
-
-  out.sort((a, b) => String(a?.number || a?.id || "").localeCompare(String(b?.number || b?.id || "")));
-  return out;
-}
+import {norm} from "../../shared/text_utils";
 
 export async function listMyReservations(db: FirebaseFirestore.Firestore, uid: string) {
   const snap = await db

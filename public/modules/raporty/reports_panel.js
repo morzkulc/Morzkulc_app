@@ -2,16 +2,10 @@
 // Launcher raportów Zarządu: kafelki pogrupowane w kategorie + szukajka → szczegół.
 // Pokazuje WSZYSTKIE raporty na jednej karcie, ale dane renderuje tylko jeden naraz.
 import { REPORTS } from "./registry.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
 
 // Kolejność kategorii w launcherze; nieznane trafiają na koniec (alfabetycznie).
 const CATEGORY_ORDER = ["Sprzęt", "Finanse", "Członkowie", "Imprezy", "Inne"];
-
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-function escapeAttr(s) {
-  return escapeHtml(s).replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
-}
 
 function catOrder(cat) {
   const i = CATEGORY_ORDER.indexOf(cat);

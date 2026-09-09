@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: gear.syncAllFromSheet
@@ -41,10 +42,6 @@ const GEAR_CATEGORIES: GearCategory[] = [
 const SCRAP_FIELD_NAME = "gearScrapped";
 const SCRAP_AT_FIELD_NAME = "scrappedAt";
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 // Kategorie terenowe (górskie/nizinne/torowo-morskie) — jedna, spójna kolumna "Typ" w
 // arkuszu, wspólna dla kamizelek/wioseł/fartuchów (dla wioseł/fartuchów to przemianowana
 // dawna kolumna "Zdjęcie", która nigdzie nie była wykorzystywana w apce). Dopasowanie po
@@ -55,7 +52,7 @@ function norm(v: any): string {
 export type TerrainCategory = "mountain" | "lowland" | "sea";
 
 export function normalizeTerrainCategories(raw: any): TerrainCategory[] {
-  const s = norm(raw).toLowerCase();
+  const s = normNullish(raw).toLowerCase();
   if (!s) return [];
   const out: TerrainCategory[] = [];
   // Krótki rdzeń "gór"/"gor" (nie "górsk") — celowo odporne też na literówki typu
@@ -69,7 +66,7 @@ export function normalizeTerrainCategories(raw: any): TerrainCategory[] {
 }
 
 function parseBool(v: any): boolean | null {
-  const s = norm(v).toLowerCase();
+  const s = normNullish(v).toLowerCase();
   if (!s) return null;
   if (["tak", "t", "yes", "y", "true", "1", "✓", "x"].includes(s)) return true;
   if (["nie", "n", "no", "false", "0"].includes(s)) return false;
@@ -77,7 +74,7 @@ function parseBool(v: any): boolean | null {
 }
 
 function parseNumber(v: any): number | null {
-  const s = norm(v).replace(",", ".");
+  const s = normNullish(v).replace(",", ".");
   if (!s) return null;
   const n = Number(s);
   return Number.isNaN(n) ? null : n;
@@ -88,7 +85,7 @@ function parseNumber(v: any): number | null {
 const SHEET_DATE_FORMAT_HINT = "RRRR-MM-DD, np. 2026-06-10";
 
 export function parseSheetDate(v: any): Date | null {
-  const s = norm(v);
+  const s = normNullish(v);
   if (!s) return null;
   let year: number; let month: number; let day: number;
   // ISO: rok 4-cyfrowy pierwszy (jednoznaczne) — np. 2026-06-10
@@ -110,7 +107,7 @@ type Row = Record<string, string>;
 
 /** Wartość komórki z traktowaniem placeholderów ("N/A", "-") jako pustej. */
 function cleanCell(v: any): string {
-  const s = norm(v);
+  const s = normNullish(v);
   const low = s.toLowerCase();
   if (!s || low === "n/a" || low === "na" || s === "-") return "";
   return s;
@@ -119,21 +116,21 @@ function cleanCell(v: any): string {
 function isRealRow(key: string, r: Row): boolean {
   switch (key) {
   case "kayaks":
-    return Boolean(norm(r["Numer Kajaka"]) || norm(r["Producent"]) || norm(r["Model"]));
+    return Boolean(normNullish(r["Numer Kajaka"]) || normNullish(r["Producent"]) || normNullish(r["Model"]));
   case "paddles":
   case "lifejackets":
   case "helmets":
-    return Boolean(norm(r["Numer"]) || norm(r["Producent"]) || norm(r["Model"]));
+    return Boolean(normNullish(r["Numer"]) || normNullish(r["Producent"]) || normNullish(r["Model"]));
   case "throwbags":
-    return Boolean(norm(r["Numer"]) || norm(r["Producent"]) || norm(r["Uwagi"]));
+    return Boolean(normNullish(r["Numer"]) || normNullish(r["Producent"]) || normNullish(r["Uwagi"]));
   case "sprayskirts":
-    return Boolean(norm(r["Numer"]) || norm(r["Producent"]) || norm(r["Materiał"]));
+    return Boolean(normNullish(r["Numer"]) || normNullish(r["Producent"]) || normNullish(r["Materiał"]));
   case "flotationChambers":
-    return Boolean(norm(r["Numer"]) || norm(r["Producent"]));
+    return Boolean(normNullish(r["Numer"]) || normNullish(r["Producent"]));
   case "wetsuits":
-    return Boolean(norm(r["typ"]) || norm(r["rozmiar"]));
+    return Boolean(normNullish(r["typ"]) || normNullish(r["rozmiar"]));
   case "miscellaneous":
-    return Boolean(norm(r["Nazwa"]));
+    return Boolean(normNullish(r["Nazwa"]));
   default:
     return false;
   }
@@ -152,23 +149,23 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
     const isOperational = parseBool(r["Sprawny?"]);
     return {
       id: String(id),
-      number: norm(r["Numer Kajaka"]),
-      brand: norm(r["Producent"]),
-      model: norm(r["Model"]),
-      size: norm(r["Rozmiar"]),
-      color: norm(r["Kolor"]),
-      type: norm(r["Typ"]),
+      number: normNullish(r["Numer Kajaka"]),
+      brand: normNullish(r["Producent"]),
+      model: normNullish(r["Model"]),
+      size: normNullish(r["Rozmiar"]),
+      color: normNullish(r["Kolor"]),
+      type: normNullish(r["Typ"]),
       liters: parseNumber(r["Litrów"]),
-      weightRange: norm(r["Zakres wag"]),
-      cockpit: norm(r["Kokpit"]),
-      storedAt: norm(r["Składowany"]),
+      weightRange: normNullish(r["Zakres wag"]),
+      cockpit: normNullish(r["Kokpit"]),
+      storedAt: normNullish(r["Składowany"]),
       isOperational,
       isHalfHalf: parseBool(r["Pół na pół?"]),
       isPrivate: parseBool(r["Prywatny?"]),
       isPrivateRentable: parseBool(r["Prywatny do wypożyczenia?"]),
-      ownerContact: norm(r["kontakt do właściciela"]),
+      ownerContact: normNullish(r["kontakt do właściciela"]),
       privateSinceInClub: parseSheetDate(r["od kiedy w klubie (kajaki prywatne)"]),
-      notes: norm(r["Uwagi"]),
+      notes: normNullish(r["Uwagi"]),
       status: isOperational === false ? "repair" : "available",
       gearCategory: "kayaks",
       gearCategoryDisplay: "Kajaki",
@@ -178,18 +175,18 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "paddles":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      model: norm(r["Model"]),
-      color: norm(r["Kolor"]),
-      type: norm(r["Rodzaj"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      model: normNullish(r["Model"]),
+      color: normNullish(r["Kolor"]),
+      type: normNullish(r["Rodzaj"]),
       terrainCategories: normalizeTerrainCategories(r["Typ"]),
       terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       lengthCm: parseNumber(r["Długość"]),
-      featherAngle: norm(r["Kąt skrętu"]),
+      featherAngle: normNullish(r["Kąt skrętu"]),
       isBreakdown: parseBool(r["Składane"]),
       isPoolAllowed: parseBool(r["Basen"]),
-      notes: norm(r["Uwagi"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "paddles",
       gearCategoryDisplay: "Wiosła",
@@ -198,17 +195,17 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "lifejackets":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      model: norm(r["Model"]),
-      color: norm(r["Kolor"]),
-      buoyancy: norm(r["Wyporność"]),
-      type: norm(r["Typ"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      model: normNullish(r["Model"]),
+      color: normNullish(r["Kolor"]),
+      buoyancy: normNullish(r["Wyporność"]),
+      type: normNullish(r["Typ"]),
       terrainCategories: normalizeTerrainCategories(r["Typ"]),
       terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
-      size: norm(r["Rozmiar"]),
+      size: normNullish(r["Rozmiar"]),
       isPoolAllowed: parseBool(r["Basen"]),
-      notes: norm(r["Uwagi"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "lifejackets",
       gearCategoryDisplay: "Kamizelki",
@@ -217,13 +214,13 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "helmets":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      model: norm(r["Model"]),
-      color: norm(r["Kolor"]),
-      size: norm(r["Rozmiar"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      model: normNullish(r["Model"]),
+      color: normNullish(r["Kolor"]),
+      size: normNullish(r["Rozmiar"]),
       isPoolAllowed: parseBool(r["Basen"]),
-      notes: norm(r["Uwagi"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "helmets",
       gearCategoryDisplay: "Kaski",
@@ -232,9 +229,9 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "throwbags":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      notes: norm(r["Uwagi"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "throwbags",
       gearCategoryDisplay: "Rzutki",
@@ -243,16 +240,16 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "sprayskirts":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      material: norm(r["Materiał"]),
-      size: norm(r["Rozmiar"]),
-      tunnelSize: norm(r["Rozmiar Komina"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      material: normNullish(r["Materiał"]),
+      size: normNullish(r["Rozmiar"]),
+      tunnelSize: normNullish(r["Rozmiar Komina"]),
       terrainCategories: normalizeTerrainCategories(r["Typ"]),
       terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       isPoolAllowed: parseBool(r["Basen"]),
       isLowlandAllowed: parseBool(r["Niziny"]),
-      notes: norm(r["Uwagi"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "sprayskirts",
       gearCategoryDisplay: "Fartuchy",
@@ -261,11 +258,11 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "flotationChambers":
     return {
       id: String(id),
-      number: norm(r["Numer"]),
-      brand: norm(r["Producent"]),
-      color: norm(r["Kolor"]),
-      assignedToKayak: norm(r["Przypisana do kajaka"]),
-      notes: norm(r["uwagi"]),
+      number: normNullish(r["Numer"]),
+      brand: normNullish(r["Producent"]),
+      color: normNullish(r["Kolor"]),
+      assignedToKayak: normNullish(r["Przypisana do kajaka"]),
+      notes: normNullish(r["uwagi"]),
       status: "available",
       gearCategory: "flotationChambers",
       gearCategoryDisplay: "Komory",
@@ -274,10 +271,10 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "wetsuits":
     return {
       id: String(id),
-      type: norm(r["typ"]),
-      size: norm(r["rozmiar"]),
-      color: norm(r["kolor"]),
-      notes: norm(r["uwagi"]),
+      type: normNullish(r["typ"]),
+      size: normNullish(r["rozmiar"]),
+      color: normNullish(r["kolor"]),
+      notes: normNullish(r["uwagi"]),
       status: "available",
       gearCategory: "wetsuits",
       gearCategoryDisplay: "Kurtki/Pianki",
@@ -286,9 +283,9 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
   case "miscellaneous":
     return {
       id: String(id),
-      name: norm(r["Nazwa"]),
-      color: norm(r["Kolor"]),
-      notes: norm(r["Uwagi"]),
+      name: normNullish(r["Nazwa"]),
+      color: normNullish(r["Kolor"]),
+      notes: normNullish(r["Uwagi"]),
       status: "available",
       gearCategory: "miscellaneous",
       gearCategoryDisplay: "Inne różne",
@@ -309,7 +306,7 @@ type CatSummary = {
 
 // Etykieta "numeru" sztuki różni się między kategoriami (Numer Kajaka / Numer / Nazwa).
 function rowNumberLabel(r: Row): string {
-  return norm(r["Numer Kajaka"]) || norm(r["Numer"]) || norm(r["Nazwa"]) || "";
+  return normNullish(r["Numer Kajaka"]) || normNullish(r["Numer"]) || normNullish(r["Nazwa"]) || "";
 }
 
 export type GearRowClassification = {
@@ -333,7 +330,7 @@ export function classifyGearRows(key: string, idHeader: string, rows: Row[]): Ge
   let skippedNotReal = 0;
 
   for (const r of rows) {
-    const id = norm(r[idHeader]);
+    const id = normNullish(r[idHeader]);
     if (!id) {
       skippedNoId++;
       continue;
@@ -343,7 +340,7 @@ export function classifyGearRows(key: string, idHeader: string, rows: Row[]): Ge
       continue;
     }
     if (seen.has(id)) {
-      duplicates.push({id, number: rowNumberLabel(r), model: norm(r["Model"]), rowNumber: norm(r["_rowNumber"])});
+      duplicates.push({id, number: rowNumberLabel(r), model: normNullish(r["Model"]), rowNumber: normNullish(r["_rowNumber"])});
       continue;
     }
     seen.add(id);
@@ -495,14 +492,14 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
       if (parseBool(r["Prywatny?"]) !== true) continue;
       const idCol = cleanCell(r["ID"]);
       const numCol = cleanCell(r["Numer Kajaka"]);
-      const rowNum = norm(r["_rowNumber"]);
+      const rowNum = normNullish(r["_rowNumber"]);
       const label = `ID ${idCol || "?"}${numCol ? ` / nr ${numCol}` : ""}${rowNum ? `, wiersz ${rowNum}` : ""}`;
-      const owner = norm(r["kontakt do właściciela"]);
+      const owner = normNullish(r["kontakt do właściciela"]);
       if (!owner || !owner.includes("@")) {
         privateIssues.push({id: label, reason: "brak maila właściciela"});
         continue;
       }
-      const storage = norm(r["Składowany"]).toLowerCase();
+      const storage = normNullish(r["Składowany"]).toLowerCase();
       const rentable = parseBool(r["Prywatny do wypożyczenia?"]) === true;
       if (storage === "klub" && !rentable && parseSheetDate(r["od kiedy w klubie (kajaki prywatne)"]) === null) {
         privateIssues.push({id: label, reason: `brak/niepoprawna data 'od kiedy w klubie' — wpisz w formacie ${SHEET_DATE_FORMAT_HINT}`});
@@ -523,7 +520,7 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
         try {
           await firestore.collection("service_reports").doc("gearSync").set({
             ranAt: now,
-            ranBy: norm(payload?.requestedBy) || "system",
+            ranBy: normNullish(payload?.requestedBy) || "system",
             hasWarnings: true,
             blocked: true,
             privateKayakErrors: privateIssues,
@@ -567,7 +564,7 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
       try {
         await firestore.collection("service_reports").doc("gearSync").set({
           ranAt: now,
-          ranBy: norm(payload?.requestedBy) || "system",
+          ranBy: normNullish(payload?.requestedBy) || "system",
           hasWarnings,
           totals: {
             sheetRows: total.sheetRows,

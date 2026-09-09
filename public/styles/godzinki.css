@@ -120,13 +120,6 @@
   color: var(--warning, #d8920f);
 }
 
-.godzinkiMeta {
-  display: block;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
 /* Pasek saldo + wygasają */
 .godzinkiInfoBar {
   display: flex;

@@ -16,105 +16,10 @@
   gap: var(--space-2);
 }
 
-/* ── Stats + Action tiles obok siebie (mobile-first) ── */
-.startHeroBody {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-3);
-  align-items: start;
-}
-
-.startStats {
-  display: grid;
-  gap: 2px;
-  margin-top: 4px;
-  min-width: 0;
-}
-
-.startStatRow {
-  display: flex;
-  justify-content: flex-start;
-  gap: 6px;
-  align-items: baseline;
-  padding: 4px 0;
-}
-
-.startStatKey {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .startStatVal {
   color: var(--text);
   font-size: 14px;
   font-weight: 900;
-}
-
-/* ── Action tiles 2×2 ── */
-.startTopActions {
-  display: grid;
-  grid-template-columns: repeat(2, 68px);
-  gap: 8px;
-  align-self: start;
-}
-
-@media (min-width: 480px) {
-  .startTopActions {
-    grid-template-columns: repeat(2, 76px);
-  }
-}
-
-@media (min-width: 900px) {
-  .startTopActions {
-    grid-template-columns: repeat(2, 82px);
-  }
-}
-
-/* ── Tile: ikona + label, kwadratowy ── */
-.startTile {
-  height: 68px;
-  border-radius: 16px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  text-align: center;
-  overflow: hidden;
-}
-
-@media (min-width: 480px) {
-  .startTile {
-    height: 76px;
-  }
-}
-
-@media (min-width: 900px) {
-  .startTile {
-    height: 82px;
-  }
-}
-
-.startTile svg {
-  flex-shrink: 0;
-  display: block;
-}
-
-.startTileTitle {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.1;
-  letter-spacing: 0.01em;
-}
-
-@media (min-width: 480px) {
-  .startTileTitle {
-    font-size: 12px;
-  }
 }
 
 /* ── Sekcje i listy ── */
@@ -142,20 +47,6 @@
   background: rgba(12, 18, 32, 0.02);
 }
 
-.startListItem--clickable {
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.startListItem--clickable:hover {
-  border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-:root[data-theme="light"] .startListItem--clickable:hover {
-  background: rgba(12, 18, 32, 0.05);
-}
-
 .startListMain {
   min-width: 0;
 }
@@ -181,12 +72,6 @@
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
-}
-
-.startStatExpiry {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
 }
 
 .startStatValNeg {
@@ -261,9 +146,6 @@
 
 .startTile2Subtitle { font-size: 10px; font-weight: 700; color: var(--text-muted); line-height: 1; }
 .startTile2Subtitle .startStatVal { font-size: 10px; }
-
-/* ── Nagłówek sekcji z kilkoma przyciskami ── */
-.dashCardHeadActions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 /* Przycisk „Zobacz wszystkie" na końcu listy sekcji (pełna szerokość) */
 .startSectionFooterBtn { width: 100%; margin-top: 10px; }

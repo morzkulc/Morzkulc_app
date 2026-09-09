@@ -1,3 +1,4 @@
+import {norm} from "../../shared/text_utils";
 type GearCategory =
   | "paddles"
   | "lifejackets"
@@ -39,9 +40,16 @@ const GEAR_COLLECTIONS: Record<GearCategory, GearCollectionConfig> = {
   },
 };
 
-function norm(v: any): string {
-  return String(v || "").trim();
-}
+// Etykiety PL kategorii sprzętu — kajaki dołożone ręcznie (mają własny, oddzielny serwis,
+// nie wchodzą do GEAR_COLLECTIONS powyżej). Współdzielone przez raporty admina (D4: było
+// kopiowane 1:1 w kilku plikach).
+export const CATEGORY_LABELS: Record<string, string> = {
+  kayaks: "Kajaki",
+  ...Object.fromEntries(Object.entries(GEAR_COLLECTIONS).map(([k, v]) => [k, v.label])),
+};
+
+/** Zbiór poprawnych kluczy kategorii (D5: był kopiowany 1:1 w kilku plikach). */
+export const VALID_CATEGORIES: Set<string> = new Set(Object.keys(CATEGORY_LABELS));
 
 function toNumberSafe(v: any): number | null {
   if (v === null || v === undefined) return null;

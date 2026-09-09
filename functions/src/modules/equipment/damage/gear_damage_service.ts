@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import {randomUUID} from "crypto";
 import {CATEGORY_COLLECTIONS} from "../bundle/gear_bundle_service";
+import {normNullish} from "../../shared/text_utils";
 
 const MAX_PHOTOS = 2;
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
@@ -30,12 +31,8 @@ type ServiceResult<T> =
   | {ok: true; data: T}
   | {ok: false; code: string; message: string};
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 export function isSupportedDamageCategory(category: string): boolean {
-  return Object.prototype.hasOwnProperty.call(CATEGORY_COLLECTIONS, norm(category).toLowerCase());
+  return Object.prototype.hasOwnProperty.call(CATEGORY_COLLECTIONS, normNullish(category).toLowerCase());
 }
 
 /**
@@ -49,23 +46,23 @@ export async function createDamageReport(
   memberRoleKeys: string[],
   input: SubmitDamageReportInput
 ): Promise<ServiceResult<{reportId: string}>> {
-  const roleKey = norm(input.roleKey);
+  const roleKey = normNullish(input.roleKey);
   if (!memberRoleKeys.includes(roleKey)) {
     return {ok: false, code: "forbidden", message: "Rola nie uprawnia do zgłaszania uszkodzeń sprzętu."};
   }
 
-  const category = norm(input.category).toLowerCase();
+  const category = normNullish(input.category).toLowerCase();
   const collection = CATEGORY_COLLECTIONS[category];
   if (!collection) {
     return {ok: false, code: "invalid_category", message: `Nieobsługiwana kategoria: ${category}`};
   }
 
-  const itemId = norm(input.itemId);
+  const itemId = normNullish(input.itemId);
   if (!itemId) {
     return {ok: false, code: "validation_failed", message: "Brak wskazanego przedmiotu."};
   }
 
-  const description = norm(input.description);
+  const description = normNullish(input.description);
   if (!description) {
     return {ok: false, code: "validation_failed", message: "Opis zgłoszenia jest wymagany."};
   }
@@ -82,10 +79,10 @@ export async function createDamageReport(
       input.severity === "dead" ? "dead" :
         "usable";
 
-  const number = norm(itemData?.number || itemId);
-  const brand = norm(itemData?.brand);
-  const model = norm(itemData?.model);
-  const itemLabel = [brand, model].filter(Boolean).join(" ") || norm(itemData?.name) || number;
+  const number = normNullish(itemData?.number || itemId);
+  const brand = normNullish(itemData?.brand);
+  const model = normNullish(itemData?.model);
+  const itemLabel = [brand, model].filter(Boolean).join(" ") || normNullish(itemData?.name) || number;
 
   const photosInput = Array.isArray(input.photos) ? input.photos.slice(0, MAX_PHOTOS) : [];
 
@@ -102,7 +99,7 @@ export async function createDamageReport(
   let photoIndex = 0;
   for (const photo of photosInput) {
     photoIndex++;
-    const raw = norm(photo?.data);
+    const raw = normNullish(photo?.data);
     const base64 = raw.includes(",") ? raw.slice(raw.indexOf(",") + 1) : raw;
     if (!base64) continue;
 
@@ -112,7 +109,7 @@ export async function createDamageReport(
       return {ok: false, code: "photo_too_large", message: "Zdjęcie jest za duże (limit 3 MB) — spróbuj ponownie, aplikacja powinna je skompresować."};
     }
 
-    const mimeType = norm(photo?.mimeType) || "image/jpeg";
+    const mimeType = normNullish(photo?.mimeType) || "image/jpeg";
     const ext = mimeType.includes("png") ? "png" : "jpg";
     const path = `gear_damage_reports/${category}/${itemId}/${reportId}/${photoIndex}.${ext}`;
     const token = randomUUID();
@@ -137,8 +134,8 @@ export async function createDamageReport(
     description,
     photoUrls,
     reporterUid: input.uid,
-    reporterName: norm(input.reporterName) || norm(input.reporterEmail) || input.uid,
-    reporterEmail: norm(input.reporterEmail),
+    reporterName: normNullish(input.reporterName) || normNullish(input.reporterEmail) || input.uid,
+    reporterEmail: normNullish(input.reporterEmail),
     status: "open",
     createdAt: now,
     resolvedAt: null,
@@ -158,7 +155,7 @@ export async function resolveDamageReport(
   db: FirebaseFirestore.Firestore,
   input: {reportId: string; resolvedByUid: string; resolvedByName: string}
 ): Promise<ServiceResult<Record<string, never>>> {
-  const reportId = norm(input.reportId);
+  const reportId = normNullish(input.reportId);
   if (!reportId) {
     return {ok: false, code: "validation_failed", message: "Brak reportId"};
   }
@@ -175,7 +172,7 @@ export async function resolveDamageReport(
       status: "resolved",
       resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
       resolvedByUid: input.resolvedByUid,
-      resolvedByName: norm(input.resolvedByName) || input.resolvedByUid,
+      resolvedByName: normNullish(input.resolvedByName) || input.resolvedByUid,
     });
   }
 

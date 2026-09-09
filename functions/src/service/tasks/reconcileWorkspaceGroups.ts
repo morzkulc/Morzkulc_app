@@ -1,6 +1,7 @@
 import {ServiceTask} from "../types";
 import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {listaRoleForUserRole, RoleMappingEntry, SimpleLogger} from "../workspaceGroupSync";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: users.reconcileWorkspaceGroups
@@ -27,10 +28,6 @@ type Payload = {
   email?: string;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 type Correction = {
   email: string;
   group: string;
@@ -51,7 +48,7 @@ function targetManagedGroupsFor(
   if (statusKey !== "status_aktywny") return new Set();
   return new Set(
     (roleMappings[roleKey]?.groups || [])
-      .map((g) => norm(g).toLowerCase())
+      .map((g) => normNullish(g).toLowerCase())
       .filter((g) => g.includes("@"))
   );
 }
@@ -97,8 +94,8 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
   run: async (payload, ctx) => {
     const {firestore, workspace, config, logger} = ctx;
     const dryRun = ctx.dryRun || Boolean(payload?.dry);
-    const targetEmail = norm(payload?.email).toLowerCase();
-    const listaGroupEmail = norm(config.listaGroupEmail).toLowerCase();
+    const targetEmail = normNullish(payload?.email).toLowerCase();
+    const listaGroupEmail = normNullish(config.listaGroupEmail).toLowerCase();
 
     logger.info("reconcileWorkspaceGroups: start", {dryRun, targetEmail: targetEmail || null});
 
@@ -109,7 +106,7 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
     const managedGroups = new Set<string>();
     for (const entry of Object.values(roleMappings)) {
       for (const g of (entry?.groups || [])) {
-        const gn = norm(g).toLowerCase();
+        const gn = normNullish(g).toLowerCase();
         if (gn && gn.includes("@")) managedGroups.add(gn);
       }
     }
@@ -129,8 +126,8 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
         };
       }
       const data = snap.docs[0].data() as any;
-      const roleKey = norm(data?.role_key);
-      const statusKey = norm(data?.status_key);
+      const roleKey = normNullish(data?.role_key);
+      const statusKey = normNullish(data?.status_key);
 
       if (dryRun) {
         logger.info("DRYRUN reconcileWorkspaceGroups (point)", {targetEmail, roleKey, statusKey});
@@ -169,12 +166,12 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
 
     for (const doc of usersSnap.docs) {
       const data = doc.data() as any;
-      const email = norm(data?.email).toLowerCase();
+      const email = normNullish(data?.email).toLowerCase();
       if (!email || !email.includes("@")) continue;
       usersChecked++;
 
-      const roleKey = norm(data?.role_key);
-      const statusKey = norm(data?.status_key);
+      const roleKey = normNullish(data?.role_key);
+      const statusKey = normNullish(data?.status_key);
 
       // lista@
       const targetListaRole = targetListaRoleFor(roleKey, statusKey);

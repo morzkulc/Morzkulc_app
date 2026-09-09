@@ -12,7 +12,10 @@ async function verifyIdToken(req: any): Promise<{ uid: string }> {
 }
 
 export const adminRunServiceTask = onRequest(
-  { invoker: "private", timeoutSeconds: 30 },
+  // 30s było za mało dla dużych synców (np. gear.syncAllFromSheet — 9 zakładek arkusza,
+  // users.syncFieldsFromSheet — setki wierszy sekwencyjnie) — ręczne uruchomienie z panelu
+  // admina było ucinane w trakcie, zostawiając częściowy stan.
+  { invoker: "private", timeoutSeconds: 540 },
   async (req, res) => {
     try {
       if (req.method !== "POST") {

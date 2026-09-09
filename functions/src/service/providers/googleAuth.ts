@@ -4,6 +4,18 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+// Cache tokena OAuth per (service account, delegated user, scopes) — token jest ważny 3600s
+// (exp = iat+3600, patrz getDelegatedAuth), więc odświeżanie go na KAŻDE wywołanie (signJwt +
+// token exchange = 2 round-tripy sieciowe) było czystym narzutem przy każdej operacji
+// Workspace/Sheets/Calendar. Cache żyje w pamięci instancji funkcji (Cloud Functions Gen2
+// reużywa "ciepłe" instancje) — TTL 50 min zostawia margines przed realnym wygaśnięciem.
+const TOKEN_CACHE_TTL_SECONDS = 50 * 60;
+const tokenCache = new Map<string, { accessToken: string; expiresAtSeconds: number }>();
+
+function tokenCacheKey(saEmail: string, delegatedUserEmail: string, scopes: string[]): string {
+  return `${saEmail}|${delegatedUserEmail}|${[...scopes].sort().join(" ")}`;
+}
+
 async function signJwtWithIamCredentials(
   serviceAccountEmail: string,
   payload: Record<string, any>
@@ -112,20 +124,34 @@ export async function getDelegatedAuth(
     );
   }
 
-  const iat = nowSeconds();
-  const exp = iat + 3600;
+  const cacheKey = tokenCacheKey(saFinal, delegatedFinal, scopes);
+  const cached = tokenCache.get(cacheKey);
+  const nowS = nowSeconds();
 
-  const jwtPayload = {
-    iss: saFinal,
-    sub: delegatedFinal,
-    scope: scopes.join(" "),
-    aud: "https://oauth2.googleapis.com/token",
-    iat,
-    exp,
-  };
+  let accessToken: string;
+  if (cached && cached.expiresAtSeconds > nowS) {
+    accessToken = cached.accessToken;
+  } else {
+    const iat = nowS;
+    const exp = iat + 3600;
 
-  const signedJwt = await signJwtWithIamCredentials(saFinal, jwtPayload);
-  const accessToken = await exchangeJwtForAccessToken(signedJwt);
+    const jwtPayload = {
+      iss: saFinal,
+      sub: delegatedFinal,
+      scope: scopes.join(" "),
+      aud: "https://oauth2.googleapis.com/token",
+      iat,
+      exp,
+    };
+
+    const signedJwt = await signJwtWithIamCredentials(saFinal, jwtPayload);
+    accessToken = await exchangeJwtForAccessToken(signedJwt);
+
+    tokenCache.set(cacheKey, {
+      accessToken,
+      expiresAtSeconds: iat + TOKEN_CACHE_TTL_SECONDS,
+    });
+  }
 
   const oauth2 = new google.auth.OAuth2();
   oauth2.setCredentials({ access_token: accessToken });

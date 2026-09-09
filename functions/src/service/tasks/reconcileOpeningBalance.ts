@@ -3,6 +3,7 @@ import {ServiceTask} from "../types";
 import {creditOpeningBalance} from "../../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../../modules/hours/godzinki_vars";
 import {getObHours, buildOpeningBalanceAdminPatch, obValueExact, obEmailKey} from "../../modules/hours/opening_balance_fields";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: opening.reconcile
@@ -33,11 +34,8 @@ type Payload = {
   email?: string;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 function lower(v: any): string {
-  return norm(v).toLowerCase();
+  return normNullish(v).toLowerCase();
 }
 
 type ObEntry = {data: any; ref: FirebaseFirestore.DocumentReference};

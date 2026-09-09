@@ -1,4 +1,5 @@
 import {ServiceTask} from "../types";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: users.notifyAkademikAccessChanged
@@ -16,10 +17,6 @@ type Payload = {
   granted: boolean;
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
 export const usersNotifyAkademikAccessChangedTask: ServiceTask<Payload> = {
   id: "users.notifyAkademikAccessChanged",
   description: "Wysyła e-mail o nadaniu/cofnięciu dostępu do odbioru kluczy z akademika.",
@@ -31,15 +28,15 @@ export const usersNotifyAkademikAccessChangedTask: ServiceTask<Payload> = {
   },
 
   run: async (payload, ctx) => {
-    const email = norm(payload.email).toLowerCase();
-    const name = norm(payload.name);
+    const email = normNullish(payload.email).toLowerCase();
+    const name = normNullish(payload.name);
     const greeting = name ? `Cześć ${name},` : "Cześć,";
 
     // Adres, pod którym znajdują się klucze — zmienna setup/vars_members.akademik_adres
     // (ta sama zakładka SETUP co konto_klubowe/statut_url itp.). Opcjonalna — pomijamy
     // linię, gdy zmienna nie istnieje jeszcze w arkuszu.
     const varsSnap = await ctx.firestore.collection("setup").doc("vars_members").get();
-    const akademikAdres = norm((varsSnap.exists ? (varsSnap.data() as any)?.vars?.akademik_adres?.value : "") ?? "");
+    const akademikAdres = normNullish((varsSnap.exists ? (varsSnap.data() as any)?.vars?.akademik_adres?.value : "") ?? "");
 
     const subject = payload.granted ?
       "Dostęp do akademika — nadanie uprawnienia" :

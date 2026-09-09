@@ -4,6 +4,10 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {daysOnWaterInclusive} from "../modules/calendar/calendar_utils";
+import {normNullish} from "../modules/shared/text_utils";
+import {resolveDateRange} from "../modules/shared/date_range_utils";
+import {fullName, nickname} from "../modules/shared/user_display";
+import {CATEGORY_LABELS} from "../modules/equipment/shared/gear_catalog_service";
 
 type TokenCheck =
   | {error: string}
@@ -18,68 +22,6 @@ export type GetAdminGearTopRentalsDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-// Etykiety PL kategorii sprzętu.
-const CATEGORY_LABELS: Record<string, string> = {
-  kayaks: "Kajaki",
-  paddles: "Wiosła",
-  lifejackets: "Kamizelki",
-  helmets: "Kaski",
-  throwbags: "Rzutki",
-  sprayskirts: "Fartuchy",
-};
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-
-function isIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-
-function todayWarsawIso(): string {
-  return new Date().toLocaleDateString("en-CA", {timeZone: "Europe/Warsaw"});
-}
-
-function isoToDateUTC(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-}
-
-function dateUTCToIso(dt: Date): string {
-  return dt.toISOString().slice(0, 10);
-}
-
-function minusMonths(iso: string, n: number): string {
-  const d = isoToDateUTC(iso);
-  d.setUTCMonth(d.getUTCMonth() - n);
-  return dateUTCToIso(d);
-}
-
-/** Zakres [from, to] (YYYY-MM-DD). Domyślnie semestr (6 mies. wstecz). */
-function resolveRange(range: string, fromQ: string, toQ: string):
-  | {ok: true; from: string; to: string; key: string}
-  | {ok: false; message: string} {
-  const today = todayWarsawIso();
-  switch (range) {
-  case "month":
-    return {ok: true, key: "month", from: minusMonths(today, 1), to: today};
-  case "year":
-    return {ok: true, key: "year", from: minusMonths(today, 12), to: today};
-  case "custom": {
-    const from = norm(fromQ);
-    const to = norm(toQ);
-    if (!isIsoDate(from) || !isIsoDate(to)) {
-      return {ok: false, message: "Nieprawidłowy zakres dat (wymagany format YYYY-MM-DD)."};
-    }
-    if (from > to) return {ok: false, message: "Data „od\" jest późniejsza niż „do\"."};
-    return {ok: true, key: "custom", from, to};
-  }
-  case "semester":
-  default:
-    return {ok: true, key: "semester", from: minusMonths(today, 6), to: today};
-  }
-}
 
 type RentalEntry = {
   userUid: string;
@@ -98,16 +40,6 @@ type ItemAgg = {
   rentalsCount: number;
   rentals: RentalEntry[];
 };
-
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
 
 export async function handleGetAdminGearTopRentals(req: Request, res: Response, deps: GetAdminGearTopRentalsDeps) {
   const {sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, db, adminRoleKeys} = deps;
@@ -131,14 +63,17 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
 
-      const range = norm((req.query.range as string) || "semester").toLowerCase();
-      const rr = resolveRange(range, (req.query.from as string) || "", (req.query.to as string) || "");
+      const range = normNullish((req.query.range as string) || "semester").toLowerCase();
+      const rr = resolveDateRange(range, (req.query.from as string) || "", (req.query.to as string) || "", {
+        defaultKey: "semester",
+        monthMode: "calendarMonth",
+      });
       if (!rr.ok) {
         res.status(400).json({error: rr.message});
         return;
@@ -161,21 +96,21 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
 
       for (const doc of snap.docs) {
         const r = doc.data() as any;
-        if (norm(r.status) !== "active") continue;
-        const startDate = norm(r.startDate);
-        const endDate = norm(r.endDate);
+        if (normNullish(r.status) !== "active") continue;
+        const startDate = normNullish(r.startDate);
+        const endDate = normNullish(r.endDate);
         if (!startDate || startDate > to) continue; // brak nakładania
 
         // Pozycje: nowy format items[]; legacy fallback z kayakIds[] (bez nazwy — dociągamy niżej).
         let items: Array<{category: string; number: string; name: string}> = [];
         if (Array.isArray(r.items) && r.items.length) {
           items = r.items.map((it: any) => ({
-            category: norm(it.category).toLowerCase(),
-            number: norm(it.itemNumber) || norm(it.number),
-            name: norm(it.itemLabel),
+            category: normNullish(it.category).toLowerCase(),
+            number: normNullish(it.itemNumber) || normNullish(it.number),
+            name: normNullish(it.itemLabel),
           }));
         } else if (Array.isArray(r.kayakIds) && r.kayakIds.length) {
-          items = r.kayakIds.map((kid: any) => ({category: "kayaks", number: norm(kid), name: ""}));
+          items = r.kayakIds.map((kid: any) => ({category: "kayaks", number: normNullish(kid), name: ""}));
         }
         if (!items.length) continue;
 
@@ -185,8 +120,8 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
         const days = daysOnWaterInclusive(overlapStart, overlapEnd);
         if (days <= 0) continue;
 
-        const userUid = norm(r.userUid);
-        const userEmail = norm(r.userEmail);
+        const userUid = normNullish(r.userUid);
+        const userEmail = normNullish(r.userEmail);
         if (userUid) uids.add(userUid);
 
         for (const it of items) {
@@ -224,7 +159,7 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
             if (!d.exists) return;
             const [itemKey] = kayakKeys[i];
             const kd = d.data() as any;
-            const name = [norm(kd?.brand), norm(kd?.model)].filter(Boolean).join(" ");
+            const name = [normNullish(kd?.brand), normNullish(kd?.model)].filter(Boolean).join(" ");
             if (name) {
               const agg = byKey.get(itemKey);
               if (agg) agg.name = name;

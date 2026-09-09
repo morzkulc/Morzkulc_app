@@ -4,6 +4,9 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {getAllRecords, computeBalance, computeNextExpiry} from "../modules/hours/godzinki_service";
+import {normNullish} from "../modules/shared/text_utils";
+import {resolveDateRange} from "../modules/shared/date_range_utils";
+import {fullName, nickname} from "../modules/shared/user_display";
 
 type TokenCheck =
   | {error: string}
@@ -19,41 +22,10 @@ export type GetAdminUserActivityDeps = {
   adminRoleKeys: string[];
 };
 
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-function isIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-function todayWarsawIso(): string {
-  return new Date().toLocaleDateString("en-CA", {timeZone: "Europe/Warsaw"});
-}
-function isoToDateUTC(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-}
-function dateUTCToIso(dt: Date): string {
-  return dt.toISOString().slice(0, 10);
-}
-function minusDays(iso: string, n: number): string {
-  const d = isoToDateUTC(iso); d.setUTCDate(d.getUTCDate() - n); return dateUTCToIso(d);
-}
-function minusMonths(iso: string, n: number): string {
-  const d = isoToDateUTC(iso); d.setUTCMonth(d.getUTCMonth() - n); return dateUTCToIso(d);
-}
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
-
 /** Dopasowanie użytkownika do frazy (substring po e-mailu, imieniu, nazwisku, ksywie, „imię nazwisko"). */
 function matchesQuery(u: any, qLower: string): boolean {
   const p = u?.profile || {};
-  const hay = [norm(u?.email), norm(p.firstName), norm(p.lastName), norm(p.nickname), fullName(u)]
+  const hay = [normNullish(u?.email), normNullish(p.firstName), normNullish(p.lastName), normNullish(p.nickname), fullName(u)]
     .join(" ").toLowerCase();
   return hay.includes(qLower);
 }
@@ -63,7 +35,7 @@ function tsIso(v: any): string | null {
 
 /** Serializacja rekordu godzinki_ledger do postaci jak w widoku historii w aplikacji. */
 function serialize(r: any): any {
-  const out: any = {id: r.id, type: r.type, amount: r.amount, reason: norm(r.reason), createdAt: tsIso(r.createdAt)};
+  const out: any = {id: r.id, type: r.type, amount: r.amount, reason: normNullish(r.reason), createdAt: tsIso(r.createdAt)};
   if (r.type === "earn") {
     out.approved = r.approved ?? false;
     out.grantedAt = (r.grantedAt && r.grantedAt.toDate) ? r.grantedAt.toDate().toISOString().slice(0, 10) : null;
@@ -79,27 +51,6 @@ function serialize(r: any): any {
     out.refundedAt = tsIso(r.refundedAt);
   }
   return out;
-}
-
-function resolveRange(range: string, fromQ: string, toQ: string):
-  | {ok: true; from: string; to: string; key: string}
-  | {ok: false; message: string} {
-  const today = todayWarsawIso();
-  switch (range) {
-  case "month":
-    return {ok: true, key: "month", from: minusDays(today, 30), to: today};
-  case "year":
-    return {ok: true, key: "year", from: minusMonths(today, 12), to: today};
-  case "custom": {
-    const from = norm(fromQ); const to = norm(toQ);
-    if (!isIsoDate(from) || !isIsoDate(to)) return {ok: false, message: "Nieprawidłowy zakres dat (YYYY-MM-DD)."};
-    if (from > to) return {ok: false, message: "Data „od\" jest późniejsza niż „do\"."};
-    return {ok: true, key: "custom", from, to};
-  }
-  case "semester":
-  default:
-    return {ok: true, key: "semester", from: minusMonths(today, 6), to: today};
-  }
 }
 
 export async function handleGetAdminUserActivity(req: Request, res: Response, deps: GetAdminUserActivityDeps) {
@@ -124,20 +75,22 @@ export async function handleGetAdminUserActivity(req: Request, res: Response, de
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = normNullish((userSnap.data() as any)?.role_key);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
 
-      const query = norm((req.query.query as string) || (req.query.email as string));
+      const query = normNullish((req.query.query as string) || (req.query.email as string));
       if (!query) {
         res.status(400).json({error: "Podaj e-mail, nazwisko lub ksywę użytkownika."});
         return;
       }
 
-      const range = norm((req.query.range as string) || "semester").toLowerCase();
-      const rr = resolveRange(range, (req.query.from as string) || "", (req.query.to as string) || "");
+      const range = normNullish((req.query.range as string) || "semester").toLowerCase();
+      const rr = resolveDateRange(range, (req.query.from as string) || "", (req.query.to as string) || "", {
+        defaultKey: "semester",
+      });
       if (!rr.ok) {
         res.status(400).json({error: rr.message});
         return;
@@ -162,7 +115,7 @@ export async function handleGetAdminUserActivity(req: Request, res: Response, de
         if (matches.length > 1) {
           const candidates = matches.slice(0, 12).map((d) => {
             const x = d.data() as any;
-            return {name: fullName(x), nick: nickname(x), email: norm(x.email)};
+            return {name: fullName(x), nick: nickname(x), email: normNullish(x.email)};
           }).sort((a, b) => a.name.localeCompare(b.name, "pl"));
           res.status(200).json({ok: true, found: false, candidates, message: `Pasuje ${matches.length} osób — doprecyzuj lub wybierz.`});
           return;
@@ -193,7 +146,7 @@ export async function handleGetAdminUserActivity(req: Request, res: Response, de
       res.status(200).json({
         ok: true,
         found: true,
-        user: {name: fullName(targetData), email: norm(targetData.email)},
+        user: {name: fullName(targetData), email: normNullish(targetData.email)},
         range: {key, from, to},
         balance,
         nextExpiryMonthYear,

@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {updateBundleReservationItems, BundleItemInput} from "../modules/equipment/bundle/gear_bundle_service";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -13,10 +14,6 @@ export type GearBundleReservationUpdateItemsDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 function parseItems(raw: any): BundleItemInput[] | null {
   if (!Array.isArray(raw) || raw.length === 0) return null;
@@ -44,14 +41,14 @@ export async function handleGearBundleReservationUpdateItems(
 
   corsHandler(req, res, async () => {
     try {
-      const tokenCheck = await requireIdToken(req);
-      if ("error" in tokenCheck) {
-        res.status(401).json({error: tokenCheck.error});
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
         return;
       }
 
-      if (req.method !== "POST") {
-        res.status(405).json({error: "Method not allowed"});
+      const tokenCheck = await requireIdToken(req);
+      if ("error" in tokenCheck) {
+        res.status(401).json({error: tokenCheck.error});
         return;
       }
 

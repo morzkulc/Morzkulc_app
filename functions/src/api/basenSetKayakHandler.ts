@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {setEnrollmentKayak, BasenSlotLabel} from "../modules/basen/basen_service";
+import {setEnrollmentKayak, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -49,9 +49,7 @@ export async function handleBasenSetKayak(req: Request, res: Response, deps: Dep
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const clientErrors = ["nie istnieje", "anulowany", "zajęty"];
-      const isClient = clientErrors.some((s) => msg.includes(s));
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

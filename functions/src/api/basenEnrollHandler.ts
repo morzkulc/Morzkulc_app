@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {enrollInSlot, getBasenVars, BasenSlotLabel} from "../modules/basen/basen_service";
+import {enrollInSlot, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 
 type Deps = {
@@ -127,9 +127,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const clientPatterns = ["pełny", "anulowan", "już zapisany", "nie istnieje", "zajęty", "dostępny", "maksymalną", "limit", "przypisaną"];
-      const status = clientPatterns.some((p) => msg.includes(p)) ? 400 : 500;
-      res.status(status).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

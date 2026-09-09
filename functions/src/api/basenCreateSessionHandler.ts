@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {createSession, getBasenVars, resolveBasenAdminGrant, ReservedSpotsInput} from "../modules/basen/basen_service";
+import {createSession, getBasenVars, resolveBasenAdminGrant, ReservedSpotsInput, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -104,8 +104,7 @@ export async function handleBasenCreateSession(req: Request, res: Response, deps
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);
-      const isClient = msg.includes("już istnieje");
-      res.status(isClient ? 400 : 500).json({error: msg});
+      res.status(err instanceof ClientError ? 400 : 500).json({error: msg});
     }
   });
 }

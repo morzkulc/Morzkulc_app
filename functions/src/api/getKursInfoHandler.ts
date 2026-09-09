@@ -4,6 +4,7 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {getServiceConfig} from "../service/service_config";
+import {norm} from "../modules/shared/text_utils";
 
 type TokenCheck =
   | {error: string}
@@ -18,10 +19,6 @@ export type GetKursInfoDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v || "").trim();
-}
 
 function flattenEmails(arr: any): string[] {
   if (!Array.isArray(arr)) return [];

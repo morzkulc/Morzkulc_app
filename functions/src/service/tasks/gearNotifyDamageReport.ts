@@ -1,5 +1,6 @@
 import {ServiceTask} from "../types";
 import {getAppVars} from "../../modules/setup/app_vars";
+import {normNullish} from "../../modules/shared/text_utils";
 
 /**
  * Task: gear.notifyDamageReport
@@ -15,10 +16,6 @@ import {getAppVars} from "../../modules/setup/app_vars";
 type Payload = {
   reportId: string;
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
 
 function escapeHtml(v: any): string {
   return String(v == null ? "" : v)
@@ -59,21 +56,21 @@ export const gearNotifyDamageReportTask: ServiceTask<Payload> = {
     const r = reportSnap.data() as any;
 
     const appVars = await getAppVars(ctx.firestore);
-    const boardEmail = norm(appVars.adminNotifyEmail).toLowerCase();
+    const boardEmail = normNullish(appVars.adminNotifyEmail).toLowerCase();
     if (!boardEmail || !boardEmail.includes("@")) {
       return {ok: false, message: "Missing/invalid admin_notify_email"};
     }
 
-    const category = norm(r?.category).toLowerCase();
+    const category = normNullish(r?.category).toLowerCase();
     const noun = CATEGORY_NOUN[category] || "Sprzęt";
-    const itemLabel = norm(r?.itemLabel);
-    const itemNumber = norm(r?.itemNumber);
+    const itemLabel = normNullish(r?.itemLabel);
+    const itemNumber = normNullish(r?.itemNumber);
     const itemDesc = [noun, itemNumber].filter(Boolean).join(" ") + (itemLabel ? ` (${itemLabel})` : "");
 
-    const severityKey = norm(r?.severity);
+    const severityKey = normNullish(r?.severity);
     const severityLabel = SEVERITY_LABEL[severityKey] || severityKey || "—";
 
-    const photoUrls: string[] = Array.isArray(r?.photoUrls) ? r.photoUrls.filter((u: any) => norm(u)) : [];
+    const photoUrls: string[] = Array.isArray(r?.photoUrls) ? r.photoUrls.filter((u: any) => normNullish(u)) : [];
 
     const subject = `SKK Morzkulc — zgłoszenie uszkodzenia: ${itemDesc}`;
     const bodyLines = [
@@ -81,8 +78,8 @@ export const gearNotifyDamageReportTask: ServiceTask<Payload> = {
       "",
       `Sprzęt: ${itemDesc}`,
       `Ocena: ${severityLabel}`,
-      `Opis: ${norm(r?.description) || "(brak)"}`,
-      `Zgłosił: ${norm(r?.reporterName) || "—"} (${norm(r?.reporterEmail) || "—"})`,
+      `Opis: ${normNullish(r?.description) || "(brak)"}`,
+      `Zgłosił: ${normNullish(r?.reporterName) || "—"} (${normNullish(r?.reporterEmail) || "—"})`,
     ];
     if (photoUrls.length) {
       bodyLines.push("Zdjęcia:");
@@ -110,8 +107,8 @@ export const gearNotifyDamageReportTask: ServiceTask<Payload> = {
       "<p>Nowe zgłoszenie uszkodzenia sprzętu.</p>",
       `<p><strong>Sprzęt:</strong> ${escapeHtml(itemDesc)}<br>`,
       `<strong>Ocena:</strong> ${escapeHtml(severityLabel)}<br>`,
-      `<strong>Opis:</strong> ${escapeHtml(norm(r?.description) || "(brak)")}<br>`,
-      `<strong>Zgłosił:</strong> ${escapeHtml(norm(r?.reporterName) || "—")} (${escapeHtml(norm(r?.reporterEmail) || "—")})</p>`,
+      `<strong>Opis:</strong> ${escapeHtml(normNullish(r?.description) || "(brak)")}<br>`,
+      `<strong>Zgłosił:</strong> ${escapeHtml(normNullish(r?.reporterName) || "—")} (${escapeHtml(normNullish(r?.reporterEmail) || "—")})</p>`,
       photosHtml,
       `<p><a href="${escapeHtml(appVars.appUrl)}">Panel Zarządu — Administracja</a></p>`,
       "<p style=\"color:#888;\">— Automatyczne powiadomienie SKK Morzkulc</p>",

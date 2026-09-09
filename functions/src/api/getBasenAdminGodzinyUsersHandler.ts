@@ -1,6 +1,8 @@
 import type {Request, Response} from "express";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {computeBasenGodzinyBalance, BasenGodzinyRecord} from "../modules/basen/basen_godziny_service";
+import {normNullish} from "../modules/shared/text_utils";
+import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -11,23 +13,6 @@ type Deps = {
   requireIdToken: (req: Request) => Promise<{error: string} | {decoded: any}>;
   adminRoleKeys: string[];
 };
-
-function norm(v: any): string {
-  return String(v == null ? "" : v).trim();
-}
-function fullName(u: any): string {
-  const p = u?.profile || {};
-  const full = [p.firstName, p.lastName].map((s: any) => norm(s)).filter(Boolean).join(" ").trim();
-  return full || norm(p.nickname) || "";
-}
-function nickname(u: any): string {
-  return norm(u?.profile?.nickname);
-}
-/** Zarejestrowany = ukończył rejestrację w aplikacji (ma profil z imieniem i nazwiskiem). */
-function isRegistered(u: any): boolean {
-  const p = u?.profile || {};
-  return Boolean(norm(p.firstName) && norm(p.lastName));
-}
 
 // Widoczni są tylko userzy AKTYWNI w ostatnich 4 miesiącach (zapis na basen — dowolna
 // data sesji od cutoff wzwyż, czyli też wszystkie PRZYSZŁE — albo wpis w godziny_ledger
@@ -91,7 +76,7 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
       const activeUids = new Set<string>();
       ledgerSnap.forEach((doc) => {
         const r = doc.data() as any;
-        const ruid = norm(r.uid);
+        const ruid = normNullish(r.uid);
         if (!ruid) return;
         const arr = recsByUid.get(ruid);
         if (arr) arr.push(r as BasenGodzinyRecord);
@@ -100,15 +85,14 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
         if (createdMs >= cutoffMs) activeUids.add(ruid);
       });
       recentEnrollSnap.forEach((doc) => {
-        const enrollUid = norm((doc.data() as any)?.userUid);
+        const enrollUid = normNullish((doc.data() as any)?.userUid);
         if (enrollUid) activeUids.add(enrollUid);
       });
 
       // Tylko aktywni userzy odczytywani z users_active (nie cała kolekcja) — jeśli ktoś
       // spoza tej listy potrzebuje zarządzania godzinami, admin szuka go inaczej.
-      const activeUserDocs = await Promise.all(
-        Array.from(activeUids).map((activeUid) => deps.db.collection("users_active").doc(activeUid).get())
-      );
+      const activeUserRefs = Array.from(activeUids).map((activeUid) => deps.db.collection("users_active").doc(activeUid));
+      const activeUserDocs = activeUserRefs.length ? await deps.db.getAll(...activeUserRefs) : [];
 
       const rows = activeUserDocs
         .filter((d) => d.exists && isRegistered(d.data()))
@@ -118,8 +102,8 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
             userUid: d.id,
             userName: fullName(u),
             userNick: nickname(u),
-            userEmail: norm(u?.email),
-            roleKey: norm(u?.role_key),
+            userEmail: normNullish(u?.email),
+            roleKey: normNullish(u?.role_key),
             balance: computeBasenGodzinyBalance(recsByUid.get(d.id) || []),
           };
         });

@@ -7,6 +7,7 @@ import {isUserStatusBlocked} from "../../users/userStatusCheck";
 import {updateReservationDates} from "../kayaks/gear_kayaks_service";
 import {countMyOverlappingItemsByCategory, countItemsByCategory, findCategoryOverLimit} from "../shared/reservation_limits";
 import {findActiveKierownikEvents} from "../../calendar/events_service";
+import {norm} from "../../shared/text_utils";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -48,10 +49,6 @@ const CATEGORY_PRIORITY = ["kayaks", "paddles", "lifejackets", "helmets", "spray
 // ──────────────────────────────────────────────────────────────────────────────
 // Pure helpers — these are mirrored exactly in test_bundle_reservations.py
 // ──────────────────────────────────────────────────────────────────────────────
-
-function norm(s: any): string {
-  return String(s || "").trim();
-}
 
 /**
  * Composite identifier for an item across all categories.

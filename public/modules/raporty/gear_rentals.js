@@ -2,6 +2,8 @@
 // Raport „Wypożyczony sprzęt" — deskryptor do rejestru raportów Zarządu.
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
+import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { formatDatePL } from "/core/format_utils.js";
 
 const REPORT_URL = "/api/admin/reports/gear-rentals";
 const ADMIN_CANCEL_URL = "/api/admin/gear-reservations/cancel";
@@ -20,18 +22,6 @@ const CATEGORY_NOUN = {
 // (zachowujemy polskie litery, @, kropkę, podkreślenie, myślnik).
 const USER_NONWORD = /[^a-z0-9ąćęłńóśźż@._-]+/g;
 
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-function escapeAttr(s) {
-  return escapeHtml(s).replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
-}
-function formatDatePL(iso) {
-  const s = String(iso || "").trim();
-  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return s || "—";
-  const [y, m, d] = s.split("-");
-  return `${d}.${m}.${y}`;
-}
 
 export const gearRentalsReport = {
   id: "gear-rentals",
