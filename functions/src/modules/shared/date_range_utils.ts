@@ -24,9 +24,19 @@ export function minusDays(iso: string, n: number): string {
   return dateUTCToIso(d);
 }
 
+/**
+ * Odejmuje n miesięcy kalendarzowych. Dzień przycinany do długości miesiąca docelowego
+ * (31.03 − 1 → 28.02, 31.05 − 1 → 30.04) — surowe setUTCMonth przepełniało się do
+ * następnego miesiąca (31.03 − 1 = 03.03), skracając zakres raportów uruchamianych
+ * 29–31 dnia miesiąca.
+ */
 export function minusMonths(iso: string, n: number): string {
   const d = isoToDateUTC(iso);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
   d.setUTCMonth(d.getUTCMonth() - n);
+  const daysInTarget = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, daysInTarget));
   return dateUTCToIso(d);
 }
 

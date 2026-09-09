@@ -214,7 +214,9 @@ function validateIncomingProfile(incoming: ProfileInput): ValidationResult {
   return {ok: Object.keys(fields).length === 0, fields};
 }
 
-function computeRoleKeyFromOpeningBalance(
+// computeRoleKeyFromOpeningBalance / findOpeningBalance / emailExistsInOtherObRow są
+// eksportowane wyłącznie dla testów jednostkowych (test/register_core.test.ts).
+export function computeRoleKeyFromOpeningBalance(
   obData: any,
   memberField: string,
   memberRoleCode: string,
@@ -235,7 +237,7 @@ type OpeningMatch = {
   allDocs: FirebaseFirestore.QueryDocumentSnapshot[];
 };
 
-async function findOpeningBalance(
+export async function findOpeningBalance(
   db: FirebaseFirestore.Firestore,
   email: string,
   firstName?: string,
@@ -280,7 +282,7 @@ async function findOpeningBalance(
  * Przyjmuje `docs` już pobrane przez findOpeningBalance zamiast robić drugi pełny odczyt
  * tej samej kolekcji.
  */
-async function emailExistsInOtherObRow(
+export async function emailExistsInOtherObRow(
   docs: FirebaseFirestore.QueryDocumentSnapshot[],
   email: string,
   exceptDocId: string | null

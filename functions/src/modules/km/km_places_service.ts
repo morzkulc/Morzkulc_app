@@ -26,7 +26,9 @@ export function tokenizeName(name: string): string[] {
   const lower = name.trim().toLowerCase();
   if (!lower) return [];
   const words = lower.split(/\s+/).filter(Boolean);
-  const tokens = new Set<string>([lower, ...words]);
+  // Token pełnej nazwy z pojedynczymi spacjami — zapytanie użytkownika jest normalizowane
+  // tak samo (trim+lowercase), więc wielokrotne spacje w nazwie źródłowej nie mogą go rozjechać.
+  const tokens = new Set<string>([words.join(" "), ...words]);
   // Dodaj prefiks każdego słowa (min 2 znaki) dla prefix-match
   for (const w of words) {
     for (let i = 2; i < w.length; i++) {

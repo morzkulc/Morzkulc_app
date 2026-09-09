@@ -240,8 +240,10 @@ async function resolveSchoolYear(
  * Reguła (decyzja zarządu): tegoroczna szkoleniówka (rok == bieżący rok kalendarzowy)
  * i rezerwacja składana do końca września tego roku — liczone po DACIE ZŁOŻENIA
  * rezerwacji (now), nie po terminie rezerwacji. Zwolnienie obejmuje kursanta i kandydata.
+ *
+ * Eksportowane wyłącznie dla testów jednostkowych (test/gear_bundle_core.test.ts).
  */
-async function isFreeRentalExempt(
+export async function isFreeRentalExempt(
   db: FirebaseFirestore.Firestore,
   schoolYear: number | null,
   now: Date = new Date()
@@ -266,8 +268,10 @@ async function isFreeRentalExempt(
  * ręcznie w arkuszu (panel zarządu listuje kursantów po terminie).
  *
  * Zwraca obiekt błędu, gdy rezerwacja niedozwolona, albo null gdy dozwolona.
+ *
+ * Eksportowane wyłącznie dla testów jednostkowych (test/gear_bundle_core.test.ts).
  */
-async function assertKursantRentalAllowed(
+export async function assertKursantRentalAllowed(
   db: FirebaseFirestore.Firestore,
   exempt: boolean,
   schoolYear: number | null

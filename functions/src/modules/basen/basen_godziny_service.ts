@@ -28,7 +28,12 @@ export interface BasenGodzinyRecord {
 const COLLECTION = "basen_godziny_ledger";
 
 export function computeBasenGodzinyBalance(records: BasenGodzinyRecord[]): number {
-  return records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  // Number.isFinite — jeden nienumeryczny amount (np. ręczna edycja w konsoli) nie może
+  // zamienić całego salda użytkownika w NaN.
+  return records.reduce((sum, r) => {
+    const n = Number(r.amount);
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
 }
 
 export async function getBasenGodzinyRecords(
