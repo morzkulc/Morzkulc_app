@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-09T12:22:22`
+Generated at: `2026-09-10T08:11:01`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,28 +57,18 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `576`
-- Python files: `42`
-- Script files JS/TS/GS/etc.: `383`
-- Config files: `22`
-- Markdown files: `100`
-- Internal dependency edges: `643`
+- Total scanned files: `577`
+- Python files: `41`
+- Script files JS/TS/GS/etc.: `394`
+- Config files: `19`
+- Markdown files: `96`
+- Internal dependency edges: `788`
 
 ## Project tree
 
 ```text
 - .claude/
   - settings.local.json
-- .claude_context/
-  - README.md
-  - context_backend.md
-  - context_config.md
-  - context_dependencies.json
-  - context_files.json
-  - context_frontend.md
-  - context_keywords.md
-  - context_routes.md
-  - context_tests.md
 - DOCS/
   - Clode Design/
     - audyt-ux-skk-morzkulc.md
@@ -92,6 +82,9 @@ Excluded sensitive files:
     - 05.09_prompt_kalendarz_rezerwacji_styl.md
     - 06.09_prompt_design_system_nawigacja_kafelki.md
     - 07.09_zgloszenia_uszkodzen_i_przebudowa_sprzet_PLAN.md
+    - 09.09_PLAN_naprawy_audyt_v2.md
+    - 09.09_analiza_kodu_plan_naprawy.md
+    - 09.09_audyt_niezalezny_v2.md
     - 10.06_session_summary.md
     - 10.07_audyt_kursant_błąd.md
     - 11.08_blachy_i_brakujące_pola_TO_DO.md
@@ -310,7 +303,9 @@ Excluded sensitive files:
         - function_roles_service.js
         - setup_gear_vars.js
       - shared/
+        - date_range_utils.js
         - text_utils.js
+        - user_display.js
       - users/
         - userStatusCheck.js
     - service/
@@ -429,7 +424,6 @@ Excluded sensitive files:
       - gearBundleReservationCreateHandler.ts
       - gearBundleReservationUpdateItemsHandler.ts
       - gearFavoriteToggleHandler.ts
-      - gearKayaksListHandler.ts
       - gearMyReservationsHandler.ts
       - gearReservationCancelHandler.ts
       - gearReservationCreateHandler.ts
@@ -507,7 +501,9 @@ Excluded sensitive files:
         - function_roles_service.ts
         - setup_gear_vars.ts
       - shared/
+        - date_range_utils.ts
         - text_utils.ts
+        - user_display.ts
       - users/
         - userStatusCheck.ts
     - service/
@@ -567,11 +563,18 @@ Excluded sensitive files:
       - workspaceGroupSync.ts
     - index.ts
   - test/
+    - helpers/
+      - fake_firestore.ts
+    - basen_core.test.ts
     - events_core.test.ts
     - faza2_core.test.ts
+    - gear_bundle_core.test.ts
     - gear_core.test.ts
     - godzinki_core.test.ts
+    - km_core.test.ts
+    - register_core.test.ts
     - setup_consolidation.test.ts
+    - shared_utils.test.ts
     - sync_core.test.ts
     - workspace_group_sync.test.ts
   - .eslintrc.js
@@ -590,6 +593,8 @@ Excluded sensitive files:
     - club_badges.js
     - date_range_calendar.js
     - firebase_client.js
+    - format_utils.js
+    - html_utils.js
     - module_stub.js
     - modules_registry.js
     - render_shell.js
@@ -627,7 +632,6 @@ Excluded sensitive files:
       - ch05.html
       - ch06.html
   - styles/
-    - app.css
     - base.css
     - basen.css
     - dashboard.css
@@ -702,15 +706,12 @@ Excluded sensitive files:
   - test_godzinki.py
   - test_pwa.py
 - tools/
-  - build_project_context.py
   - generate_pwa_icons.py
 - .firebaserc
 - .gitattributes
 - .gitignore
 - CLAUDE.md
 - READ_ME.md
-- ai_full_audit_report.json
-- ai_full_audit_report.txt
 - firebase.json
 - firestore.indexes.json
 - project_context.py
@@ -720,7 +721,9 @@ Excluded sensitive files:
 
 - `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
+- `functions/lib/api/adminApprovalHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/adminGearReservationCancelHandler.js` -> `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
+- `functions/lib/api/adminGearReservationCancelHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/basenAddSaunaHandler.js` -> `functions/lib/modules/basen/basen_service.js`
 - `functions/lib/api/basenAdminAddGodzinyHandler.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/api/basenAdminAddGodzinyHandler.js` -> `functions/lib/modules/basen/basen_service.js`
@@ -736,27 +739,54 @@ Excluded sensitive files:
 - `functions/lib/api/basenSetKayakHandler.js` -> `functions/lib/modules/basen/basen_service.js`
 - `functions/lib/api/gearBundleReservationCreateHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/gearBundleReservationCreateHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/api/gearBundleReservationCreateHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/gearBundleReservationCreateHandler.js` -> `functions/lib/modules/users/userStatusCheck.js`
 - `functions/lib/api/gearBundleReservationUpdateItemsHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/api/gearBundleReservationUpdateItemsHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/gearFavoriteToggleHandler.js` -> `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 - `functions/lib/api/gearKayaksListHandler.js` -> `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
 - `functions/lib/api/gearMyReservationsHandler.js` -> `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
 - `functions/lib/api/gearReservationCancelHandler.js` -> `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
+- `functions/lib/api/gearReservationCancelHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/gearReservationCreateHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/gearReservationCreateHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/api/gearReservationCreateHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/gearReservationCreateHandler.js` -> `functions/lib/modules/users/userStatusCheck.js`
 - `functions/lib/api/gearReservationUpdateHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/gearReservationUpdateHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/api/gearReservationUpdateHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminGearDamageReportsHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminGearRentalsHandler.js` -> `functions/lib/modules/equipment/shared/gear_catalog_service.js`
+- `functions/lib/api/getAdminGearRentalsHandler.js` -> `functions/lib/modules/shared/date_range_utils.js`
+- `functions/lib/api/getAdminGearRentalsHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminGearRentalsHandler.js` -> `functions/lib/modules/shared/user_display.js`
 - `functions/lib/api/getAdminGearTopRentalsHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
+- `functions/lib/api/getAdminGearTopRentalsHandler.js` -> `functions/lib/modules/equipment/shared/gear_catalog_service.js`
+- `functions/lib/api/getAdminGearTopRentalsHandler.js` -> `functions/lib/modules/shared/date_range_utils.js`
+- `functions/lib/api/getAdminGearTopRentalsHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminGearTopRentalsHandler.js` -> `functions/lib/modules/shared/user_display.js`
+- `functions/lib/api/getAdminMemberActivityHandler.js` -> `functions/lib/modules/shared/date_range_utils.js`
+- `functions/lib/api/getAdminMemberActivityHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminMemberActivityHandler.js` -> `functions/lib/modules/shared/user_display.js`
 - `functions/lib/api/getAdminMemberDuesHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
+- `functions/lib/api/getAdminMemberDuesHandler.js` -> `functions/lib/modules/shared/date_range_utils.js`
+- `functions/lib/api/getAdminMemberDuesHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminMemberDuesHandler.js` -> `functions/lib/modules/shared/user_display.js`
 - `functions/lib/api/getAdminPendingHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 - `functions/lib/api/getAdminPendingHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/getAdminPendingHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
+- `functions/lib/api/getAdminPendingHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/getAdminPendingHandler.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/api/getAdminUserActivityHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
+- `functions/lib/api/getAdminUserActivityHandler.js` -> `functions/lib/modules/shared/date_range_utils.js`
+- `functions/lib/api/getAdminUserActivityHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getAdminUserActivityHandler.js` -> `functions/lib/modules/shared/user_display.js`
 - `functions/lib/api/getBasenAdminGodzinyHistoryHandler.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/api/getBasenAdminGodzinyHistoryHandler.js` -> `functions/lib/modules/basen/basen_service.js`
 - `functions/lib/api/getBasenAdminGodzinyUsersHandler.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/api/getBasenAdminGodzinyUsersHandler.js` -> `functions/lib/modules/basen/basen_service.js`
+- `functions/lib/api/getBasenAdminGodzinyUsersHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/getBasenAdminGodzinyUsersHandler.js` -> `functions/lib/modules/shared/user_display.js`
 - `functions/lib/api/getBasenAttendeesHandler.js` -> `functions/lib/modules/basen/basen_service.js`
 - `functions/lib/api/getBasenGodzinyHandler.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/api/getBasenKarnetyHandler.js` -> `functions/lib/modules/basen/basen_service.js`
@@ -765,6 +795,7 @@ Excluded sensitive files:
 - `functions/lib/api/getBasenSessionsHandler.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/api/getBasenSessionsHandler.js` -> `functions/lib/modules/basen/basen_service.js`
 - `functions/lib/api/getEventsHandler.js` -> `functions/lib/modules/calendar/events_service.js`
+- `functions/lib/api/getGearFavoritesHandler.js` -> `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 - `functions/lib/api/getGearItemAvailabilityHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/getGearItemAvailabilityHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 - `functions/lib/api/getGearItemsHandler.js` -> `functions/lib/modules/equipment/shared/gear_catalog_service.js`
@@ -772,6 +803,7 @@ Excluded sensitive files:
 - `functions/lib/api/getGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/getGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/api/getKayakReservationsHandler.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/api/getKursInfoHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/getKursInfoHandler.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/api/godzinkiPurchaseHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/godzinkiPurchaseHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
@@ -779,6 +811,9 @@ Excluded sensitive files:
 - `functions/lib/api/kmAddLogHandler.js` -> `functions/lib/modules/km/km_log_service.js`
 - `functions/lib/api/kmAddLogHandler.js` -> `functions/lib/modules/km/km_places_service.js`
 - `functions/lib/api/kmAddLogHandler.js` -> `functions/lib/modules/km/km_vars.js`
+- `functions/lib/api/kmAddLogHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/kmAdminMergePlacesHandler.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/api/kmEventStatsHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/kmMyLogsHandler.js` -> `functions/lib/modules/km/km_log_service.js`
 - `functions/lib/api/kmMyStatsHandler.js` -> `functions/lib/modules/km/km_log_service.js`
 - `functions/lib/api/kmPlacesHandler.js` -> `functions/lib/modules/km/km_places_service.js`
@@ -790,9 +825,12 @@ Excluded sensitive files:
 - `functions/lib/api/registerUserHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/api/registerUserHandler.js` -> `functions/lib/modules/hours/opening_balance_fields.js`
 - `functions/lib/api/resolveGearDamageReportHandler.js` -> `functions/lib/modules/equipment/damage/gear_damage_service.js`
+- `functions/lib/api/resolveGearDamageReportHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/submitEventHandler.js` -> `functions/lib/modules/calendar/events_service.js`
+- `functions/lib/api/submitEventHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/submitEventHandler.js` -> `functions/lib/modules/users/userStatusCheck.js`
 - `functions/lib/api/submitGearDamageReportHandler.js` -> `functions/lib/modules/equipment/damage/gear_damage_service.js`
+- `functions/lib/api/submitGearDamageReportHandler.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/api/submitGodzinkiHandler.js` -> `functions/lib/modules/hours/godzinki_vars.js`
@@ -869,7 +907,9 @@ Excluded sensitive files:
 - `functions/lib/index.js` -> `functions/lib/service/worker/onJobCreatedWorker.js`
 - `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
 - `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/setup/function_roles_service.js`
+- `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/calendar/events_service.js` -> `functions/lib/modules/calendar/calendar_utils.js`
+- `functions/lib/modules/calendar/events_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/calendar/events_service.js` -> `functions/lib/modules/users/userStatusCheck.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/calendar/events_service.js`
@@ -879,18 +919,25 @@ Excluded sensitive files:
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/hours_quote.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/setup/setup_gear_vars.js`
+- `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/users/userStatusCheck.js`
 - `functions/lib/modules/equipment/damage/gear_damage_service.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/modules/equipment/damage/gear_damage_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/equipment/shared/reservation_limits.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/hours/hours_quote.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/setup/setup_gear_vars.js`
+- `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js` -> `functions/lib/modules/users/userStatusCheck.js`
+- `functions/lib/modules/equipment/shared/gear_catalog_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/shared/reservation_limits.js` -> `functions/lib/modules/calendar/calendar_utils.js`
+- `functions/lib/modules/equipment/shared/reservation_limits.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/hours/hours_quote.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/km/km_log_service.js` -> `functions/lib/modules/km/km_scoring.js`
+- `functions/lib/modules/shared/date_range_utils.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/modules/shared/user_display.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/admin/adminRunTask.js` -> `functions/lib/service/runner.js`
 - `functions/lib/service/admin/adminRunTask.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/providers/googleCalendarProvider.js` -> `functions/lib/service/providers/googleAuth.js`
@@ -940,6 +987,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/adminNotifyPendingApprovals.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/adminNotifyPendingApprovals.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/basenGrantInstructorRewards.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
+- `functions/lib/service/tasks/basenNotifySessionCancelled.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/eventsNotifyKierownik.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/eventsNotifyKierownik.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/eventsNotifyNew.js` -> `functions/lib/modules/setup/app_vars.js`
@@ -948,6 +996,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/eventsNotifyUpcoming.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/eventsNotifyUpcoming.js` -> `functions/lib/modules/setup/events_vars.js`
 - `functions/lib/service/tasks/eventsNotifyUpcoming.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/service/tasks/eventsSyncCalendar.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/eventsSyncCalendar.js` -> `functions/lib/service/providers/googleCalendarProvider.js`
 - `functions/lib/service/tasks/eventsSyncCalendar.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/modules/calendar/events_service.js`
@@ -956,11 +1005,14 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/gearNotifyDamageReport.js` -> `functions/lib/modules/setup/app_vars.js`
+- `functions/lib/service/tasks/gearNotifyDamageReport.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js` -> `functions/lib/modules/setup/app_vars.js`
+- `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/setup/setup_gear_vars.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/service/tasks/gearSyncAllFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/gearSyncAllFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/gearSyncAllFromSheet.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/gearSyncKayaksFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
@@ -973,6 +1025,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/godzinkiMergeHistoricalUser.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/setup/app_vars.js`
@@ -981,23 +1034,33 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/kmMergeHistoricalUser.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/kmRebuildRankings.js` -> `functions/lib/service/tasks/kmRebuildUserStats.js`
 - `functions/lib/service/tasks/kmRebuildUserStats.js` -> `functions/lib/modules/km/km_scoring.js`
 - `functions/lib/service/tasks/kmRebuildUserStats.js` -> `functions/lib/modules/km/km_vars.js`
+- `functions/lib/service/tasks/kmRebuildUserStats.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/service/tasks/kursSyncFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/kursSyncFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/kursSyncFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/membersSyncToSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/membersSyncToSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/membersSyncToSheet.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/onUserRegisteredWelcome.js` -> `functions/lib/service/workspaceGroupSync.js`
 - `functions/lib/service/tasks/reconcileOpeningBalance.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/reconcileOpeningBalance.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/service/tasks/reconcileOpeningBalance.js` -> `functions/lib/modules/hours/opening_balance_fields.js`
+- `functions/lib/service/tasks/reconcileOpeningBalance.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/service/tasks/reconcileWorkspaceGroups.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/reconcileWorkspaceGroups.js` -> `functions/lib/service/workspaceGroupSync.js`
+- `functions/lib/service/tasks/setupSyncFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/setupSyncFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/setupSyncFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/usersNotifyAkademikAccessChanged.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/usersSyncFieldsFromSheet.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+- `functions/lib/service/tasks/usersSyncFieldsFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/usersSyncFieldsFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/usersSyncFieldsFromSheet.js` -> `functions/lib/service/service_config.js`
+- `functions/lib/service/tasks/usersSyncRolesFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/usersSyncRolesFromSheet.js` -> `functions/lib/service/providers/googleSheetsProvider.js`
 - `functions/lib/service/tasks/usersSyncRolesFromSheet.js` -> `functions/lib/service/providers/googleWorkspaceProvider.js`
 - `functions/lib/service/tasks/usersSyncRolesFromSheet.js` -> `functions/lib/service/service_config.js`
@@ -1009,13 +1072,16 @@ Excluded sensitive files:
 - `functions/lib/service/worker/jobProcessor.js` -> `functions/lib/service/runner.js`
 - `functions/lib/service/worker/jobProcessor.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/worker/onJobCreatedWorker.js` -> `functions/lib/service/worker/jobProcessor.js`
+- `functions/lib/service/workspaceGroupSync.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/scripts/checkGearReport.js` -> `functions/lib/api/getAdminGearRentalsHandler.js`
 - `functions/scripts/checkKlubFinanceLeak.js` -> `functions/lib/api/getKlubInfoHandler.js`
 - `functions/scripts/checkMemberActivity.js` -> `functions/lib/api/getAdminMemberActivityHandler.js`
 - `functions/scripts/runReconcileOpeningBalance.js` -> `functions/lib/service/tasks/reconcileOpeningBalance.js`
 - `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
+- `functions/src/api/adminApprovalHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/adminGearReservationCancelHandler.ts` -> `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
+- `functions/src/api/adminGearReservationCancelHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/basenAddSaunaHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/basenAdminAddGodzinyHandler.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/api/basenAdminAddGodzinyHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
@@ -1029,39 +1095,67 @@ Excluded sensitive files:
 - `functions/src/api/basenSetKayakHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/gearBundleReservationCreateHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/gearBundleReservationCreateHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/api/gearBundleReservationCreateHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/gearBundleReservationCreateHandler.ts` -> `functions/src/modules/users/userStatusCheck.ts`
 - `functions/src/api/gearBundleReservationUpdateItemsHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
-- `functions/src/api/gearKayaksListHandler.ts` -> `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
+- `functions/src/api/gearBundleReservationUpdateItemsHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/gearFavoriteToggleHandler.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 - `functions/src/api/gearMyReservationsHandler.ts` -> `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
 - `functions/src/api/gearReservationCancelHandler.ts` -> `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
+- `functions/src/api/gearReservationCancelHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/gearReservationCreateHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/gearReservationCreateHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/api/gearReservationCreateHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/gearReservationCreateHandler.ts` -> `functions/src/modules/users/userStatusCheck.ts`
 - `functions/src/api/gearReservationUpdateHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/gearReservationUpdateHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/api/gearReservationUpdateHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminGearDamageReportsHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminGearRentalsHandler.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+- `functions/src/api/getAdminGearRentalsHandler.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/src/api/getAdminGearRentalsHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminGearRentalsHandler.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/src/api/getAdminGearTopRentalsHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
+- `functions/src/api/getAdminGearTopRentalsHandler.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+- `functions/src/api/getAdminGearTopRentalsHandler.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/src/api/getAdminGearTopRentalsHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminGearTopRentalsHandler.ts` -> `functions/src/modules/shared/user_display.ts`
+- `functions/src/api/getAdminMemberActivityHandler.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/src/api/getAdminMemberActivityHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminMemberActivityHandler.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/src/api/getAdminMemberDuesHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
+- `functions/src/api/getAdminMemberDuesHandler.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/src/api/getAdminMemberDuesHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminMemberDuesHandler.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/src/api/getAdminPendingHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 - `functions/src/api/getAdminPendingHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/getAdminPendingHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
+- `functions/src/api/getAdminPendingHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/getAdminPendingHandler.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/api/getAdminUserActivityHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
+- `functions/src/api/getAdminUserActivityHandler.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/src/api/getAdminUserActivityHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getAdminUserActivityHandler.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/src/api/getBasenAdminGodzinyHistoryHandler.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/api/getBasenAdminGodzinyHistoryHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/getBasenAdminGodzinyUsersHandler.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/api/getBasenAdminGodzinyUsersHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
+- `functions/src/api/getBasenAdminGodzinyUsersHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/getBasenAdminGodzinyUsersHandler.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/src/api/getBasenAttendeesHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/getBasenKayaksHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/getBasenMyGodzinyHandler.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/api/getBasenSessionsHandler.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/api/getBasenSessionsHandler.ts` -> `functions/src/modules/basen/basen_service.ts`
 - `functions/src/api/getEventsHandler.ts` -> `functions/src/modules/calendar/events_service.ts`
+- `functions/src/api/getGearFavoritesHandler.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 - `functions/src/api/getGearItemAvailabilityHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/getGearItemAvailabilityHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 - `functions/src/api/getGearItemsHandler.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 - `functions/src/api/getGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/getGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/api/getKayakReservationsHandler.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/api/getKursInfoHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/getKursInfoHandler.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/api/godzinkiPurchaseHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/godzinkiPurchaseHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
@@ -1069,6 +1163,9 @@ Excluded sensitive files:
 - `functions/src/api/kmAddLogHandler.ts` -> `functions/src/modules/km/km_log_service.ts`
 - `functions/src/api/kmAddLogHandler.ts` -> `functions/src/modules/km/km_places_service.ts`
 - `functions/src/api/kmAddLogHandler.ts` -> `functions/src/modules/km/km_vars.ts`
+- `functions/src/api/kmAddLogHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/kmAdminMergePlacesHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/api/kmEventStatsHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/kmMyLogsHandler.ts` -> `functions/src/modules/km/km_log_service.ts`
 - `functions/src/api/kmMyStatsHandler.ts` -> `functions/src/modules/km/km_log_service.ts`
 - `functions/src/api/kmPlacesHandler.ts` -> `functions/src/modules/km/km_places_service.ts`
@@ -1080,9 +1177,12 @@ Excluded sensitive files:
 - `functions/src/api/registerUserHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/api/registerUserHandler.ts` -> `functions/src/modules/hours/opening_balance_fields.ts`
 - `functions/src/api/resolveGearDamageReportHandler.ts` -> `functions/src/modules/equipment/damage/gear_damage_service.ts`
+- `functions/src/api/resolveGearDamageReportHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/submitEventHandler.ts` -> `functions/src/modules/calendar/events_service.ts`
+- `functions/src/api/submitEventHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/submitEventHandler.ts` -> `functions/src/modules/users/userStatusCheck.ts`
 - `functions/src/api/submitGearDamageReportHandler.ts` -> `functions/src/modules/equipment/damage/gear_damage_service.ts`
+- `functions/src/api/submitGearDamageReportHandler.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/api/submitGodzinkiHandler.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
@@ -1159,7 +1259,9 @@ Excluded sensitive files:
 - `functions/src/index.ts` -> `functions/src/service/worker/onJobCreatedWorker.ts`
 - `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/setup/function_roles_service.ts`
+- `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/calendar/events_service.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
+- `functions/src/modules/calendar/events_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/calendar/events_service.ts` -> `functions/src/modules/users/userStatusCheck.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/calendar/events_service.ts`
@@ -1169,22 +1271,29 @@ Excluded sensitive files:
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/hours_quote.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
+- `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/users/userStatusCheck.ts`
 - `functions/src/modules/equipment/damage/gear_damage_service.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/modules/equipment/damage/gear_damage_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/equipment/shared/reservation_limits.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/hours/hours_quote.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
+- `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts` -> `functions/src/modules/users/userStatusCheck.ts`
+- `functions/src/modules/equipment/shared/gear_catalog_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/equipment/shared/reservation_limits.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
+- `functions/src/modules/equipment/shared/reservation_limits.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/hours/godzinki_service.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/modules/hours/hours_quote.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/hours/hours_quote.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/src/modules/km/km_log_service.ts` -> `functions/src/modules/km/km_scoring.ts`
 - `functions/src/modules/km/km_log_service.ts` -> `functions/src/modules/km/km_vars.ts`
 - `functions/src/modules/km/km_scoring.ts` -> `functions/src/modules/km/km_vars.ts`
+- `functions/src/modules/shared/date_range_utils.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/modules/shared/user_display.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/admin/adminRunTask.ts` -> `functions/src/service/runner.ts`
 - `functions/src/service/admin/adminRunTask.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/providers/googleCalendarProvider.ts` -> `functions/src/service/providers/googleAuth.ts`
@@ -1239,6 +1348,7 @@ Excluded sensitive files:
 - `functions/src/service/tasks/adminNotifyPendingApprovals.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/basenGrantInstructorRewards.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
 - `functions/src/service/tasks/basenGrantInstructorRewards.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/basenNotifySessionCancelled.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/basenNotifySessionCancelled.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/eventsNotifyKierownik.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/eventsNotifyKierownik.ts` -> `functions/src/modules/shared/text_utils.ts`
@@ -1251,6 +1361,7 @@ Excluded sensitive files:
 - `functions/src/service/tasks/eventsNotifyUpcoming.ts` -> `functions/src/modules/setup/events_vars.ts`
 - `functions/src/service/tasks/eventsNotifyUpcoming.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/eventsNotifyUpcoming.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/eventsSyncCalendar.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/eventsSyncCalendar.ts` -> `functions/src/service/providers/googleCalendarProvider.ts`
 - `functions/src/service/tasks/eventsSyncCalendar.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/eventsSyncCalendar.ts` -> `functions/src/service/types.ts`
@@ -1261,14 +1372,17 @@ Excluded sensitive files:
 - `functions/src/service/tasks/eventsSyncFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/eventsSyncFromSheet.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/modules/setup/app_vars.ts`
+- `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/modules/setup/app_vars.ts`
+- `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearPrivateStorage.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/gearSyncAllFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearSyncAllFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/gearSyncAllFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/gearSyncAllFromSheet.ts` -> `functions/src/service/types.ts`
@@ -1282,6 +1396,7 @@ Excluded sensitive files:
 - `functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/godzinkiMergeHistoricalUser.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/godzinkiMergeHistoricalUser.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
@@ -1294,17 +1409,21 @@ Excluded sensitive files:
 - `functions/src/service/tasks/godzinkiSyncFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/godzinkiSyncFromSheet.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/groupsDiagnose.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/kmMergeHistoricalUser.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/kmMergeHistoricalUser.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/kmRebuildMapData.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/kmRebuildRankings.ts` -> `functions/src/service/tasks/kmRebuildUserStats.ts`
 - `functions/src/service/tasks/kmRebuildRankings.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/kmRebuildUserStats.ts` -> `functions/src/modules/km/km_scoring.ts`
 - `functions/src/service/tasks/kmRebuildUserStats.ts` -> `functions/src/modules/km/km_vars.ts`
+- `functions/src/service/tasks/kmRebuildUserStats.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/kmRebuildUserStats.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/kursSyncFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/kursSyncFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/kursSyncFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/kursSyncFromSheet.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/listaEnforcePostingPolicy.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/membersSyncToSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/membersSyncToSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/membersSyncToSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/membersSyncToSheet.ts` -> `functions/src/service/types.ts`
@@ -1313,19 +1432,25 @@ Excluded sensitive files:
 - `functions/src/service/tasks/reconcileOpeningBalance.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/service/tasks/reconcileOpeningBalance.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/service/tasks/reconcileOpeningBalance.ts` -> `functions/src/modules/hours/opening_balance_fields.ts`
+- `functions/src/service/tasks/reconcileOpeningBalance.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/reconcileOpeningBalance.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/reconcileWorkspaceGroups.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/reconcileWorkspaceGroups.ts` -> `functions/src/service/providers/googleWorkspaceProvider.ts`
 - `functions/src/service/tasks/reconcileWorkspaceGroups.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/reconcileWorkspaceGroups.ts` -> `functions/src/service/workspaceGroupSync.ts`
+- `functions/src/service/tasks/setupSyncFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/setupSyncFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/setupSyncFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/setupSyncFromSheet.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/usersNotifyAkademikAccessChanged.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/usersNotifyAkademikAccessChanged.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/usersSyncFieldsFromSheet.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/src/service/tasks/usersSyncFieldsFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/usersSyncFieldsFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/usersSyncFieldsFromSheet.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/tasks/usersSyncFieldsFromSheet.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/usersSyncFunctionRolesFromSetup.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/usersSyncRolesFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/usersSyncRolesFromSheet.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/src/service/tasks/usersSyncRolesFromSheet.ts` -> `functions/src/service/providers/googleWorkspaceProvider.ts`
 - `functions/src/service/tasks/usersSyncRolesFromSheet.ts` -> `functions/src/service/service_config.ts`
@@ -1338,20 +1463,41 @@ Excluded sensitive files:
 - `functions/src/service/worker/jobProcessor.ts` -> `functions/src/service/runner.ts`
 - `functions/src/service/worker/jobProcessor.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/service/worker/onJobCreatedWorker.ts` -> `functions/src/service/worker/jobProcessor.ts`
+- `functions/src/service/workspaceGroupSync.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/workspaceGroupSync.ts` -> `functions/src/service/providers/googleWorkspaceProvider.ts`
+- `functions/test/basen_core.test.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
+- `functions/test/basen_core.test.ts` -> `functions/test/helpers/fake_firestore.ts`
 - `functions/test/events_core.test.ts` -> `functions/src/modules/calendar/events_service.ts`
 - `functions/test/events_core.test.ts` -> `functions/src/service/providers/googleSheetsProvider.ts`
 - `functions/test/events_core.test.ts` -> `functions/src/service/tasks/eventsNotifyUpcoming.ts`
 - `functions/test/events_core.test.ts` -> `functions/src/service/tasks/eventsSyncFromSheet.ts`
 - `functions/test/faza2_core.test.ts` -> `functions/src/service/tasks/adminNotifyPendingApprovals.ts`
+- `functions/test/gear_bundle_core.test.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
+- `functions/test/gear_bundle_core.test.ts` -> `functions/src/modules/equipment/shared/reservation_limits.ts`
+- `functions/test/gear_bundle_core.test.ts` -> `functions/src/modules/hours/godzinki_service.ts`
+- `functions/test/gear_bundle_core.test.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
+- `functions/test/gear_bundle_core.test.ts` -> `functions/test/helpers/fake_firestore.ts`
 - `functions/test/gear_core.test.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/test/gear_core.test.ts` -> `functions/src/modules/hours/hours_quote.ts`
 - `functions/test/gear_core.test.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/test/gear_core.test.ts` -> `functions/src/service/tasks/gearPrivateStorage.ts`
 - `functions/test/gear_core.test.ts` -> `functions/src/service/tasks/gearSyncAllFromSheet.ts`
 - `functions/test/godzinki_core.test.ts` -> `functions/src/modules/hours/godzinki_service.ts`
+- `functions/test/km_core.test.ts` -> `functions/src/modules/km/km_places_service.ts`
+- `functions/test/km_core.test.ts` -> `functions/src/modules/km/km_scoring.ts`
+- `functions/test/km_core.test.ts` -> `functions/src/modules/km/km_vars.ts`
+- `functions/test/km_core.test.ts` -> `functions/test/helpers/fake_firestore.ts`
+- `functions/test/register_core.test.ts` -> `functions/src/api/registerUserHandler.ts`
+- `functions/test/register_core.test.ts` -> `functions/test/helpers/fake_firestore.ts`
 - `functions/test/setup_consolidation.test.ts` -> `functions/src/api/submitGodzinkiHandler.ts`
 - `functions/test/setup_consolidation.test.ts` -> `functions/src/service/tasks/godzinkiArchiveSheetRows.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/equipment/damage/gear_damage_service.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/shared/date_range_utils.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/test/shared_utils.test.ts` -> `functions/src/modules/shared/user_display.ts`
 - `functions/test/sync_core.test.ts` -> `functions/src/service/tasks/godzinkiSyncFromSheet.ts`
 - `functions/test/workspace_group_sync.test.ts` -> `functions/src/service/workspaceGroupSync.ts`
 - `public/modules/raporty/registry.js` -> `public/modules/raporty/gear_damage_reports.js`
@@ -3108,60 +3254,6 @@ Excluded sensitive files:
   - `exists(rel: str)` (function lines 26-27) -> `bool`
   - `png_dimensions(rel: str)` (function lines 30-37) -> `tuple[int, int]`
 
-### `tools/build_project_context.py`
-
-- Lines: `673`
-- Size: `18905` bytes
-- SHA1: `9c11ab6623`
-- Module aliases: `tools.build_project_context`
-- Imports:
-  - `from __future__ import annotations`
-  - `from dataclasses import asdict, dataclass, field`
-  - `from pathlib import Path`
-  - `import json`
-  - `import re`
-  - `from typing import Iterable`
-- Top-level symbols:
-  - `EXCLUDE_DIRS`
-  - `EXCLUDE_FILES`
-  - `INCLUDE_EXT`
-  - `LARGE_FILE_LINES`
-  - `MAX_ITEMS`
-  - `MAX_LINE_LEN`
-  - `OUTPUT_DIR`
-  - `README`
-  - `ROOT`
-- Classes:
-  - class `FileInfo` lines 47-60
-- Functions:
-  - `trim(value: str, max_len: int)` (function lines 63-67) -> `str`
-  - `rel_path(path: Path)` (function lines 70-71) -> `str`
-  - `is_excluded(path: Path)` (function lines 74-87) -> `bool`
-  - `read_text(path: Path)` (function lines 90-94) -> `str`
-  - `unique_sorted(values: Iterable[str], limit: int | None)` (function lines 97-101) -> `list[str]`
-  - `classify_file(path: Path)` (function lines 104-138) -> `str`
-  - `extract_imports(text: str)` (function lines 141-157) -> `list[str]`
-  - `is_local_import(import_path: str)` (function lines 160-161) -> `bool`
-  - `extract_exports(text: str)` (function lines 164-177) -> `list[str]`
-  - `extract_symbols(text: str)` (function lines 180-193) -> `list[str]`
-  - `extract_routes(text: str)` (function lines 196-217) -> `list[str]`
-  - `extract_firebase_functions(text: str)` (function lines 220-235) -> `list[str]`
-  - `extract_keywords(path: Path, text: str)` (function lines 238-273) -> `list[str]`
-  - `parse_firebase_rewrites()` (function lines 276-312) -> `list[str]`
-  - `resolve_local_import(current_file: str, import_path: str, known_paths: set[str])` (function lines 315-339) -> `str | None`
-  - `analyze_file(path: Path)` (function lines 342-366) -> `FileInfo`
-  - `build_dependency_edges(files: list[FileInfo])` (function lines 369-379) -> `list[dict[str, str]]`
-  - `append_list(lines: list[str], values: list[str], indent: str)` (function lines 382-384) -> `None`
-  - `write_markdown(path: Path, lines: list[str])` (function lines 387-388) -> `None`
-  - `group_by_kind(files: list[FileInfo])` (function lines 391-400) -> `dict[str, list[FileInfo]]`
-  - `write_readme(files: list[FileInfo])` (function lines 403-479) -> `None`
-  - `write_routes(files: list[FileInfo])` (function lines 482-522) -> `None`
-  - `write_keywords(files: list[FileInfo])` (function lines 525-545) -> `None`
-  - `append_file_details(lines: list[str], file: FileInfo)` (function lines 548-583) -> `None`
-  - `write_group_file(filename: str, title: str, files: list[FileInfo], kinds: set[str])` (function lines 586-602) -> `None`
-  - `write_json_files(files: list[FileInfo])` (function lines 605-616) -> `None`
-  - `main()` (function lines 619-668) -> `None`
-
 ### `tools/generate_pwa_icons.py`
 
 - Lines: `130`
@@ -3423,14 +3515,16 @@ Excluded sensitive files:
 
 ### `functions/lib/api/adminApprovalHandler.js`
 
-- Lines: `232`
-- Size: `10802` bytes
+- Lines: `230`
+- Size: `10898` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2`
 - Functions:
@@ -3438,7 +3532,6 @@ Excluded sensitive files:
   - `enqueueJob`
   - `handleAdminApprove`
   - `handleAdminReject`
-  - `norm`
   - `parseKindId`
 
 ### `functions/lib/api/adminEventsSyncCalendarHandler.js`
@@ -3454,22 +3547,23 @@ Excluded sensitive files:
 
 ### `functions/lib/api/adminGearReservationCancelHandler.js`
 
-- Lines: `101`
-- Size: `4241` bytes
+- Lines: `99`
+- Size: `4301` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/equipment/kayaks/gear_kayaks_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-admin`
 - Functions:
   - `enqueueJob`
   - `handleAdminGearReservationCancel`
-  - `norm`
 
 ### `functions/lib/api/basenAddSaunaHandler.js`
 
-- Lines: `57`
-- Size: `2659` bytes
+- Lines: `56`
+- Size: `2570` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3510,8 +3604,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenCancelEnrollmentHandler.js`
 
-- Lines: `49`
-- Size: `2082` bytes
+- Lines: `47`
+- Size: `1975` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3521,8 +3615,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenCancelSessionHandler.js`
 
-- Lines: `62`
-- Size: `2997` bytes
+- Lines: `61`
+- Size: `2939` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3532,8 +3626,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenClaimWaitingStudentHandler.js`
 
-- Lines: `54`
-- Size: `2478` bytes
+- Lines: `52`
+- Size: `2321` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3543,8 +3637,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenCreateSessionHandler.js`
 
-- Lines: `91`
-- Size: `4156` bytes
+- Lines: `90`
+- Size: `4130` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3555,8 +3649,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenEnrollHandler.js`
 
-- Lines: `112`
-- Size: `6181` bytes
+- Lines: `110`
+- Size: `5990` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
   - `functions/lib/modules/users/userStatusCheck.js`
@@ -3579,8 +3673,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenSetInstructorHandler.js`
 
-- Lines: `48`
-- Size: `2271` bytes
+- Lines: `46`
+- Size: `2093` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3590,8 +3684,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/basenSetKayakHandler.js`
 
-- Lines: `45`
-- Size: `1988` bytes
+- Lines: `43`
+- Size: `1875` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3643,39 +3737,44 @@ Excluded sensitive files:
 
 ### `functions/lib/api/gearBundleReservationCreateHandler.js`
 
-- Lines: `104`
-- Size: `4993` bytes
+- Lines: `102`
+- Size: `5125` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
 - Functions:
   - `handleGearBundleReservationCreate`
-  - `norm`
   - `parseItems`
 
 ### `functions/lib/api/gearBundleReservationUpdateItemsHandler.js`
 
-- Lines: `68`
-- Size: `2653` bytes
+- Lines: `66`
+- Size: `2713` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `handleGearBundleReservationUpdateItems`
-  - `norm`
   - `parseItems`
 
 ### `functions/lib/api/gearFavoriteToggleHandler.js`
 
-- Lines: `96`
-- Size: `4032` bytes
+- Lines: `94`
+- Size: `4029` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 - Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
   - `import/require firebase-admin`
 - Functions:
   - `handleGearFavoriteToggle`
@@ -3693,8 +3792,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/gearMyReservationsHandler.js`
 
-- Lines: `28`
-- Size: `1221` bytes
+- Lines: `32`
+- Size: `1370` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
 - Imports:
@@ -3704,183 +3803,179 @@ Excluded sensitive files:
 
 ### `functions/lib/api/gearReservationCancelHandler.js`
 
-- Lines: `36`
-- Size: `1476` bytes
+- Lines: `38`
+- Size: `1650` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/equipment/kayaks/gear_kayaks_service`
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `handleGearReservationCancel`
-  - `norm`
 
 ### `functions/lib/api/gearReservationCreateHandler.js`
 
-- Lines: `88`
-- Size: `4513` bytes
+- Lines: `82`
+- Size: `4265` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
-  - `import/require firebase-functions/v2`
 - Functions:
   - `asStringArray`
   - `handleGearReservationCreate`
-  - `norm`
 
 ### `functions/lib/api/gearReservationUpdateHandler.js`
 
-- Lines: `52`
-- Size: `2243` bytes
+- Lines: `54`
+- Size: `2453` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `handleGearReservationUpdate`
-  - `norm`
 
 ### `functions/lib/api/getAdminGearDamageReportsHandler.js`
 
-- Lines: `82`
-- Size: `4316` bytes
+- Lines: `80`
+- Size: `4484` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleGetAdminGearDamageReports`
-  - `norm`
   - `tsToIso`
 
 ### `functions/lib/api/getAdminGearRentalsHandler.js`
 
-- Lines: `202`
-- Size: `8728` bytes
+- Lines: `140`
+- Size: `7089` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/shared/gear_catalog_service.js`
+  - `functions/lib/modules/shared/date_range_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminGearRentals`
-  - `isIsoDate`
-  - `isoToDateUTC`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/lib/api/getAdminGearTopRentalsHandler.js`
 
-- Lines: `231`
-- Size: `10635` bytes
+- Lines: `176`
+- Size: `9278` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
+  - `functions/lib/modules/equipment/shared/gear_catalog_service.js`
+  - `functions/lib/modules/shared/date_range_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminGearTopRentals`
-  - `isIsoDate`
-  - `isoToDateUTC`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/lib/api/getAdminMemberActivityHandler.js`
 
-- Lines: `173`
-- Size: `7631` bytes
+- Lines: `115`
+- Size: `5740` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/date_range_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminMemberActivity`
-  - `isIsoDate`
-  - `isRegistered`
-  - `isoToDateUTC`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/lib/api/getAdminMemberDuesHandler.js`
 
-- Lines: `130`
-- Size: `6304` bytes
+- Lines: `110`
+- Size: `5832` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
+  - `functions/lib/modules/shared/date_range_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `fullName`
   - `handleGetAdminMemberDues`
-  - `isRegistered`
-  - `nickname`
-  - `norm`
   - `parseContrib`
-  - `todayWarsawIso`
 
 ### `functions/lib/api/getAdminPendingHandler.js`
 
-- Lines: `400`
-- Size: `25578` bytes
+- Lines: `410`
+- Size: `27416` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/service_config.js`
 - Imports:
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../service/service_config`
   - `import/require firebase-functions/v2`
 - Functions:
   - `docsOf`
   - `errorOf`
   - `handleGetAdminPending`
-  - `norm`
   - `snapOf`
   - `tsToIso`
 
 ### `functions/lib/api/getAdminUserActivityHandler.js`
 
-- Lines: `192`
-- Size: `9052` bytes
+- Lines: `141`
+- Size: `7671` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
+  - `functions/lib/modules/shared/date_range_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminUserActivity`
-  - `isIsoDate`
-  - `isoToDateUTC`
   - `matchesQuery`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
   - `serialize`
-  - `todayWarsawIso`
   - `tsIso`
 
 ### `functions/lib/api/getBasenAdminGodzinyHistoryHandler.js`
@@ -3898,25 +3993,25 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getBasenAdminGodzinyUsersHandler.js`
 
-- Lines: `123`
-- Size: `6369` bytes
+- Lines: `109`
+- Size: `6019` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_godziny_service.js`
   - `functions/lib/modules/basen/basen_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
+  - `functions/lib/modules/shared/user_display.js`
 - Imports:
   - `import/require ../modules/basen/basen_godziny_service`
   - `import/require ../modules/basen/basen_service`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
 - Functions:
-  - `fullName`
   - `handleGetBasenAdminGodzinyUsers`
-  - `isRegistered`
-  - `nickname`
-  - `norm`
 
 ### `functions/lib/api/getBasenAttendeesHandler.js`
 
-- Lines: `34`
-- Size: `1491` bytes
+- Lines: `38`
+- Size: `1640` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3948,8 +4043,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getBasenKayaksHandler.js`
 
-- Lines: `35`
-- Size: `1518` bytes
+- Lines: `39`
+- Size: `1667` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
 - Imports:
@@ -3970,8 +4065,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getBasenSessionsHandler.js`
 
-- Lines: `111`
-- Size: `6313` bytes
+- Lines: `115`
+- Size: `6462` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_godziny_service.js`
   - `functions/lib/modules/basen/basen_service.js`
@@ -4004,8 +4099,12 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getGearFavoritesHandler.js`
 
-- Lines: `47`
-- Size: `2123` bytes
+- Lines: `45`
+- Size: `2120` bytes
+- Internal dependencies:
+  - `functions/lib/modules/equipment/shared/gear_catalog_service.js`
+- Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
 - Functions:
   - `handleGetGearFavorites`
 
@@ -4055,8 +4154,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getGodzinkiHandler.js`
 
-- Lines: `146`
-- Size: `7713` bytes
+- Lines: `150`
+- Size: `7862` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -4070,7 +4169,7 @@ Excluded sensitive files:
 ### `functions/lib/api/getKayakReservationsHandler.js`
 
 - Lines: `121`
-- Size: `7370` bytes
+- Size: `7360` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 - Imports:
@@ -4095,7 +4194,7 @@ Excluded sensitive files:
 ### `functions/lib/api/getKursantStatsHandler.js`
 
 - Lines: `95`
-- Size: `5840` bytes
+- Size: `5835` bytes
 - Imports:
   - `import/require firebase-functions/v2`
 - Functions:
@@ -4103,17 +4202,18 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getKursInfoHandler.js`
 
-- Lines: `99`
-- Size: `4748` bytes
+- Lines: `97`
+- Size: `5114` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../service/service_config`
   - `import/require firebase-functions/v2`
 - Functions:
   - `flattenEmails`
   - `handleGetKursInfo`
-  - `norm`
 
 ### `functions/lib/api/getModulesHandler.js`
 
@@ -4140,8 +4240,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/godzinkiPurchaseHandler.js`
 
-- Lines: `87`
-- Size: `4308` bytes
+- Lines: `91`
+- Size: `4458` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -4155,41 +4255,47 @@ Excluded sensitive files:
 
 ### `functions/lib/api/kmAddLogHandler.js`
 
-- Lines: `230`
-- Size: `11569` bytes
+- Lines: `228`
+- Size: `12014` bytes
 - Internal dependencies:
   - `functions/lib/modules/km/km_log_service.js`
   - `functions/lib/modules/km/km_places_service.js`
   - `functions/lib/modules/km/km_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/km/km_log_service`
   - `import/require ../modules/km/km_places_service`
   - `import/require ../modules/km/km_vars`
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `handleKmAddLog`
   - `isIsoDate`
-  - `norm`
   - `toSafeFloat`
   - `toSafeInt`
 
 ### `functions/lib/api/kmAdminMergePlacesHandler.js`
 
-- Lines: `214`
-- Size: `9076` bytes
+- Lines: `212`
+- Size: `9196` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-admin`
 - Functions:
   - `batchUpdateLogs`
   - `handleKmAdminMergePlaces`
-  - `norm`
 
 ### `functions/lib/api/kmEventStatsHandler.js`
 
-- Lines: `99`
-- Size: `4410` bytes
+- Lines: `97`
+- Size: `4555` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `handleKmEventStats`
-  - `norm`
 
 ### `functions/lib/api/kmMapDataHandler.js`
 
@@ -4253,8 +4359,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/registerUserHandler.js`
 
-- Lines: `762`
-- Size: `41599` bytes
+- Lines: `772`
+- Size: `42245` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4295,51 +4401,54 @@ Excluded sensitive files:
 
 ### `functions/lib/api/resolveGearDamageReportHandler.js`
 
-- Lines: `65`
-- Size: `3593` bytes
+- Lines: `63`
+- Size: `3738` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/damage/gear_damage_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleResolveGearDamageReport`
-  - `norm`
 
 ### `functions/lib/api/submitEventHandler.js`
 
-- Lines: `101`
-- Size: `5146` bytes
+- Lines: `99`
+- Size: `5458` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/events_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
   - `import/require ../modules/calendar/events_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleSubmitEvent`
-  - `norm`
 
 ### `functions/lib/api/submitGearDamageReportHandler.js`
 
-- Lines: `135`
-- Size: `7157` bytes
+- Lines: `133`
+- Size: `7452` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/damage/gear_damage_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2`
 - Functions:
   - `enqueueJob`
   - `handleSubmitGearDamageReport`
-  - `norm`
 
 ### `functions/lib/api/submitGodzinkiHandler.js`
 
-- Lines: `146`
-- Size: `7985` bytes
+- Lines: `150`
+- Size: `8135` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/hours/godzinki_service.js`
@@ -4542,8 +4651,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/basen/basen_godziny_service.js`
 
-- Lines: `137`
-- Size: `5512` bytes
+- Lines: `142`
+- Size: `5725` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -4557,15 +4666,19 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/basen/basen_service.js`
 
-- Lines: `890`
-- Size: `48865` bytes
+- Lines: `903`
+- Size: `49921` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_godziny_service.js`
   - `functions/lib/modules/setup/function_roles_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../setup/function_roles_service`
+  - `import/require ../shared/text_utils`
   - `import/require ./basen_godziny_service`
   - `import/require firebase-admin`
+- Classes:
+  - `ClientError`
 - Functions:
   - `addSaunaToSession`
   - `buildAvailableKayaksList`
@@ -4588,7 +4701,6 @@ Excluded sensitive files:
   - `listAvailableBasenKayaks`
   - `listSlotAttendees`
   - `listUpcomingSessions`
-  - `norm`
   - `parseVarValue`
   - `resolveBasenAdminGrant`
   - `resolveKayakLabel`
@@ -4615,12 +4727,14 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/calendar/events_service.js`
 
-- Lines: `248`
-- Size: `11163` bytes
+- Lines: `246`
+- Size: `11467` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
+  - `import/require ../shared/text_utils`
   - `import/require ../users/userStatusCheck`
   - `import/require ./calendar_utils`
 - Functions:
@@ -4632,14 +4746,13 @@ Excluded sensitive files:
   - `listAllEvents`
   - `listRecentEvents`
   - `listUpcomingEvents`
-  - `norm`
   - `resolveKierownicyList`
   - `resolveKierownikCandidate`
 
 ### `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 
-- Lines: `1142`
-- Size: `61521` bytes
+- Lines: `1146`
+- Size: `63076` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4649,6 +4762,7 @@ Excluded sensitive files:
   - `functions/lib/modules/hours/godzinki_vars.js`
   - `functions/lib/modules/hours/hours_quote.js`
   - `functions/lib/modules/setup/setup_gear_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
@@ -4657,6 +4771,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
   - `import/require ../../setup/setup_gear_vars`
+  - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
   - `import/require ../kayaks/gear_kayaks_service`
   - `import/require ../shared/reservation_limits`
@@ -4680,7 +4795,6 @@ Excluded sensitive files:
   - `isFreeRentalExempt`
   - `isSupportedBundleCategory`
   - `listMyBundleReservations`
-  - `norm`
   - `parseSchoolYear`
   - `resolveSchoolYear`
   - `uniqBy`
@@ -4690,24 +4804,25 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/equipment/damage/gear_damage_service.js`
 
-- Lines: `169`
-- Size: `8068` bytes
+- Lines: `167`
+- Size: `8458` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../../shared/text_utils`
   - `import/require ../bundle/gear_bundle_service`
   - `import/require crypto`
   - `import/require firebase-admin`
 - Functions:
   - `createDamageReport`
   - `isSupportedDamageCategory`
-  - `norm`
   - `resolveDamageReport`
 
 ### `functions/lib/modules/equipment/kayaks/gear_kayaks_service.js`
 
-- Lines: `284`
-- Size: `15399` bytes
+- Lines: `269`
+- Size: `14757` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/shared/reservation_limits.js`
@@ -4715,6 +4830,7 @@ Excluded sensitive files:
   - `functions/lib/modules/hours/godzinki_vars.js`
   - `functions/lib/modules/hours/hours_quote.js`
   - `functions/lib/modules/setup/setup_gear_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
@@ -4722,6 +4838,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
   - `import/require ../../setup/setup_gear_vars`
+  - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
   - `import/require ../shared/reservation_limits`
 - Functions:
@@ -4729,42 +4846,44 @@ Excluded sensitive files:
   - `cancelReservation`
   - `findConflicts`
   - `getUserRole`
-  - `listKayaks`
   - `listMyReservations`
-  - `norm`
   - `updateReservationDates`
 
 ### `functions/lib/modules/equipment/shared/gear_catalog_service.js`
 
-- Lines: `125`
-- Size: `5330` bytes
+- Lines: `130`
+- Size: `6286` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../shared/text_utils`
 - Functions:
   - `buildMeta`
   - `getCollectionConfig`
   - `isSupportedGearCategory`
   - `listGearItemsByCategory`
-  - `norm`
   - `pickGearItem`
   - `toNumberSafe`
 
 ### `functions/lib/modules/equipment/shared/reservation_limits.js`
 
-- Lines: `88`
-- Size: `4172` bytes
+- Lines: `86`
+- Size: `4263` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
+  - `import/require ../../shared/text_utils`
 - Functions:
   - `countItemsByCategory`
   - `countMyOverlappingItemsByCategory`
   - `findCategoryOverLimit`
-  - `norm`
 
 ### `functions/lib/modules/hours/godzinki_service.js`
 
-- Lines: `939`
-- Size: `43165` bytes
+- Lines: `931`
+- Size: `42763` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -4783,7 +4902,6 @@ Excluded sensitive files:
   - `getNextExpiry`
   - `markApprovalRejected`
   - `processApproval`
-  - `refundHoursForReservation`
   - `refundHoursForReservationInTx`
   - `reverseDeductHoursInTx`
   - `submitEarning`
@@ -4843,8 +4961,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/km/km_places_service.js`
 
-- Lines: `178`
-- Size: `6535` bytes
+- Lines: `180`
+- Size: `6748` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -4909,12 +5027,43 @@ Excluded sensitive files:
   - `toBool`
   - `toNumber`
 
+### `functions/lib/modules/shared/date_range_utils.js`
+
+- Lines: `80`
+- Size: `3515` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ./text_utils`
+- Functions:
+  - `dateUTCToIso`
+  - `isIsoDate`
+  - `isoToDateUTC`
+  - `minusDays`
+  - `minusMonths`
+  - `resolveDateRange`
+  - `todayWarsawIso`
+
 ### `functions/lib/modules/shared/text_utils.js`
 
-- Lines: `11`
-- Size: `350` bytes
+- Lines: `20`
+- Size: `722` bytes
 - Functions:
   - `norm`
+  - `normNullish`
+
+### `functions/lib/modules/shared/user_display.js`
+
+- Lines: `22`
+- Size: `1083` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ./text_utils`
+- Functions:
+  - `fullName`
+  - `isRegistered`
+  - `nickname`
 
 ### `functions/lib/modules/users/userStatusCheck.js`
 
@@ -4927,8 +5076,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/admin/adminRunTask.js`
 
-- Lines: `79`
-- Size: `3375` bytes
+- Lines: `83`
+- Size: `3632` bytes
 - Internal dependencies:
   - `functions/lib/service/runner.js`
   - `functions/lib/service/service_config.js`
@@ -4942,8 +5091,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/providers/googleAuth.js`
 
-- Lines: `97`
-- Size: `3818` bytes
+- Lines: `120`
+- Size: `4956` bytes
 - Imports:
   - `import/require googleapis`
 - Functions:
@@ -4951,6 +5100,7 @@ Excluded sensitive files:
   - `getDelegatedAuth`
   - `nowSeconds`
   - `signJwtWithIamCredentials`
+  - `tokenCacheKey`
 
 ### `functions/lib/service/providers/googleCalendarProvider.js`
 
@@ -4969,8 +5119,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/providers/googleSheetsProvider.js`
 
-- Lines: `469`
-- Size: `21764` bytes
+- Lines: `466`
+- Size: `21596` bytes
 - Internal dependencies:
   - `functions/lib/service/providers/googleAuth.js`
 - Imports:
@@ -4991,8 +5141,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/providers/googleWorkspaceProvider.js`
 
-- Lines: `500`
-- Size: `22477` bytes
+- Lines: `469`
+- Size: `21159` bytes
 - Internal dependencies:
   - `functions/lib/service/providers/googleAuth.js`
 - Imports:
@@ -5152,10 +5302,13 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/basenNotifySessionCancelled.js`
 
-- Lines: `75`
-- Size: `3282` bytes
-- Functions:
-  - `norm`
+- Lines: `118`
+- Size: `5684` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require firebase-admin`
 
 ### `functions/lib/service/tasks/eventsNotifyKierownik.js`
 
@@ -5208,17 +5361,17 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/eventsSyncCalendar.js`
 
-- Lines: `176`
-- Size: `8660` bytes
+- Lines: `174`
+- Size: `8831` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleCalendarProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleCalendarProvider`
   - `import/require ../service_config`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/lib/service/tasks/eventsSyncFromSheet.js`
 
@@ -5249,29 +5402,32 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/gearNotifyDamageReport.js`
 
-- Lines: `103`
-- Size: `5798` bytes
+- Lines: `101`
+- Size: `6096` bytes
 - Internal dependencies:
   - `functions/lib/modules/setup/app_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
 - Functions:
   - `escapeHtml`
-  - `norm`
 
 ### `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
 
-- Lines: `152`
-- Size: `7171` bytes
+- Lines: `203`
+- Size: `9945` bytes
 - Internal dependencies:
   - `functions/lib/modules/setup/app_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require firebase-admin`
 - Functions:
   - `describeItems`
   - `displayNameOf`
   - `formatDatePL`
-  - `norm`
 
 ### `functions/lib/service/tasks/gearPrivateStorage.js`
 
@@ -5299,12 +5455,14 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/gearSyncAllFromSheet.js`
 
-- Lines: `446`
-- Size: `23387` bytes
+- Lines: `444`
+- Size: `25535` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require firebase-admin`
@@ -5314,7 +5472,6 @@ Excluded sensitive files:
   - `cleanCell`
   - `flush`
   - `isRealRow`
-  - `norm`
   - `normalizeTerrainCategories`
   - `parseBool`
   - `parseNumber`
@@ -5378,12 +5535,13 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/godzinkiMergeHistoricalUser.js`
 
-- Lines: `131`
-- Size: `6137` bytes
+- Lines: `129`
+- Size: `6185` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js`
 
@@ -5435,12 +5593,13 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/kmMergeHistoricalUser.js`
 
-- Lines: `151`
-- Size: `6813` bytes
+- Lines: `149`
+- Size: `6861` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/lib/service/tasks/kmRebuildMapData.js`
 
@@ -5462,31 +5621,33 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/kmRebuildUserStats.js`
 
-- Lines: `218`
-- Size: `10433` bytes
+- Lines: `216`
+- Size: `10556` bytes
 - Internal dependencies:
   - `functions/lib/modules/km/km_scoring.js`
   - `functions/lib/modules/km/km_vars.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../../modules/km/km_scoring`
   - `import/require ../../modules/km/km_vars`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require firebase-admin`
 - Functions:
   - `flushBatch`
-  - `norm`
 
 ### `functions/lib/service/tasks/kursSyncFromSheet.js`
 
-- Lines: `96`
-- Size: `4094` bytes
+- Lines: `94`
+- Size: `4265` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
 - Functions:
-  - `norm`
   - `normDate`
   - `parseBool`
 
@@ -5497,19 +5658,20 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/membersSyncToSheet.js`
 
-- Lines: `181`
-- Size: `9070` bytes
+- Lines: `179`
+- Size: `9241` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require firebase-admin`
 - Functions:
   - `ensureMemberId`
   - `formatDatePL`
-  - `norm`
   - `roleLabel`
   - `statusLabel`
   - `toDateSafe`
@@ -5528,50 +5690,53 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/reconcileOpeningBalance.js`
 
-- Lines: `233`
-- Size: `12275` bytes
+- Lines: `231`
+- Size: `12298` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
   - `functions/lib/modules/hours/opening_balance_fields.js`
+  - `functions/lib/modules/shared/text_utils.js`
 - Imports:
   - `import/require ../../modules/hours/godzinki_service`
   - `import/require ../../modules/hours/godzinki_vars`
   - `import/require ../../modules/hours/opening_balance_fields`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require firebase-admin`
 - Functions:
   - `lower`
-  - `norm`
 
 ### `functions/lib/service/tasks/reconcileWorkspaceGroups.js`
 
-- Lines: `191`
-- Size: `9453` bytes
+- Lines: `189`
+- Size: `9676` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/workspaceGroupSync.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../workspaceGroupSync`
 - Functions:
   - `enforceTargetStateForUser`
-  - `norm`
   - `targetListaRoleFor`
   - `targetManagedGroupsFor`
 
 ### `functions/lib/service/tasks/setupSyncFromSheet.js`
 
-- Lines: `362`
-- Size: `16570` bytes
+- Lines: `360`
+- Size: `16793` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require firebase-admin`
 - Functions:
   - `g`
   - `headerMap`
-  - `norm`
   - `normalizeHeader`
   - `parseSetupValue`
   - `readAppSetupModules`
@@ -5584,21 +5749,25 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/usersNotifyAkademikAccessChanged.js`
 
-- Lines: `54`
-- Size: `3176` bytes
-- Functions:
-  - `norm`
+- Lines: `52`
+- Size: `3249` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
 
 ### `functions/lib/service/tasks/usersSyncFieldsFromSheet.js`
 
-- Lines: `524`
-- Size: `26460` bytes
+- Lines: `522`
+- Size: `26758` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/service_config.js`
 - Imports:
   - `import/require ../../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require firebase-admin`
@@ -5608,7 +5777,6 @@ Excluded sensitive files:
   - `headerMap`
   - `mapRoleDisplayToKey`
   - `mapStatusDisplayToKey`
-  - `norm`
   - `normalizeBoolish`
   - `normalizeDateString`
   - `normalizeHeader`
@@ -5617,8 +5785,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/usersSyncFunctionRolesFromSetup.js`
 
-- Lines: `472`
-- Size: `23320` bytes
+- Lines: `477`
+- Size: `23748` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -5634,14 +5802,16 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/usersSyncRolesFromSheet.js`
 
-- Lines: `290`
-- Size: `15403` bytes
+- Lines: `288`
+- Size: `15520` bytes
 - Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/service/providers/googleSheetsProvider.js`
   - `functions/lib/service/providers/googleWorkspaceProvider.js`
   - `functions/lib/service/service_config.js`
   - `functions/lib/service/workspaceGroupSync.js`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../providers/googleWorkspaceProvider`
   - `import/require ../service_config`
@@ -5649,7 +5819,6 @@ Excluded sensitive files:
   - `import/require firebase-admin`
 - Functions:
   - `buildInvertedLabelMap`
-  - `norm`
 
 ### `functions/lib/service/triggers/onEventApproved.js`
 
@@ -5685,8 +5854,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/worker/fallbackDailyWorker.js`
 
-- Lines: `65`
-- Size: `2690` bytes
+- Lines: `89`
+- Size: `3713` bytes
 - Internal dependencies:
   - `functions/lib/service/service_config.js`
   - `functions/lib/service/worker/jobProcessor.js`
@@ -5724,11 +5893,14 @@ Excluded sensitive files:
 
 ### `functions/lib/service/workspaceGroupSync.js`
 
-- Lines: `132`
-- Size: `5721` bytes
+- Lines: `130`
+- Size: `5763` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../modules/shared/text_utils`
 - Functions:
   - `listaRoleForUserRole`
-  - `norm`
   - `syncAllWorkspaceGroupsForRoleChange`
   - `syncListaGroupForUser`
   - `syncWorkspaceGroupsForUser`
@@ -6102,14 +6274,16 @@ Excluded sensitive files:
 
 ### `functions/src/api/adminApprovalHandler.ts`
 
-- Lines: `223`
-- Size: `8701` bytes
+- Lines: `220`
+- Size: `8684` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2`
@@ -6118,7 +6292,6 @@ Excluded sensitive files:
   - `enqueueJob`
   - `handleAdminApprove`
   - `handleAdminReject`
-  - `norm`
   - `parseKindId`
 
 ### `functions/src/api/adminEventsSyncCalendarHandler.ts`
@@ -6135,23 +6308,24 @@ Excluded sensitive files:
 
 ### `functions/src/api/adminGearReservationCancelHandler.ts`
 
-- Lines: `89`
-- Size: `2909` bytes
+- Lines: `86`
+- Size: `2892` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/equipment/kayaks/gear_kayaks_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-admin`
 - Functions:
   - `enqueueJob`
   - `handleAdminGearReservationCancel`
-  - `norm`
 
 ### `functions/src/api/basenAddSaunaHandler.ts`
 
-- Lines: `72`
-- Size: `2573` bytes
+- Lines: `71`
+- Size: `2487` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6176,8 +6350,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenCancelEnrollmentHandler.ts`
 
-- Lines: `63`
-- Size: `2126` bytes
+- Lines: `61`
+- Size: `2028` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6188,8 +6362,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenCancelSessionHandler.ts`
 
-- Lines: `80`
-- Size: `2968` bytes
+- Lines: `79`
+- Size: `2913` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6200,8 +6374,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenClaimWaitingStudentHandler.ts`
 
-- Lines: `67`
-- Size: `2530` bytes
+- Lines: `65`
+- Size: `2382` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6212,8 +6386,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenCreateSessionHandler.ts`
 
-- Lines: `112`
-- Size: `3948` bytes
+- Lines: `111`
+- Size: `3925` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6225,8 +6399,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenEnrollHandler.ts`
 
-- Lines: `136`
-- Size: `5381` bytes
+- Lines: `134`
+- Size: `5199` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
@@ -6239,8 +6413,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenSetInstructorHandler.ts`
 
-- Lines: `61`
-- Size: `2347` bytes
+- Lines: `59`
+- Size: `2178` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6251,8 +6425,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/basenSetKayakHandler.ts`
 
-- Lines: `58`
-- Size: `2096` bytes
+- Lines: `56`
+- Size: `1992` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6284,62 +6458,55 @@ Excluded sensitive files:
 
 ### `functions/src/api/gearBundleReservationCreateHandler.ts`
 
-- Lines: `128`
-- Size: `4664` bytes
+- Lines: `125`
+- Size: `4647` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
   - `import/require express`
 - Functions:
   - `handleGearBundleReservationCreate`
-  - `norm`
   - `parseItems`
 
 ### `functions/src/api/gearBundleReservationUpdateItemsHandler.ts`
 
-- Lines: `88`
-- Size: `2688` bytes
+- Lines: `85`
+- Size: `2671` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
 - Functions:
   - `handleGearBundleReservationUpdateItems`
-  - `norm`
   - `parseItems`
 
 ### `functions/src/api/gearFavoriteToggleHandler.ts`
 
-- Lines: `83`
-- Size: `2547` bytes
+- Lines: `80`
+- Size: `2513` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 - Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
   - `import/require express`
   - `import/require firebase-admin`
 - Functions:
   - `handleGearFavoriteToggle`
 
-### `functions/src/api/gearKayaksListHandler.ts`
-
-- Lines: `39`
-- Size: `1307` bytes
-- Internal dependencies:
-  - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
-- Imports:
-  - `import/require ../modules/equipment/kayaks/gear_kayaks_service`
-  - `import/require express`
-- Functions:
-  - `handleGearKayaksList`
-
 ### `functions/src/api/gearMyReservationsHandler.ts`
 
-- Lines: `41`
-- Size: `1383` bytes
+- Lines: `46`
+- Size: `1503` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
 - Imports:
@@ -6350,191 +6517,187 @@ Excluded sensitive files:
 
 ### `functions/src/api/gearReservationCancelHandler.ts`
 
-- Lines: `52`
-- Size: `1621` bytes
+- Lines: `54`
+- Size: `1725` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/equipment/kayaks/gear_kayaks_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
 - Functions:
   - `handleGearReservationCancel`
-  - `norm`
 
 ### `functions/src/api/gearReservationCreateHandler.ts`
 
-- Lines: `107`
-- Size: `4111` bytes
+- Lines: `101`
+- Size: `3935` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
   - `import/require express`
-  - `import/require firebase-functions/v2`
 - Functions:
   - `asStringArray`
   - `handleGearReservationCreate`
-  - `norm`
 
 ### `functions/src/api/gearReservationUpdateHandler.ts`
 
-- Lines: `69`
-- Size: `2244` bytes
+- Lines: `71`
+- Size: `2348` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
 - Functions:
   - `handleGearReservationUpdate`
-  - `norm`
 
 ### `functions/src/api/getAdminGearDamageReportsHandler.ts`
 
-- Lines: `111`
-- Size: `3859` bytes
+- Lines: `108`
+- Size: `3842` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleGetAdminGearDamageReports`
-  - `norm`
   - `tsToIso`
 
 ### `functions/src/api/getAdminGearRentalsHandler.ts`
 
-- Lines: `245`
-- Size: `8309` bytes
+- Lines: `172`
+- Size: `6298` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminGearRentals`
-  - `isIsoDate`
-  - `isoToDateUTC`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/src/api/getAdminGearTopRentalsHandler.ts`
 
-- Lines: `277`
-- Size: `9694` bytes
+- Lines: `212`
+- Size: `8017` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
+  - `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
   - `import/require ../modules/calendar/calendar_utils`
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminGearTopRentals`
-  - `isIsoDate`
-  - `isoToDateUTC`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/src/api/getAdminMemberActivityHandler.ts`
 
-- Lines: `194`
-- Size: `7074` bytes
+- Lines: `133`
+- Size: `5090` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminMemberActivity`
-  - `isIsoDate`
-  - `isRegistered`
-  - `isoToDateUTC`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
-  - `todayWarsawIso`
 
 ### `functions/src/api/getAdminMemberDuesHandler.ts`
 
-- Lines: `160`
-- Size: `5857` bytes
+- Lines: `139`
+- Size: `5320` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `fullName`
   - `handleGetAdminMemberDues`
-  - `isRegistered`
-  - `nickname`
-  - `norm`
   - `parseContrib`
-  - `todayWarsawIso`
 
 ### `functions/src/api/getAdminPendingHandler.ts`
 
-- Lines: `498`
-- Size: `20645` bytes
+- Lines: `508`
+- Size: `21430` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/service_config.ts`
 - Imports:
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
   - `import/require ../modules/hours/godzinki_service`
   - `import/require ../modules/hours/godzinki_vars`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../service/service_config`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
   - `docsOf`
   - `handleGetAdminPending`
-  - `norm`
   - `tsToIso`
 
 ### `functions/src/api/getAdminUserActivityHandler.ts`
 
-- Lines: `209`
-- Size: `8279` bytes
+- Lines: `162`
+- Size: `6663` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
   - `import/require ../modules/hours/godzinki_service`
+  - `import/require ../modules/shared/date_range_utils`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
-  - `dateUTCToIso`
-  - `fullName`
   - `handleGetAdminUserActivity`
-  - `isIsoDate`
-  - `isoToDateUTC`
   - `matchesQuery`
-  - `minusDays`
-  - `minusMonths`
-  - `nickname`
-  - `norm`
-  - `resolveRange`
   - `serialize`
-  - `todayWarsawIso`
   - `tsIso`
 
 ### `functions/src/api/getBasenAdminGodzinyHistoryHandler.ts`
@@ -6553,26 +6716,26 @@ Excluded sensitive files:
 
 ### `functions/src/api/getBasenAdminGodzinyUsersHandler.ts`
 
-- Lines: `136`
-- Size: `5596` bytes
+- Lines: `120`
+- Size: `5231` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_godziny_service.ts`
   - `functions/src/modules/basen/basen_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
 - Imports:
   - `import/require ../modules/basen/basen_godziny_service`
   - `import/require ../modules/basen/basen_service`
+  - `import/require ../modules/shared/text_utils`
+  - `import/require ../modules/shared/user_display`
   - `import/require express`
 - Functions:
-  - `fullName`
   - `handleGetBasenAdminGodzinyUsers`
-  - `isRegistered`
-  - `nickname`
-  - `norm`
 
 ### `functions/src/api/getBasenAttendeesHandler.ts`
 
-- Lines: `45`
-- Size: `1638` bytes
+- Lines: `50`
+- Size: `1758` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6583,8 +6746,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getBasenKayaksHandler.ts`
 
-- Lines: `46`
-- Size: `1687` bytes
+- Lines: `51`
+- Size: `1807` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
 - Imports:
@@ -6607,8 +6770,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getBasenSessionsHandler.ts`
 
-- Lines: `122`
-- Size: `5350` bytes
+- Lines: `127`
+- Size: `5470` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_godziny_service.ts`
   - `functions/src/modules/basen/basen_service.ts`
@@ -6643,9 +6806,12 @@ Excluded sensitive files:
 
 ### `functions/src/api/getGearFavoritesHandler.ts`
 
-- Lines: `67`
-- Size: `2096` bytes
+- Lines: `64`
+- Size: `2062` bytes
+- Internal dependencies:
+  - `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 - Imports:
+  - `import/require ../modules/equipment/shared/gear_catalog_service`
   - `import/require express`
 - Functions:
   - `handleGetGearFavorites`
@@ -6697,8 +6863,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getGodzinkiHandler.ts`
 
-- Lines: `167`
-- Size: `6253` bytes
+- Lines: `172`
+- Size: `6373` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -6712,8 +6878,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getKayakReservationsHandler.ts`
 
-- Lines: `161`
-- Size: `5941` bytes
+- Lines: `157`
+- Size: `5891` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 - Imports:
@@ -6739,8 +6905,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getKursantStatsHandler.ts`
 
-- Lines: `123`
-- Size: `4311` bytes
+- Lines: `121`
+- Size: `4290` bytes
 - Imports:
   - `import/require express`
   - `import/require firebase-functions/v2`
@@ -6749,23 +6915,24 @@ Excluded sensitive files:
 
 ### `functions/src/api/getKursInfoHandler.ts`
 
-- Lines: `124`
-- Size: `4197` bytes
+- Lines: `121`
+- Size: `4180` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/service_config.ts`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../service/service_config`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
   - `flattenEmails`
   - `handleGetKursInfo`
-  - `norm`
 
 ### `functions/src/api/godzinkiPurchaseHandler.ts`
 
-- Lines: `110`
-- Size: `4106` bytes
+- Lines: `115`
+- Size: `4227` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -6780,45 +6947,50 @@ Excluded sensitive files:
 
 ### `functions/src/api/kmAddLogHandler.ts`
 
-- Lines: `266`
-- Size: `10082` bytes
+- Lines: `263`
+- Size: `10187` bytes
 - Internal dependencies:
   - `functions/src/modules/km/km_log_service.ts`
   - `functions/src/modules/km/km_places_service.ts`
   - `functions/src/modules/km/km_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/km/km_log_service`
   - `import/require ../modules/km/km_places_service`
   - `import/require ../modules/km/km_vars`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
 - Functions:
   - `handleKmAddLog`
   - `isIsoDate`
-  - `norm`
   - `toSafeFloat`
   - `toSafeInt`
 
 ### `functions/src/api/kmAdminMergePlacesHandler.ts`
 
-- Lines: `219`
-- Size: `7277` bytes
+- Lines: `216`
+- Size: `7291` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-admin`
 - Functions:
   - `batchUpdateLogs`
   - `handleKmAdminMergePlaces`
-  - `norm`
 
 ### `functions/src/api/kmEventStatsHandler.ts`
 
-- Lines: `141`
-- Size: `4444` bytes
+- Lines: `138`
+- Size: `4465` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
 - Functions:
   - `handleKmEventStats`
-  - `norm`
 
 ### `functions/src/api/kmMapDataHandler.ts`
 
@@ -6890,8 +7062,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/registerUserHandler.ts`
 
-- Lines: `960`
-- Size: `38172` bytes
+- Lines: `971`
+- Size: `38867` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -6934,54 +7106,57 @@ Excluded sensitive files:
 
 ### `functions/src/api/resolveGearDamageReportHandler.ts`
 
-- Lines: `84`
-- Size: `3050` bytes
+- Lines: `81`
+- Size: `3071` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/damage/gear_damage_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleResolveGearDamageReport`
-  - `norm`
 
 ### `functions/src/api/submitEventHandler.ts`
 
-- Lines: `136`
-- Size: `4575` bytes
+- Lines: `133`
+- Size: `4558` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/events_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
   - `import/require ../modules/calendar/events_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
   - `import/require express`
   - `import/require firebase-functions/v2`
 - Functions:
   - `handleSubmitEvent`
-  - `norm`
 
 ### `functions/src/api/submitGearDamageReportHandler.ts`
 
-- Lines: `126`
-- Size: `5045` bytes
+- Lines: `123`
+- Size: `5108` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/damage/gear_damage_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../modules/equipment/damage/gear_damage_service`
+  - `import/require ../modules/shared/text_utils`
   - `import/require express`
   - `import/require firebase-admin`
   - `import/require firebase-functions/v2`
 - Functions:
   - `enqueueJob`
   - `handleSubmitGearDamageReport`
-  - `norm`
 
 ### `functions/src/api/submitGodzinkiHandler.ts`
 
-- Lines: `159`
-- Size: `6898` bytes
+- Lines: `164`
+- Size: `7019` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
@@ -7187,8 +7362,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/basen/basen_godziny_service.ts`
 
-- Lines: `145`
-- Size: `5065` bytes
+- Lines: `150`
+- Size: `5264` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -7202,15 +7377,19 @@ Excluded sensitive files:
 
 ### `functions/src/modules/basen/basen_service.ts`
 
-- Lines: `1139`
-- Size: `49824` bytes
+- Lines: `1150`
+- Size: `50634` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_godziny_service.ts`
   - `functions/src/modules/setup/function_roles_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../setup/function_roles_service`
+  - `import/require ../shared/text_utils`
   - `import/require ./basen_godziny_service`
   - `import/require firebase-admin`
+- Classes:
+  - `ClientError`
 - Functions:
   - `addSaunaToSession`
   - `buildAvailableKayaksList`
@@ -7232,7 +7411,6 @@ Excluded sensitive files:
   - `listAvailableBasenKayaks`
   - `listSlotAttendees`
   - `listUpcomingSessions`
-  - `norm`
   - `parseVarValue`
   - `resolveBasenAdminGrant`
   - `resolveKayakLabel`
@@ -7259,12 +7437,14 @@ Excluded sensitive files:
 
 ### `functions/src/modules/calendar/events_service.ts`
 
-- Lines: `343`
-- Size: `12679` bytes
+- Lines: `340`
+- Size: `12654` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
+  - `import/require ../shared/text_utils`
   - `import/require ../users/userStatusCheck`
   - `import/require ./calendar_utils`
 - Functions:
@@ -7276,14 +7456,13 @@ Excluded sensitive files:
   - `listAllEvents`
   - `listRecentEvents`
   - `listUpcomingEvents`
-  - `norm`
   - `resolveKierownicyList`
   - `resolveKierownikCandidate`
 
 ### `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 
-- Lines: `1349`
-- Size: `56048` bytes
+- Lines: `1350`
+- Size: `56220` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7293,6 +7472,7 @@ Excluded sensitive files:
   - `functions/src/modules/hours/godzinki_vars.ts`
   - `functions/src/modules/hours/hours_quote.ts`
   - `functions/src/modules/setup/setup_gear_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
@@ -7301,6 +7481,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
   - `import/require ../../setup/setup_gear_vars`
+  - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
   - `import/require ../kayaks/gear_kayaks_service`
   - `import/require ../shared/reservation_limits`
@@ -7324,7 +7505,6 @@ Excluded sensitive files:
   - `isFreeRentalExempt`
   - `isSupportedBundleCategory`
   - `listMyBundleReservations`
-  - `norm`
   - `parseSchoolYear`
   - `resolveSchoolYear`
   - `updateBundleReservationDates`
@@ -7333,24 +7513,25 @@ Excluded sensitive files:
 
 ### `functions/src/modules/equipment/damage/gear_damage_service.ts`
 
-- Lines: `184`
-- Size: `6875` bytes
+- Lines: `181`
+- Size: `6961` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
+  - `import/require ../../shared/text_utils`
   - `import/require ../bundle/gear_bundle_service`
   - `import/require crypto`
   - `import/require firebase-admin`
 - Functions:
   - `createDamageReport`
   - `isSupportedDamageCategory`
-  - `norm`
   - `resolveDamageReport`
 
 ### `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts`
 
-- Lines: `347`
-- Size: `13430` bytes
+- Lines: `330`
+- Size: `12940` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/shared/reservation_limits.ts`
@@ -7358,6 +7539,7 @@ Excluded sensitive files:
   - `functions/src/modules/hours/godzinki_vars.ts`
   - `functions/src/modules/hours/hours_quote.ts`
   - `functions/src/modules/setup/setup_gear_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
@@ -7365,6 +7547,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
   - `import/require ../../setup/setup_gear_vars`
+  - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
   - `import/require ../shared/reservation_limits`
 - Functions:
@@ -7372,42 +7555,44 @@ Excluded sensitive files:
   - `cancelReservation`
   - `findConflicts`
   - `getUserRole`
-  - `listKayaks`
   - `listMyReservations`
-  - `norm`
   - `updateReservationDates`
 
 ### `functions/src/modules/equipment/shared/gear_catalog_service.ts`
 
-- Lines: `151`
-- Size: `3686` bytes
+- Lines: `159`
+- Size: `4232` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
+- Imports:
+  - `import/require ../../shared/text_utils`
 - Functions:
   - `buildMeta`
   - `getCollectionConfig`
   - `isSupportedGearCategory`
   - `listGearItemsByCategory`
-  - `norm`
   - `pickGearItem`
   - `toNumberSafe`
 
 ### `functions/src/modules/equipment/shared/reservation_limits.ts`
 
-- Lines: `96`
-- Size: `3588` bytes
+- Lines: `93`
+- Size: `3566` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
 - Imports:
   - `import/require ../../calendar/calendar_utils`
+  - `import/require ../../shared/text_utils`
 - Functions:
   - `countItemsByCategory`
   - `countMyOverlappingItemsByCategory`
   - `findCategoryOverLimit`
-  - `norm`
 
 ### `functions/src/modules/hours/godzinki_service.ts`
 
-- Lines: `1160`
-- Size: `43078` bytes
+- Lines: `1144`
+- Size: `42598` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_vars.ts`
 - Imports:
@@ -7429,7 +7614,6 @@ Excluded sensitive files:
   - `getNextExpiry`
   - `markApprovalRejected`
   - `processApproval`
-  - `refundHoursForReservation`
   - `refundHoursForReservationInTx`
   - `reverseDeductHoursInTx`
   - `submitEarning`
@@ -7493,8 +7677,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/km/km_places_service.ts`
 
-- Lines: `153`
-- Size: `4825` bytes
+- Lines: `155`
+- Size: `5034` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -7563,12 +7747,43 @@ Excluded sensitive files:
   - `toBool`
   - `toNumber`
 
+### `functions/src/modules/shared/date_range_utils.ts`
+
+- Lines: `98`
+- Size: `3622` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
+- Imports:
+  - `import/require ./text_utils`
+- Functions:
+  - `dateUTCToIso`
+  - `isIsoDate`
+  - `isoToDateUTC`
+  - `minusDays`
+  - `minusMonths`
+  - `resolveDateRange`
+  - `todayWarsawIso`
+
 ### `functions/src/modules/shared/text_utils.ts`
 
-- Lines: `9`
-- Size: `233` bytes
+- Lines: `18`
+- Size: `589` bytes
 - Functions:
   - `norm`
+  - `normNullish`
+
+### `functions/src/modules/shared/user_display.ts`
+
+- Lines: `19`
+- Size: `661` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
+- Imports:
+  - `import/require ./text_utils`
+- Functions:
+  - `fullName`
+  - `isRegistered`
+  - `nickname`
 
 ### `functions/src/modules/users/userStatusCheck.ts`
 
@@ -7581,8 +7796,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/admin/adminRunTask.ts`
 
-- Lines: `51`
-- Size: `1694` bytes
+- Lines: `54`
+- Size: `1956` bytes
 - Internal dependencies:
   - `functions/src/service/runner.ts`
   - `functions/src/service/service_config.ts`
@@ -7596,8 +7811,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/providers/googleAuth.ts`
 
-- Lines: `136`
-- Size: `3573` bytes
+- Lines: `162`
+- Size: `4748` bytes
 - Imports:
   - `import/require googleapis`
 - Functions:
@@ -7605,6 +7820,7 @@ Excluded sensitive files:
   - `getDelegatedAuth`
   - `nowSeconds`
   - `signJwtWithIamCredentials`
+  - `tokenCacheKey`
 
 ### `functions/src/service/providers/googleCalendarProvider.ts`
 
@@ -7623,8 +7839,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/providers/googleSheetsProvider.ts`
 
-- Lines: `568`
-- Size: `20376` bytes
+- Lines: `561`
+- Size: `20139` bytes
 - Internal dependencies:
   - `functions/src/service/providers/googleAuth.ts`
 - Imports:
@@ -7644,8 +7860,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/providers/googleWorkspaceProvider.ts`
 
-- Lines: `583`
-- Size: `19865` bytes
+- Lines: `550`
+- Size: `18764` bytes
 - Internal dependencies:
   - `functions/src/service/providers/googleAuth.ts`
 - Imports:
@@ -7815,14 +8031,15 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/basenNotifySessionCancelled.ts`
 
-- Lines: `90`
-- Size: `2777` bytes
+- Lines: `102`
+- Size: `3651` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
-- Functions:
-  - `norm`
+  - `import/require firebase-admin`
 
 ### `functions/src/service/tasks/eventsNotifyKierownik.ts`
 
@@ -7881,19 +8098,19 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/eventsSyncCalendar.ts`
 
-- Lines: `169`
-- Size: `5824` bytes
+- Lines: `166`
+- Size: `5810` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleCalendarProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleCalendarProvider`
   - `import/require ../service_config`
   - `import/require ../types`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/src/service/tasks/eventsSyncFromSheet.ts`
 
@@ -7926,33 +8143,36 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/gearNotifyDamageReport.ts`
 
-- Lines: `132`
-- Size: `5495` bytes
+- Lines: `129`
+- Size: `5561` bytes
 - Internal dependencies:
   - `functions/src/modules/setup/app_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
   - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
 - Functions:
   - `escapeHtml`
-  - `norm`
 
 ### `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
 
-- Lines: `182`
-- Size: `6260` bytes
+- Lines: `200`
+- Size: `7237` bytes
 - Internal dependencies:
   - `functions/src/modules/setup/app_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
   - `import/require ../../modules/setup/app_vars`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
+  - `import/require firebase-admin`
 - Functions:
   - `describeItems`
   - `displayNameOf`
   - `formatDatePL`
-  - `norm`
 
 ### `functions/src/service/tasks/gearPrivateStorage.ts`
 
@@ -7982,13 +8202,15 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/gearSyncAllFromSheet.ts`
 
-- Lines: `604`
-- Size: `22608` bytes
+- Lines: `601`
+- Size: `23192` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require ../types`
@@ -7999,7 +8221,6 @@ Excluded sensitive files:
   - `cleanCell`
   - `flush`
   - `isRealRow`
-  - `norm`
   - `normalizeTerrainCategories`
   - `parseBool`
   - `parseNumber`
@@ -8051,15 +8272,15 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/godzinkiMergeHistoricalUser.ts`
 
-- Lines: `119`
-- Size: `4138` bytes
+- Lines: `116`
+- Size: `4134` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts`
 
@@ -8119,15 +8340,15 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/kmMergeHistoricalUser.ts`
 
-- Lines: `138`
-- Size: `4588` bytes
+- Lines: `135`
+- Size: `4584` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
   - `import/require firebase-admin`
-- Functions:
-  - `norm`
 
 ### `functions/src/service/tasks/kmRebuildMapData.ts`
 
@@ -8154,35 +8375,37 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/kmRebuildUserStats.ts`
 
-- Lines: `212`
-- Size: `7419` bytes
+- Lines: `209`
+- Size: `7436` bytes
 - Internal dependencies:
   - `functions/src/modules/km/km_scoring.ts`
   - `functions/src/modules/km/km_vars.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
   - `import/require ../../modules/km/km_scoring`
   - `import/require ../../modules/km/km_vars`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
   - `import/require firebase-admin`
 - Functions:
   - `flushBatch`
-  - `norm`
 
 ### `functions/src/service/tasks/kursSyncFromSheet.ts`
 
-- Lines: `112`
-- Size: `3420` bytes
+- Lines: `109`
+- Size: `3406` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require ../types`
 - Functions:
-  - `norm`
   - `normDate`
   - `parseBool`
 
@@ -8197,13 +8420,15 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/membersSyncToSheet.ts`
 
-- Lines: `176`
-- Size: `6461` bytes
+- Lines: `173`
+- Size: `6447` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require ../types`
@@ -8211,7 +8436,6 @@ Excluded sensitive files:
 - Functions:
   - `ensureMemberId`
   - `formatDatePL`
-  - `norm`
   - `roleLabel`
   - `statusLabel`
   - `toDateSafe`
@@ -8232,57 +8456,60 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/reconcileOpeningBalance.ts`
 
-- Lines: `234`
-- Size: `10186` bytes
+- Lines: `232`
+- Size: `10176` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
   - `functions/src/modules/hours/opening_balance_fields.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
   - `import/require ../../modules/hours/godzinki_service`
   - `import/require ../../modules/hours/godzinki_vars`
   - `import/require ../../modules/hours/opening_balance_fields`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
   - `import/require firebase-admin`
 - Functions:
   - `lower`
-  - `norm`
 
 ### `functions/src/service/tasks/reconcileWorkspaceGroups.ts`
 
-- Lines: `247`
-- Size: `9192` bytes
+- Lines: `244`
+- Size: `9237` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleWorkspaceProvider.ts`
   - `functions/src/service/types.ts`
   - `functions/src/service/workspaceGroupSync.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleWorkspaceProvider`
   - `import/require ../types`
   - `import/require ../workspaceGroupSync`
 - Functions:
   - `enforceTargetStateForUser`
-  - `norm`
   - `targetListaRoleFor`
   - `targetManagedGroupsFor`
 
 ### `functions/src/service/tasks/setupSyncFromSheet.ts`
 
-- Lines: `374`
-- Size: `14542` bytes
+- Lines: `371`
+- Size: `14587` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require ../types`
   - `import/require firebase-admin`
 - Functions:
   - `headerMap`
-  - `norm`
   - `normalizeHeader`
   - `parseSetupValue`
   - `readAppSetupModules`
@@ -8295,26 +8522,28 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/usersNotifyAkademikAccessChanged.ts`
 
-- Lines: `71`
-- Size: `2857` bytes
+- Lines: `68`
+- Size: `2860` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/types.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../types`
-- Functions:
-  - `norm`
 
 ### `functions/src/service/tasks/usersSyncFieldsFromSheet.ts`
 
-- Lines: `538`
-- Size: `22808` bytes
+- Lines: `535`
+- Size: `22874` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
 - Imports:
   - `import/require ../../modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../service_config`
   - `import/require ../types`
@@ -8324,7 +8553,6 @@ Excluded sensitive files:
   - `headerMap`
   - `mapRoleDisplayToKey`
   - `mapStatusDisplayToKey`
-  - `norm`
   - `normalizeBoolish`
   - `normalizeDateString`
   - `normalizeHeader`
@@ -8333,8 +8561,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/usersSyncFunctionRolesFromSetup.ts`
 
-- Lines: `531`
-- Size: `18882` bytes
+- Lines: `536`
+- Size: `19272` bytes
 - Internal dependencies:
   - `functions/src/service/types.ts`
 - Imports:
@@ -8353,15 +8581,17 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/usersSyncRolesFromSheet.ts`
 
-- Lines: `317`
-- Size: `11721` bytes
+- Lines: `314`
+- Size: `11707` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleSheetsProvider.ts`
   - `functions/src/service/providers/googleWorkspaceProvider.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/types.ts`
   - `functions/src/service/workspaceGroupSync.ts`
 - Imports:
+  - `import/require ../../modules/shared/text_utils`
   - `import/require ../providers/googleSheetsProvider`
   - `import/require ../providers/googleWorkspaceProvider`
   - `import/require ../service_config`
@@ -8370,7 +8600,6 @@ Excluded sensitive files:
   - `import/require firebase-admin`
 - Functions:
   - `buildInvertedLabelMap`
-  - `norm`
 
 ### `functions/src/service/triggers/onEventApproved.ts`
 
@@ -8406,8 +8635,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/worker/fallbackDailyWorker.ts`
 
-- Lines: `38`
-- Size: `1071` bytes
+- Lines: `64`
+- Size: `2014` bytes
 - Internal dependencies:
   - `functions/src/service/service_config.ts`
   - `functions/src/service/worker/jobProcessor.ts`
@@ -8445,18 +8674,33 @@ Excluded sensitive files:
 
 ### `functions/src/service/workspaceGroupSync.ts`
 
-- Lines: `172`
-- Size: `5607` bytes
+- Lines: `169`
+- Size: `5590` bytes
 - Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/service/providers/googleWorkspaceProvider.ts`
 - Imports:
+  - `import/require ../modules/shared/text_utils`
   - `import/require ./providers/googleWorkspaceProvider`
 - Functions:
   - `listaRoleForUserRole`
-  - `norm`
   - `syncAllWorkspaceGroupsForRoleChange`
   - `syncListaGroupForUser`
   - `syncWorkspaceGroupsForUser`
+
+### `functions/test/basen_core.test.ts`
+
+- Lines: `196`
+- Size: `9502` bytes
+- Internal dependencies:
+  - `functions/src/modules/basen/basen_godziny_service.ts`
+  - `functions/test/helpers/fake_firestore.ts`
+- Imports:
+  - `import/require ../src/modules/basen/basen_godziny_service`
+  - `import/require ./helpers/fake_firestore`
+  - `import/require vitest`
+- Functions:
+  - `slot`
 
 ### `functions/test/events_core.test.ts`
 
@@ -8487,10 +8731,49 @@ Excluded sensitive files:
   - `baseInput`
   - `mustDigest`
 
+### `functions/test/gear_bundle_core.test.ts`
+
+- Lines: `1069`
+- Size: `59523` bytes
+- Internal dependencies:
+  - `functions/src/modules/calendar/calendar_utils.ts`
+  - `functions/src/modules/equipment/shared/reservation_limits.ts`
+  - `functions/src/modules/hours/godzinki_service.ts`
+  - `functions/src/modules/setup/setup_gear_vars.ts`
+  - `functions/test/helpers/fake_firestore.ts`
+- Imports:
+  - `import/require ../src/modules/calendar/calendar_utils`
+  - `import/require ../src/modules/equipment/shared/reservation_limits`
+  - `import/require ../src/modules/hours/godzinki_service`
+  - `import/require ../src/modules/setup/setup_gear_vars`
+  - `import/require ./helpers/fake_firestore`
+  - `import/require vitest`
+- Functions:
+  - `balance`
+  - `dbKurs`
+  - `dbWith`
+  - `earn`
+  - `kayak`
+  - `ledger`
+  - `mustOk`
+  - `patchDoc`
+  - `reservationDoc`
+  - `reservationRow`
+  - `reserve`
+  - `seedDb`
+  - `setVar`
+  - `smallGear`
+  - `spends`
+  - `stored`
+  - `upd`
+  - `user`
+  - `withClubReservation`
+  - `withReservation`
+
 ### `functions/test/gear_core.test.ts`
 
 - Lines: `157`
-- Size: `6388` bytes
+- Size: `6469` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/hours/hours_quote.ts`
@@ -8524,6 +8807,58 @@ Excluded sensitive files:
   - `makeSpend`
   - `ts`
 
+### `functions/test/helpers/fake_firestore.ts`
+
+- Lines: `394`
+- Size: `13675` bytes
+- Classes:
+  - `FakeCollectionReference`
+  - `FakeDocumentReference`
+  - `FakeDocumentSnapshot`
+  - `FakeFirestore`
+  - `FakeQuery`
+  - `FakeTimestamp`
+- Functions:
+  - `compare`
+  - `deepMerge`
+  - `getPath`
+  - `isPlainObject`
+  - `matches`
+  - `resolveValue`
+  - `setPath`
+  - `toComparable`
+  - `ts`
+
+### `functions/test/km_core.test.ts`
+
+- Lines: `115`
+- Size: `5255` bytes
+- Internal dependencies:
+  - `functions/src/modules/km/km_places_service.ts`
+  - `functions/src/modules/km/km_scoring.ts`
+  - `functions/src/modules/km/km_vars.ts`
+  - `functions/test/helpers/fake_firestore.ts`
+- Imports:
+  - `import/require ../src/modules/km/km_places_service`
+  - `import/require ../src/modules/km/km_scoring`
+  - `import/require ../src/modules/km/km_vars`
+  - `import/require ./helpers/fake_firestore`
+  - `import/require vitest`
+
+### `functions/test/register_core.test.ts`
+
+- Lines: `169`
+- Size: `8104` bytes
+- Internal dependencies:
+  - `functions/src/api/registerUserHandler.ts`
+  - `functions/test/helpers/fake_firestore.ts`
+- Imports:
+  - `import/require ../src/api/registerUserHandler`
+  - `import/require ./helpers/fake_firestore`
+  - `import/require vitest`
+- Functions:
+  - `obDb`
+
 ### `functions/test/setup_consolidation.test.ts`
 
 - Lines: `65`
@@ -8534,6 +8869,28 @@ Excluded sensitive files:
 - Imports:
   - `import/require ../src/api/submitGodzinkiHandler`
   - `import/require ../src/service/tasks/godzinkiArchiveSheetRows`
+  - `import/require vitest`
+
+### `functions/test/shared_utils.test.ts`
+
+- Lines: `205`
+- Size: `10790` bytes
+- Internal dependencies:
+  - `functions/src/modules/calendar/calendar_utils.ts`
+  - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
+  - `functions/src/modules/equipment/damage/gear_damage_service.ts`
+  - `functions/src/modules/equipment/shared/gear_catalog_service.ts`
+  - `functions/src/modules/shared/date_range_utils.ts`
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/modules/shared/user_display.ts`
+- Imports:
+  - `import/require ../src/modules/calendar/calendar_utils`
+  - `import/require ../src/modules/equipment/bundle/gear_bundle_service`
+  - `import/require ../src/modules/equipment/damage/gear_damage_service`
+  - `import/require ../src/modules/equipment/shared/gear_catalog_service`
+  - `import/require ../src/modules/shared/date_range_utils`
+  - `import/require ../src/modules/shared/text_utils`
+  - `import/require ../src/modules/shared/user_display`
   - `import/require vitest`
 
 ### `functions/test/sync_core.test.ts`
@@ -8594,18 +8951,22 @@ Excluded sensitive files:
 
 ### `public/core/club_badges.js`
 
-- Lines: `60`
-- Size: `2142` bytes
+- Lines: `55`
+- Size: `2196` bytes
+- Imports:
+  - `import/require /core/html_utils.js`
 - Functions:
   - `clubDisplayName`
   - `clubIconPath`
-  - `escapeHtml`
   - `renderClubBadgeHtml`
 
 ### `public/core/date_range_calendar.js`
 
-- Lines: `294`
-- Size: `11708` bytes
+- Lines: `283`
+- Size: `11484` bytes
+- Imports:
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
 - Functions:
   - `addDaysIso`
   - `bufferedConflictDays`
@@ -8613,9 +8974,7 @@ Excluded sensitive files:
   - `daysInclusive`
   - `draw`
   - `emitChange`
-  - `escapeHtml`
   - `expandRangeDays`
-  - `formatDatePL`
   - `handleDayClick`
   - `isOccupied`
   - `isoFromParts`
@@ -8648,13 +9007,33 @@ Excluded sensitive files:
   - `storageFetchKlubVideoUrl`
   - `storageFetchLifejacketUrl`
 
+### `public/core/format_utils.js`
+
+- Lines: `42`
+- Size: `1554` bytes
+- Functions:
+  - `buildKayakTitle`
+  - `countReservationDays`
+  - `formatDatePL`
+  - `formatShortDate`
+  - `pluralizeDays`
+
+### `public/core/html_utils.js`
+
+- Lines: `17`
+- Size: `575` bytes
+- Functions:
+  - `escapeAttr`
+  - `escapeHtml`
+
 ### `public/core/module_stub.js`
 
-- Lines: `32`
-- Size: `742` bytes
+- Lines: `27`
+- Size: `657` bytes
+- Imports:
+  - `import/require /core/html_utils.js`
 - Functions:
   - `createGenericModule`
-  - `escapeHtml`
 
 ### `public/core/modules_registry.js`
 
@@ -8678,12 +9057,14 @@ Excluded sensitive files:
 
 ### `public/core/render_shell.js`
 
-- Lines: `1859`
-- Size: `84016` bytes
+- Lines: `1794`
+- Size: `82201` bytes
 - Imports:
   - `import/require /core/access_control.js`
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/router.js`
   - `import/require /core/text_format.js`
 - Functions:
@@ -8694,24 +9075,17 @@ Excluded sensitive files:
   - `buildHomeHoursCell`
   - `buildHomeKursEventsSection`
   - `buildHomeReservationsSection`
-  - `buildKayakTitle`
   - `buildKlubBoxHtml`
-  - `countReservationDays`
   - `dayInfo`
   - `draw`
-  - `escapeAttr`
-  - `escapeHtml`
   - `fieldErrorToPl`
   - `fmtKmValue`
   - `formatContribDate`
-  - `formatDatePL`
   - `formatEntryFeeValidUntil`
-  - `formatShortDate`
   - `getDashboardConfig`
   - `getGearRoute`
   - `getHelloName`
   - `getHoursValue`
-  - `getModuleRouteByLabelOrId`
   - `getModuleRouteByType`
   - `getReservationKayakTitles`
   - `goToGodzinki`
@@ -8727,7 +9101,6 @@ Excluded sensitive files:
   - `isPhoneValid`
   - `loadAdminPendingBadge`
   - `normalizePhoneDigits`
-  - `pluralizeDays`
   - `render`
   - `renderHomeBasenCalendar`
   - `renderHomeDashboard`
@@ -8769,10 +9142,11 @@ Excluded sensitive files:
 
 ### `public/core/text_format.js`
 
-- Lines: `63`
-- Size: `2517` bytes
+- Lines: `58`
+- Size: `2571` bytes
+- Imports:
+  - `import/require /core/html_utils.js`
 - Functions:
-  - `escapeHtml`
   - `formatFreeText`
   - `isUrlOnly`
   - `normalizeBlankLines`
@@ -8800,26 +9174,26 @@ Excluded sensitive files:
 
 ### `public/modules/admin_pending_module.js`
 
-- Lines: `527`
-- Size: `29002` bytes
+- Lines: `516`
+- Size: `28767` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/router.js`
   - `import/require /core/user_error_messages.js`
   - `import/require /modules/raporty/reports_panel.js`
 - Functions:
   - `createAdminPendingModule`
-  - `escapeHtml`
-  - `formatDatePL`
   - `load`
   - `renderContent`
   - `setErr`
 
 ### `public/modules/basen_module.js`
 
-- Lines: `1540`
-- Size: `69862` bytes
+- Lines: `1557`
+- Size: `70944` bytes
 - Imports:
   - `import/require /core/api_client.js`
 - Functions:
@@ -8828,7 +9202,7 @@ Excluded sensitive files:
   - `bindCalendarNav`
   - `bindModalCloseDelegation`
   - `bindReservedFieldToggles`
-  - `bindSessionActions`
+  - `bindSessionActionsDelegation`
   - `buildReserved`
   - `buildSessionsByDate`
   - `closeClaimStudentModal`
@@ -8882,12 +9256,14 @@ Excluded sensitive files:
 
 ### `public/modules/gear_module.js`
 
-- Lines: `3267`
-- Size: `148779` bytes
+- Lines: `3197`
+- Size: `146226` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
   - `import/require /core/firebase_client.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
   - `applyClubEventDates`
@@ -8899,7 +9275,6 @@ Excluded sensitive files:
   - `buildHelmetLine2`
   - `buildHelmetLine3`
   - `buildKayakDetailsRows`
-  - `buildKayakTitle`
   - `buildLifejacketLine2`
   - `buildLifejacketLine3`
   - `cacheKey`
@@ -8911,10 +9286,7 @@ Excluded sensitive files:
   - `compressImageFile`
   - `createGearModule`
   - `dotsIconSvg`
-  - `escapeAttr`
-  - `escapeHtml`
   - `formatDamageItemLabel`
-  - `formatDatePLFromIso`
   - `formatItemLabel`
   - `formatItemLabelFromParts`
   - `gearTabIcon`
@@ -9041,17 +9413,16 @@ Excluded sensitive files:
 
 ### `public/modules/klub_module.js`
 
-- Lines: `282`
-- Size: `13172` bytes
+- Lines: `275`
+- Size: `13003` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/firebase_client.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/router.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
   - `createKlubModule`
-  - `escapeAttr`
-  - `escapeHtml`
   - `formatNrb`
   - `openMap`
   - `renderActiveTab`
@@ -9124,29 +9495,24 @@ Excluded sensitive files:
 
 ### `public/modules/my_reservations_module.js`
 
-- Lines: `686`
-- Size: `27695` bytes
+- Lines: `639`
+- Size: `26491` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/router.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `buildKayakTitle`
   - `closeEditModal`
-  - `countReservationDays`
   - `createMyReservationsModule`
-  - `escapeAttr`
-  - `escapeHtml`
-  - `formatDatePL`
-  - `formatShortDate`
   - `getReservationKayakTitles`
   - `getReservationPrimaryItem`
   - `loadKayakMap`
   - `loadOccupiedRangesForReservation`
   - `loadReservations`
   - `openEditModal`
-  - `pluralizeDays`
   - `renderDedicatedEditView`
   - `renderReservations`
   - `setCancelRsvErr`
@@ -9159,29 +9525,28 @@ Excluded sensitive files:
 
 ### `public/modules/raporty/gear_damage_reports.js`
 
-- Lines: `93`
-- Size: `4292` bytes
+- Lines: `86`
+- Size: `4113` bytes
 - Imports:
   - `import/require /core/api_client.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `escapeHtml`
-  - `formatDatePL`
   - `load`
   - `renderItems`
   - `severityBadgeHtml`
 
 ### `public/modules/raporty/gear_rentals.js`
 
-- Lines: `281`
-- Size: `12608` bytes
+- Lines: `271`
+- Size: `12308` bytes
 - Imports:
   - `import/require /core/api_client.js`
+  - `import/require /core/format_utils.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `escapeAttr`
-  - `escapeHtml`
-  - `formatDatePL`
   - `loadReport`
   - `rebuildUserList`
   - `renderReport`
@@ -9191,25 +9556,25 @@ Excluded sensitive files:
 
 ### `public/modules/raporty/member_activity.js`
 
-- Lines: `90`
-- Size: `3908` bytes
+- Lines: `87`
+- Size: `3837` bytes
 - Imports:
   - `import/require /core/api_client.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `escapeHtml`
   - `load`
   - `renderRows`
 
 ### `public/modules/raporty/member_dues.js`
 
-- Lines: `102`
-- Size: `4288` bytes
+- Lines: `99`
+- Size: `4217` bytes
 - Imports:
   - `import/require /core/api_client.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `escapeHtml`
   - `formatContribDate`
   - `load`
   - `passesView`
@@ -9236,31 +9601,30 @@ Excluded sensitive files:
 
 ### `public/modules/raporty/reports_panel.js`
 
-- Lines: `117`
-- Size: `5052` bytes
+- Lines: `111`
+- Size: `4890` bytes
 - Internal dependencies:
   - `public/modules/raporty/registry.js`
 - Imports:
   - `import/require ./registry.js`
+  - `import/require /core/html_utils.js`
 - Functions:
   - `applySearch`
   - `catOrder`
   - `cleanup`
-  - `escapeAttr`
-  - `escapeHtml`
   - `openReport`
   - `renderLauncher`
   - `renderReportsPanel`
 
 ### `public/modules/raporty/top_rentals.js`
 
-- Lines: `138`
-- Size: `6294` bytes
+- Lines: `135`
+- Size: `6223` bytes
 - Imports:
   - `import/require /core/api_client.js`
+  - `import/require /core/html_utils.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
-  - `escapeHtml`
   - `load`
   - `renderRows`
   - `selectedCats`
@@ -9285,8 +9649,8 @@ Excluded sensitive files:
 
 ### `public/sw.js`
 
-- Lines: `157`
-- Size: `5447` bytes
+- Lines: `173`
+- Size: `5992` bytes
 
 ### `scripts/bump-sw-cache.js`
 
@@ -9304,64 +9668,6 @@ Excluded sensitive files:
 - Size: `14550` bytes
 - Detected top-level keys / sections:
   - `permissions`
-
-### `.claude_context/context_dependencies.json`
-
-- Lines: `None`
-- Size: `1751019` bytes
-- Notes:
-  - File is larger than 1500000 bytes or cannot be read.
-
-### `.claude_context/context_files.json`
-
-- Lines: `None`
-- Size: `7708118` bytes
-- Notes:
-  - File is larger than 1500000 bytes or cannot be read.
-
-### `ai_full_audit_report.json`
-
-- Lines: `18606`
-- Size: `507412` bytes
-- Detected top-level keys / sections:
-  - `backend_hotspots_summary`
-  - `browser_route_risk_summary`
-  - `cloud_run_yaml_summary`
-  - `critical_files`
-  - `dependency_graph`
-  - `dependency_summary`
-  - `diagnostic_route_usage_summary`
-  - `duplication_summary`
-  - `env_summary`
-  - `executive_summary`
-  - `file_size_complexity_summary`
-  - `firebase_json_summary`
-  - `firebaserc_summary`
-  - `firestore_index_check`
-  - `firestore_summary`
-  - `frontend_firebase_summary`
-  - `frontend_hotspots_summary`
-  - `full_read_bundles`
-  - `git_summary`
-  - `hardcode_findings`
-  - `hardcode_summary`
-  - `host_api_security_summary`
-  - `large_functions_summary`
-  - `manual_review_targets`
-  - `possible_loop_await_risk_summary`
-  - `priority_plan_for_ai_developer`
-  - `project_summary`
-  - `refactor_risk_summary`
-  - `reverse_dependency_graph`
-  - `rules`
-  - `runtime_large_functions_summary`
-  - `runtime_route_usage_summary`
-  - `runtime_top_files_by_line_count`
-  - `safe_medium_high_risk_zones`
-  - `shared_data_contracts`
-  - `shared_helper_candidates`
-  - `stop_conditions`
-  - `top_files_by_line_count`
 
 ### `appscript/1_App_SETUP/appsscript.json`
 
@@ -9438,16 +9744,16 @@ Excluded sensitive files:
 
 ### `firestore.indexes.json`
 
-- Lines: `146`
-- Size: `4248` bytes
+- Lines: `170`
+- Size: `4947` bytes
 - Detected top-level keys / sections:
   - `fieldOverrides`
   - `indexes`
 
 ### `functions/package-lock.json`
 
-- Lines: `11556`
-- Size: `412121` bytes
+- Lines: `11859`
+- Size: `418214` bytes
 - Detected top-level keys / sections:
   - `lockfileVersion`
   - `name`
@@ -9456,8 +9762,8 @@ Excluded sensitive files:
 
 ### `functions/package.json`
 
-- Lines: `36`
-- Size: `982` bytes
+- Lines: `35`
+- Size: `936` bytes
 - Detected top-level keys / sections:
   - `dependencies`
   - `devDependencies`
@@ -9564,366 +9870,6 @@ Excluded sensitive files:
   - `total`
 
 ## Markdown files
-
-### `.claude_context/context_backend.md`
-
-- Lines: `2442`
-- Size: `40740` bytes
-- Headings:
-  - `# Backend Context`
-  - `## `functions/node_modules/@grpc/grpc-js/build/src/load-balancer-child-handler.d.ts``
-  - `## `functions/node_modules/@grpc/grpc-js/build/src/load-balancer-child-handler.js``
-  - `## `functions/node_modules/@grpc/grpc-js/src/load-balancer-child-handler.ts``
-  - `## `functions/node_modules/caniuse-lite/data/features/registerprotocolhandler.js``
-  - `## `functions/node_modules/firebase-admin/lib/installations/installations-request-handler.d.ts``
-  - `## `functions/node_modules/firebase-admin/lib/installations/installations-request-handler.js``
-  - `## `functions/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.d.ts``
-  - `## `functions/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js``
-  - `## `functions/node_modules/googleapis/build/src/apis/tasks/index.d.ts``
-  - `## `functions/node_modules/googleapis/build/src/apis/tasks/index.js``
-  - `## `functions/node_modules/googleapis/build/src/apis/tasks/v1.d.ts``
-  - `## `functions/node_modules/googleapis/build/src/apis/tasks/v1.js``
-  - `## `functions/node_modules/undici-types/handlers.d.ts``
-  - `## `functions/node_modules/undici-types/retry-handler.d.ts``
-  - `## `functions/src/api/adminEventsSyncCalendarHandler.ts``
-  - `## `functions/src/api/basenAdminAddGodzinyHandler.ts``
-  - `## `functions/src/api/basenAdminCorrectGodzinyHandler.ts``
-  - `## `functions/src/api/basenAdminSearchUsersHandler.ts``
-  - `## `functions/src/api/basenCancelEnrollmentHandler.ts``
-  - `## `functions/src/api/basenCancelSessionHandler.ts``
-  - `## `functions/src/api/basenCreateSessionHandler.ts``
-  - `## `functions/src/api/basenEnrollHandler.ts``
-  - `## `functions/src/api/basenGrantKarnetHandler.ts``
-  - `## `functions/src/api/gearBundleReservationCreateHandler.ts``
-  - `## `functions/src/api/gearFavoriteToggleHandler.ts``
-  - `## `functions/src/api/gearKayaksListHandler.ts``
-  - `## `functions/src/api/gearMyReservationsHandler.ts``
-  - `## `functions/src/api/gearReservationCancelHandler.ts``
-  - `## `functions/src/api/gearReservationCreateHandler.ts``
-  - `## `functions/src/api/gearReservationUpdateHandler.ts``
-  - `## `functions/src/api/getAdminPendingHandler.ts``
-  - `## `functions/src/api/getBasenGodzinyHandler.ts``
-  - `## `functions/src/api/getBasenKarnetyHandler.ts``
-  - `## `functions/src/api/getBasenSessionsHandler.ts``
-  - `## `functions/src/api/getEventsHandler.ts``
-  - `## `functions/src/api/getGearFavoritesHandler.ts``
-  - `## `functions/src/api/getGearItemAvailabilityHandler.ts``
-  - `## `functions/src/api/getGearItemsHandler.ts``
-  - `## `functions/src/api/getGearKayaksHandler.ts``
-  - `## `functions/src/api/getGodzinkiHandler.ts``
-  - `## `functions/src/api/getKayakReservationsHandler.ts``
-  - `## `functions/src/api/getKursInfoHandler.ts``
-  - `## `functions/src/api/getKursantStatsHandler.ts``
-  - `## `functions/src/api/godzinkiPurchaseHandler.ts``
-  - `## `functions/src/api/kmAddLogHandler.ts``
-  - `## `functions/src/api/kmAdminMergePlacesHandler.ts``
-  - `## `functions/src/api/kmEventStatsHandler.ts``
-  - `## `functions/src/api/kmMapDataHandler.ts``
-  - `## `functions/src/api/kmMyLogsHandler.ts``
-  - `## `functions/src/api/kmMyStatsHandler.ts``
-  - `## `functions/src/api/kmPlacesHandler.ts``
-  - `## `functions/src/api/kmRankingsHandler.ts``
-  - `## `functions/src/api/registerUserHandler.ts``
-  - `## `functions/src/api/submitEventHandler.ts``
-  - `## `functions/src/api/submitGodzinkiHandler.ts``
-  - `## `functions/src/api/userWeightHandler.ts``
-  - `## `functions/src/index.ts``
-  - `## `functions/src/modules/basen/basen_godziny_service.ts``
-  - `## `functions/src/modules/basen/basen_service.ts``
-  - `## `functions/src/modules/calendar/calendar_utils.ts``
-  - `## `functions/src/modules/calendar/events_service.ts``
-  - `## `functions/src/modules/equipment/bundle/gear_bundle_service.ts``
-  - `## `functions/src/modules/equipment/kayaks/gear_kayaks_service.ts``
-  - `## `functions/src/modules/equipment/shared/gear_catalog_service.ts``
-  - `## `functions/src/modules/hours/godzinki_service.ts``
-  - `## `functions/src/modules/hours/godzinki_vars.ts``
-  - `## `functions/src/modules/hours/hours_quote.ts``
-  - `## `functions/src/modules/km/km_log_service.ts``
-  - `## `functions/src/modules/km/km_places_service.ts``
-  - `## `functions/src/modules/km/km_scoring.ts``
-  - `## `functions/src/modules/km/km_vars.ts``
-  - `## `functions/src/modules/setup/setup_gear_vars.ts``
-  - `## `functions/src/modules/users/userStatusCheck.ts``
-  - `## `functions/src/service/admin/adminRunTask.ts``
-  - `## `functions/src/service/providers/googleAuth.ts``
-  - `## `functions/src/service/providers/googleCalendarProvider.ts``
-  - `## `functions/src/service/providers/googleSheetsProvider.ts``
-  - `## `functions/src/service/providers/googleWorkspaceProvider.ts``
-  - `## `functions/src/service/registry.ts``
-  - `## `functions/src/service/runner.ts``
-  - `## `functions/src/service/service_config.ts``
-  - `## `functions/src/service/tasks/basenNotifySessionCancelled.ts``
-  - `## `functions/src/service/tasks/eventsSyncCalendar.ts``
-  - `## `functions/src/service/tasks/eventsSyncFromSheet.ts``
-  - `## `functions/src/service/tasks/gearSyncKayaksFromSheet.ts``
-  - `## `functions/src/service/tasks/godzinkiSyncFromSheet.ts``
-  - `## `functions/src/service/tasks/kmMergeHistoricalUser.ts``
-  - `## `functions/src/service/tasks/kmRebuildMapData.ts``
-  - `## `functions/src/service/tasks/kmRebuildRankings.ts``
-  - `## `functions/src/service/tasks/kmRebuildUserStats.ts``
-  - `## `functions/src/service/tasks/kursSyncFromSheet.ts``
-  - `## `functions/src/service/tasks/listaEnforcePostingPolicy.ts``
-  - `## `functions/src/service/tasks/membersSyncToSheet.ts``
-  - `## `functions/src/service/tasks/onUserRegisteredWelcome.ts``
-  - `## `functions/src/service/tasks/usersSyncFunctionRolesFromSetup.ts``
-  - `## `functions/src/service/tasks/usersSyncRolesFromSheet.ts``
-  - `## `functions/src/service/triggers/onUsersActiveCreated.ts``
-  - `## `functions/src/service/types.ts``
-  - `## `functions/src/service/worker/fallbackDailyWorker.ts``
-
-### `.claude_context/context_config.md`
-
-- Lines: `None`
-- Size: `3326716` bytes
-- Notes:
-  - File is larger than 1500000 bytes or cannot be read.
-
-### `.claude_context/context_frontend.md`
-
-- Lines: `769`
-- Size: `13247` bytes
-- Headings:
-  - `# Frontend Context`
-  - `## `public/404.html``
-  - `## `public/core/access_control.js``
-  - `## `public/core/api_client.js``
-  - `## `public/core/app_shell.js``
-  - `## `public/core/firebase_client.js``
-  - `## `public/core/module_stub.js``
-  - `## `public/core/modules_registry.js``
-  - `## `public/core/render_shell.js``
-  - `## `public/core/router.js``
-  - `## `public/core/theme.js``
-  - `## `public/core/user_error_messages.js``
-  - `## `public/index.html``
-  - `## `public/manifest.json``
-  - `## `public/map.html``
-  - `## `public/modules/admin_pending_module.js``
-  - `## `public/modules/basen_module.js``
-  - `## `public/modules/gear_module.js``
-  - `## `public/modules/godzinki_module.js``
-  - `## `public/modules/impreza_module.js``
-  - `## `public/modules/km_module.js``
-  - `## `public/modules/kurs_godzinki_module.js``
-  - `## `public/modules/kurs_module.js``
-  - `## `public/modules/my_reservations_module.js``
-  - `## `public/skrypt_kurs/chapters/ch01.html``
-  - `## `public/skrypt_kurs/chapters/ch02.html``
-  - `## `public/skrypt_kurs/chapters/ch03.html``
-  - `## `public/skrypt_kurs/chapters/ch04.html``
-  - `## `public/skrypt_kurs/chapters/ch05.html``
-  - `## `public/skrypt_kurs/chapters/ch06.html``
-  - `## `public/styles/app.css``
-  - `## `public/styles/base.css``
-  - `## `public/styles/basen.css``
-  - `## `public/styles/dashboard.css``
-  - `## `public/styles/events.css``
-  - `## `public/styles/gear.css``
-  - `## `public/styles/godzinki.css``
-  - `## `public/styles/km.css``
-  - `## `public/styles/kurs.css``
-  - `## `public/styles/start.css``
-  - `## `public/sw.js``
-
-### `.claude_context/context_keywords.md`
-
-- Lines: `17709`
-- Size: `1200081` bytes
-- Headings:
-  - `# Keyword Index`
-  - `## admin`
-  - `## auth`
-  - `## basen`
-  - `## batch`
-  - `## calendar`
-  - `## cors`
-  - `## discord`
-  - `## email`
-  - `## events`
-  - `## firestore`
-  - `## gear`
-  - `## godzinki`
-  - `## groups`
-  - `## index`
-  - `## job`
-  - `## kayak`
-  - `## km`
-  - `## map`
-  - `## member`
-  - `## ranking`
-  - `## reservation`
-  - `## role`
-  - `## setup`
-  - `## status`
-  - `## storage`
-  - `## sync`
-  - `## task`
-  - `## transaction`
-
-### `.claude_context/context_routes.md`
-
-- Lines: `413`
-- Size: `12440` bytes
-- Headings:
-  - `# Routes and Firebase Functions`
-  - `## Firebase hosting rewrites`
-  - `## Files with route/function hints`
-  - `### `ai_full_audit_report.json``
-  - `### `firebase.json``
-  - `### `functions/node_modules/@google-cloud/firestore/build/src/v1/firestore_admin_client.js``
-  - `### `functions/node_modules/@google-cloud/secret-manager/build/protos/protos.js``
-  - `### `functions/node_modules/@protobufjs/fetch/tests/index.js``
-  - `### `functions/node_modules/@types/express-serve-static-core/index.d.ts``
-  - `### `functions/node_modules/@types/node/test.d.ts``
-  - `### `functions/node_modules/express/lib/request.js``
-  - `### `functions/node_modules/express/lib/response.js``
-  - `### `functions/node_modules/firebase-functions/lib/bin/firebase-functions.js``
-  - `### `functions/node_modules/firebase-functions/lib/v1/providers/https.d.ts``
-  - `### `functions/node_modules/firebase-functions/lib/v1/providers/https.js``
-  - `### `functions/node_modules/firebase-functions/lib/v2/providers/https.d.ts``
-  - `### `functions/node_modules/firebase-functions/lib/v2/providers/https.js``
-  - `### `functions/node_modules/google-gax/build/src/longRunningCalls/longrunning.js``
-  - `### `functions/node_modules/googleapis/build/src/apis/cloudtasks/v2beta2.js``
-  - `### `functions/node_modules/node-forge/dist/forge.all.min.js``
-  - `### `functions/node_modules/node-forge/dist/forge.min.js``
-  - `### `functions/node_modules/node-forge/lib/x509.js``
-  - `### `functions/node_modules/path-scurry/node_modules/lru-cache/dist/commonjs/index.d.ts``
-  - `### `functions/node_modules/path-scurry/node_modules/lru-cache/dist/esm/index.d.ts``
-  - `### `functions/node_modules/undici-types/fetch.d.ts``
-  - `### `functions/src/index.ts``
-  - `### `functions/src/service/admin/adminRunTask.ts``
-  - `### `functions/src/service/providers/googleAuth.ts``
-  - `### `public/core/app_shell.js``
-  - `### `public/core/render_shell.js``
-  - `### `public/map.html``
-  - `### `public/modules/admin_pending_module.js``
-  - `### `public/modules/basen_module.js``
-  - `### `public/modules/gear_module.js``
-  - `### `public/modules/godzinki_module.js``
-  - `### `public/modules/impreza_module.js``
-  - `### `public/modules/km_module.js``
-  - `### `public/modules/my_reservations_module.js``
-  - `### `tests/e2e/phases/phase_A_suspended_user.py``
-  - `### `tests/test_pwa.py``
-  - `### `tools/build_project_context.py``
-
-### `.claude_context/context_tests.md`
-
-- Lines: `7021`
-- Size: `128232` bytes
-- Headings:
-  - `# Tests Context`
-  - `## `functions/node_modules/@babel/helpers/lib/helpers/classCheckPrivateStaticAccess.js``
-  - `## `functions/node_modules/@babel/helpers/lib/helpers/classCheckPrivateStaticFieldDescriptor.js``
-  - `## `functions/node_modules/@bcoe/v8-coverage/src/test/merge.spec.ts``
-  - `## `functions/node_modules/@eslint/eslintrc/lib/config-array/override-tester.js``
-  - `## `functions/node_modules/@firebase/component/dist/esm/test/setup.d.ts``
-  - `## `functions/node_modules/@firebase/component/dist/esm/test/util.d.ts``
-  - `## `functions/node_modules/@firebase/component/dist/test/setup.d.ts``
-  - `## `functions/node_modules/@firebase/component/dist/test/util.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/browser/crawler_support.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/database.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/datasnapshot.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/helpers/events.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/helpers/util.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/info.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/order.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/order_by.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/promise.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/query.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/servervalues.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/database-compat/test/transaction.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/browser/crawler_support.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/database.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/datasnapshot.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/helpers/events.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/helpers/util.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/info.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/order.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/order_by.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/promise.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/query.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/servervalues.test.d.ts``
-  - `## `functions/node_modules/@firebase/database-compat/dist/node-esm/database-compat/test/transaction.test.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/node-esm/src/api/test_access.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/node-esm/test/helpers/EventAccumulator.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/node-esm/test/helpers/syncpoint-util.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/node-esm/test/helpers/util.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/src/api/test_access.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/test/helpers/EventAccumulator.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/test/helpers/syncpoint-util.d.ts``
-  - `## `functions/node_modules/@firebase/database/dist/test/helpers/util.d.ts``
-  - `## `functions/node_modules/@firebase/logger/dist/esm/test/custom-logger.test.d.ts``
-  - `## `functions/node_modules/@firebase/logger/dist/esm/test/logger.test.d.ts``
-  - `## `functions/node_modules/@firebase/logger/dist/test/custom-logger.test.d.ts``
-  - `## `functions/node_modules/@firebase/logger/dist/test/logger.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/base64.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/compat.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/deepCopy.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/defaults.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/emulator.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/environments.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/errors.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/exponential_backoff.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/object.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/node-esm/test/subscribe.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/base64.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/compat.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/deepCopy.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/defaults.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/emulator.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/environments.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/errors.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/exponential_backoff.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/object.test.d.ts``
-  - `## `functions/node_modules/@firebase/util/dist/test/subscribe.test.d.ts``
-  - `## `functions/node_modules/@jest/pattern/src/TestPathPatterns.ts``
-  - `## `functions/node_modules/@jest/pattern/src/__tests__/TestPathPatterns.test.ts``
-  - `## `functions/node_modules/@jest/snapshot-utils/src/__tests__/utils.test.ts``
-  - `## `functions/node_modules/@jest/test-result/build/index.d.ts``
-  - `## `functions/node_modules/@jest/test-result/build/index.js``
-  - `## `functions/node_modules/@jest/test-result/package.json``
-  - `## `functions/node_modules/@jest/test-sequencer/build/index.d.ts``
-  - `## `functions/node_modules/@jest/test-sequencer/build/index.js``
-  - `## `functions/node_modules/@jest/test-sequencer/package.json``
-  - `## `functions/node_modules/@protobufjs/aspromise/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/base64/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/codegen/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/eventemitter/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/fetch/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/float/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/inquire/tests/data/array.js``
-  - `## `functions/node_modules/@protobufjs/inquire/tests/data/emptyArray.js``
-  - `## `functions/node_modules/@protobufjs/inquire/tests/data/emptyObject.js``
-  - `## `functions/node_modules/@protobufjs/inquire/tests/data/object.js``
-  - `## `functions/node_modules/@protobufjs/inquire/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/path/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/pool/tests/index.js``
-  - `## `functions/node_modules/@protobufjs/utf8/tests/index.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/called-in-order.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/class-name.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/deprecated.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/every.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/function-name.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/global.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/index.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/order-by-first-call.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/prototypes/copy-prototype-methods.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/prototypes/index.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/type-of.test.js``
-  - `## `functions/node_modules/@sinonjs/commons/lib/value-to-string.test.js``
-
-### `.claude_context/README.md`
-
-- Lines: `1372`
-- Size: `112917` bytes
-- Headings:
-  - `# Claude Code Context`
-  - `## Mandatory operating rules`
-  - `## Context files`
-  - `## Recommended route`
-  - `## Project summary`
-  - `## Large files warning`
 
 ### `CLAUDE.md`
 
@@ -10141,6 +10087,120 @@ Excluded sensitive files:
   - `### 7. Panel Zarządu — `public/modules/admin_pending_module.js``
   - `## Świadomie POZA zakresem (dla lekkości rozwiązania)`
   - `## Weryfikacja`
+
+### `DOCS/Sessions & TO DOs/09.09_analiza_kodu_plan_naprawy.md`
+
+- Lines: `391`
+- Size: `67376` bytes
+- Headings:
+  - `# Analiza kodu SKK Morzkulc — wydajność, poprawność, duplikacje, martwy kod`
+  - `## 0. Wynik bazowy (stan na dziś, zweryfikowany uruchomieniem)`
+  - `## 1. Executive summary — najważniejsze ustalenia`
+  - `## 2. Backend — warstwa HTTP API (`functions/src/index.ts` + `functions/src/api/*.ts`, 61 plików, 10 084 linii)`
+  - `### 2.1 Wydajność`
+  - `### 2.2 Poprawność`
+  - `### 2.3 Duplikacja`
+  - `### 2.4 Martwy kod`
+  - `### 2.5 Niespójności strukturalne`
+  - `## 3. Backend — logika biznesowa i system zadań asynchronicznych (`functions/src/modules/**` + `functions/src/service/**`, 71 plików)`
+  - `### 3.1 System jobów (`service/worker/*`, `service/registry.ts`)`
+  - `### 3.2 Wydajność`
+  - `### 3.3 Duplikacja`
+  - `### 3.4 Martwy kod`
+  - `### 3.5 Poprawność`
+  - `## 4. Warstwa danych — indeksy Firestore, zależności, higiena repo, pokrycie testami`
+  - `### 4.1 Indeksy Firestore vs realne zapytania`
+  - `### 4.2 Higiena repo / martwe artefakty`
+  - `### 4.3 Zależności (`functions/package.json`)`
+  - `### 4.4 Pokrycie testami`
+  - `#### 4.4.1 STATUS 09.09.2026 — brakujące testy NAPISANE (183 nowe testy, 5 plików + 1 helper; 308/308 ✅, lint ✅, build ✅)`
+  - `## 5. Frontend (`public/core/**`, `public/modules/**`, `public/styles/**`, `sw.js`, 44 pliki)`
+  - `### 5.1 Martwy kod`
+  - `### 5.2 Duplikacja`
+  - `### 5.3 Wydajność`
+  - `### 5.4 Poprawność`
+  - `### 5.5 PWA / Service Worker`
+  - `## 6. Plan napraw — fazowany, z konkretnym zakresem`
+  - `### Faza 0 — szybkie wygrane (bardzo niskie ryzyko, wysoka wartość, każda 1 plik lub mechaniczna)`
+  - `### Faza 1 — wysoki priorytet (niezawodność i wydajność ścieżek krytycznych)`
+  - `### Poza planem — zgłoszone ad-hoc 09.09.2026`
+  - `### Faza 2 — porządkowanie (duplikacje, spójność, średni priorytet)`
+  - `### Faza 3 — zmiany architektoniczne (do rozważenia długoterminowo, większy nakład)`
+  - `## 7. Statystyka końcowa`
+
+### `DOCS/Sessions & TO DOs/09.09_audyt_niezalezny_v2.md`
+
+- Lines: `212`
+- Size: `20090` bytes
+- Headings:
+  - `# Audyt niezależny v2 — wydajność, poprawność, skalowalność (09.09.2026)`
+  - `## 1. Podsumowanie — nowe znaleziska`
+  - `## 2. System jobów (`service_jobs`)`
+  - `### N1 — retry z backoffem nie działa`
+  - `### N2 — joby bez `nextRunAt` są niewidoczne dla fallbacku`
+  - `### N3 — `appsScriptSync` z domyślnym timeoutem 60 s`
+  - `### N4 — wyścig przy dopisywaniu wiersza do arkusza`
+  - `### N9 — codzienny rewrite wszystkich imprez i podwójny sync Kalendarza`
+  - `## 3. Poprawność`
+  - `### N6 — okno anulowania basenu w UTC`
+  - `### N7 — `offsetDays` hardcoded w dostępności`
+  - `### N8 — „dziś" w UTC zamiast Europe/Warsaw (systemowe)`
+  - `### N10 — `cancelSession`: zapisy czytane poza transakcją`
+  - `### N11 — ranking km „bieżący rok" bez filtra roku`
+  - `### N14 — `displayName` „undefined undefined"`
+  - `### N15 — `gearPrivateStorage`: `pending` nigdy nie ponawiane`
+  - `### N16 — bonus miesięczny zarządu bez `status_key``
+  - `### N17 — `href` z danych arkusza bez walidacji schematu`
+  - `### N19 — bezpieczeństwo (niskie)`
+  - `## 4. Skalowalność / wydajność (nowe)`
+  - `### N12 — `/api/basen/sessions` skanuje całą historię`
+  - `### N12b — `basenGrantInstructorRewards` skanuje całą historię codziennie`
+  - `### N13 — Storage per kajak przy każdym render listy`
+  - `### N18 — `MutationObserver` bez `disconnect()``
+  - `### N20 — badge admina = pełny skan ledgera`
+  - `## 5. Drobne (z kodu, do porządków)`
+  - `## 6. Odniesienie do audytów 01.09 / 09.09`
+  - `### Potwierdzone w kodzie jako naprawione (nie powtarzam)`
+  - `### Nadal otwarte z 09.09 (Faza 3) — nie duplikuję`
+  - `### Sprzeczne z 09.09`
+  - `## 7. Proponowana kolejność napraw`
+
+### `DOCS/Sessions & TO DOs/09.09_PLAN_naprawy_audyt_v2.md`
+
+- Lines: `268`
+- Size: `23069` bytes
+- Headings:
+  - `# PLAN naprawy — audyt niezależny v2 (09.09.2026)`
+  - `## 0. Decyzje do potwierdzenia PRZED startem`
+  - `## Etap 1 — System jobów (N1, N2) — KRYTYCZNE`
+  - `### Zmiany`
+  - `### Testy (`test/service_jobs_core.test.ts` — nowy; `vi.mock("../src/service/runner")`)`
+  - `### Deploy i weryfikacja`
+  - `## Etap 2 — Timeout Apps Script (N3), wyścig w arkuszu (N4)`
+  - `### Zmiany`
+  - `### Testy`
+  - `### Deploy i weryfikacja`
+  - `## Etap 3 — OWNER na lista@ (N5), okno anulowania basenu (N6), offsetDays (N7)`
+  - `### Zmiany`
+  - `### Testy`
+  - `### Deploy i weryfikacja`
+  - `## Etap 4 — „Dziś" w strefie Europe/Warsaw (N8)`
+  - `### Zmiany`
+  - `### Testy`
+  - `### Deploy i weryfikacja`
+  - `## Etap 5 — Poprawność (N10, N11, N14, N15, N16)`
+  - `### Zmiany`
+  - `### Testy`
+  - `### Deploy i weryfikacja`
+  - `## Etap 6 — Koszt i wydajność (N9, N12, N12b, N13, N18, N20)`
+  - `### Zmiany`
+  - `### Testy`
+  - `### Deploy i weryfikacja`
+  - `## Etap 7 — Bezpieczeństwo i porządki (N17, N19, § 5)`
+  - `### Zmiany`
+  - `### Testy`
+  - `## Podsumowanie testów`
+  - `## Kolejność, zakres, stan`
 
 ### `DOCS/Sessions & TO DOs/10.06_session_summary.md`
 
@@ -12174,11 +12234,10 @@ Excluded sensitive files:
 - `.firebaserc` — 10 lines, 157 bytes
 - `.gitattributes` — 4 lines, 71 bytes
 - `.gitignore` — 76 lines, 1365 bytes
-- `ai_full_audit_report.txt` — 1918 lines, 88991 bytes
 - `appscript/2_Członkowie Godzinki Imprezy/api_router` — 280 lines, 7928 bytes
 - `functions/.gitignore` — 10 lines, 153 bytes
 - `public/404.html` — 34 lines, 1808 bytes
-- `public/index.html` — 56 lines, 2344 bytes
+- `public/index.html` — 64 lines, 2804 bytes
 - `public/map.html` — 369 lines, 12601 bytes
 - `public/skrypt_kurs/chapters/ch01.html` — 6 lines, 547 bytes
 - `public/skrypt_kurs/chapters/ch02.html` — 201 lines, 11069 bytes
@@ -12186,16 +12245,15 @@ Excluded sensitive files:
 - `public/skrypt_kurs/chapters/ch04.html` — 21 lines, 1160 bytes
 - `public/skrypt_kurs/chapters/ch05.html` — 132 lines, 7205 bytes
 - `public/skrypt_kurs/chapters/ch06.html` — 265 lines, 13264 bytes
-- `public/styles/app.css` — 10 lines, 254 bytes
 - `public/styles/base.css` — 639 lines, 19864 bytes
-- `public/styles/basen.css` — 815 lines, 17080 bytes
-- `public/styles/dashboard.css` — 162 lines, 2708 bytes
+- `public/styles/basen.css` — 792 lines, 16670 bytes
+- `public/styles/dashboard.css` — 64 lines, 1229 bytes
 - `public/styles/events.css` — 284 lines, 5064 bytes
-- `public/styles/gear.css` — 1823 lines, 36002 bytes
-- `public/styles/godzinki.css` — 194 lines, 3828 bytes
+- `public/styles/gear.css` — 1692 lines, 34013 bytes
+- `public/styles/godzinki.css` — 187 lines, 3725 bytes
 - `public/styles/km.css` — 496 lines, 10234 bytes
-- `public/styles/kurs.css` — 430 lines, 7128 bytes
-- `public/styles/start.css` — 359 lines, 13899 bytes
+- `public/styles/kurs.css` — 351 lines, 5895 bytes
+- `public/styles/start.css` — 241 lines, 11835 bytes
 - `tests/e2e/.gitignore` — 11 lines, 142 bytes
 - `tests/e2e/reports/events_e2e_run.txt` — 110 lines, 8703 bytes
 - `tests/e2e/reports/godzinki_e2e_run.txt` — 57 lines, 5149 bytes
