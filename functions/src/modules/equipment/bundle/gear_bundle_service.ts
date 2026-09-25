@@ -8,6 +8,7 @@ import {updateReservationDates} from "../kayaks/gear_kayaks_service";
 import {countMyOverlappingItemsByCategory, countItemsByCategory, findCategoryOverLimit} from "../shared/reservation_limits";
 import {findActiveKierownikEvents} from "../../calendar/events_service";
 import {norm} from "../../shared/text_utils";
+import {getCachedDoc} from "../../setup/doc_cache";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -185,7 +186,7 @@ export function parseSchoolYear(raw: any): number | null {
  * setup.syncFromSheet do Firestore `setup/vars_kurs.vars.kurs_wypożycza`.
  */
 export async function getKursWypozyczaFlag(db: FirebaseFirestore.Firestore): Promise<boolean> {
-  const snap = await db.collection("setup").doc("vars_kurs").get();
+  const snap = await getCachedDoc(db, "setup", "vars_kurs");
   const value = snap.exists ? (snap.data() as any)?.vars?.["kurs_wypożycza"]?.value : undefined;
   return value === true;
 }
@@ -201,7 +202,7 @@ export async function getKursWypozyczaFlag(db: FirebaseFirestore.Firestore): Pro
  */
 export async function getKursWindowEndDay(db: FirebaseFirestore.Firestore): Promise<number> {
   const DEFAULT_DAY = 30;
-  const snap = await db.collection("setup").doc("vars_kurs").get();
+  const snap = await getCachedDoc(db, "setup", "vars_kurs");
   const raw = snap.exists ? (snap.data() as any)?.vars?.koniec_kursu?.value : undefined;
   const n = Number(raw);
   if (!Number.isFinite(n)) return DEFAULT_DAY;
@@ -310,7 +311,11 @@ export async function fetchItemDetails(
   db: FirebaseFirestore.Firestore,
   items: BundleItemInput[]
 ): Promise<
-  | {ok: true; items: BundleItemStored[]}
+  // halfHalfKayakIds: kajaki z flagą „pół na pół" (kolumna arkusza „Pół na pół?").
+  // Nie zapisujemy tego na rezerwacji — flaga jest potrzebna tylko po to, żeby
+  // wywołujący wiedział, czy zakolejkować maila do właściciela. Zbierane tutaj,
+  // bo dokumenty sprzętu i tak są w tym miejscu czytane (zero dodatkowych odczytów).
+  | {ok: true; items: BundleItemStored[]; halfHalfKayakIds: string[]; ownerContactByKayakId: Record<string, string>}
   | {ok: false; code: string; message: string; details?: any}
 > {
   // Group by category for batch fetching
@@ -325,23 +330,60 @@ export async function fetchItemDetails(
   // Fetch each category and build a map: compositeId → doc data
   const foundDocs = new Map<string, any>();
 
-  for (const [cat] of byCategory.entries()) {
+  for (const [cat, wantedIds] of byCategory.entries()) {
     const collection = CATEGORY_COLLECTIONS[cat];
     if (!collection) {
       return {ok: false, code: "invalid_category", message: `Nieobsługiwana kategoria: ${cat}`};
     }
 
-    const snap = await db.collection(collection).where("isActive", "==", true).get();
-    for (const doc of snap.docs) {
-      const d = doc.data() as any;
-      if (d?.gearScrapped === true) continue;
-      const resolvedId = norm(d?.id) || doc.id;
-      foundDocs.set(compositeId(cat, resolvedId), {...d, _resolvedId: resolvedId, _category: cat});
+    // Wcześniej: pełny odczyt kolekcji (bez limitu) tylko po to, żeby zbudować mapę
+    // id → dokument dla kilku wybranych sztuk. Rezerwacja kompletu „kajak + wiosło +
+    // kamizelka + kask + fartuch" czytała PIĘĆ pełnych kolekcji sprzętu, tuż przed
+    // transakcją. Teraz pobieramy wyłącznie potrzebne dokumenty.
+    //
+    // Dwutorowo, bo identyfikator dokumentu nie zawsze równa się polu `id`
+    // (rozwiązanie niżej: `norm(d?.id) || doc.id`): najpierw zapytanie po polu `id`
+    // paczkami po 30 (limit operatora `in`), a dla nieodnalezionych — odczyt po
+    // identyfikatorze dokumentu. Filtry isActive/gearScrapped zostają w pamięci,
+    // żeby nie wymagać nowego indeksu złożonego.
+    const uniqueIds = Array.from(new Set(wantedIds.filter(Boolean)));
+    const stillMissing = new Set(uniqueIds);
+
+    for (let i = 0; i < uniqueIds.length; i += 30) {
+      const chunk = uniqueIds.slice(i, i + 30);
+      const snap = await db.collection(collection).where("id", "in", chunk).get();
+      for (const doc of snap.docs) {
+        const d = doc.data() as any;
+        if (d?.isActive !== true) continue;
+        if (d?.gearScrapped === true) continue;
+        const resolvedId = norm(d?.id) || doc.id;
+        foundDocs.set(compositeId(cat, resolvedId), {...d, _resolvedId: resolvedId, _category: cat});
+        stillMissing.delete(resolvedId);
+      }
+    }
+
+    // Fallback dla dokumentów bez pola `id` (klucz dokumentu jest wtedy jedynym
+    // identyfikatorem) — zachowuje zachowanie sprzed zmiany.
+    if (stillMissing.size) {
+      const refs = Array.from(stillMissing).map((id) => db.collection(collection).doc(id));
+      const snaps = await db.getAll(...refs);
+      for (const doc of snaps) {
+        if (!doc.exists) continue;
+        const d = doc.data() as any;
+        if (d?.isActive !== true) continue;
+        if (d?.gearScrapped === true) continue;
+        const resolvedId = norm(d?.id) || doc.id;
+        foundDocs.set(compositeId(cat, resolvedId), {...d, _resolvedId: resolvedId, _category: cat});
+      }
     }
   }
 
   // Validate and build result list
   const result: BundleItemStored[] = [];
+  const halfHalfKayakIds: string[] = [];
+  // itemId → e-mail właściciela (z kolumny „kontakt do właściciela"). Zbierane tu,
+  // bo dokumenty sprzętu i tak są w tym miejscu czytane.
+  const ownerContactByKayakId: Record<string, string> = {};
 
   for (const inputItem of items) {
     const cat = norm(inputItem.category).toLowerCase();
@@ -399,6 +441,12 @@ export async function fetchItemDetails(
     }
 
     const isKayak = cat === "kayaks";
+    if (isKayak) {
+      const resolved = norm(found?._resolvedId) || iid;
+      if (found?.isHalfHalf === true) halfHalfKayakIds.push(resolved);
+      const owner = norm(found?.ownerContact).toLowerCase();
+      if (owner && owner.includes("@")) ownerContactByKayakId[resolved] = owner;
+    }
     const number = norm(found?.number || found?._resolvedId);
     const brand = norm(found?.brand);
     const model = norm(found?.model);
@@ -420,7 +468,7 @@ export async function fetchItemDetails(
     item.isPrimary = idx === primaryIdx;
   });
 
-  return {ok: true, items: result};
+  return {ok: true, items: result, halfHalfKayakIds, ownerContactByKayakId};
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -688,7 +736,21 @@ export async function createBundleReservation(
   // nigdy nie było) i teoretycznie zależał od stanu pul godzinkowych, których
   // nie musi w ogóle mieć, żeby zarezerwować sprzęt na imprezę.
   const kayakIds = items.filter((i) => i.category === "kayaks").map((i) => i.itemId);
-  const costHours = clubEvent ? 0 : quoteKayaksCostHours(vars, roleKey, effectiveStartDate, effectiveEndDate, kayakIds.length);
+
+  // Właściciel nie płaci godzinek za WŁASNY kajak (zgłoszenie użytkownika
+  // 24.09.2026). Dotyczy każdego kajaka, którego „kontakt do właściciela"
+  // zgadza się z adresem rezerwującego — czyli zarówno sprzętu „pół na pół",
+  // jak i prywatnego udostępnionego klubowi. Płatne zostają wyłącznie pozostałe
+  // sztuki w tej samej rezerwacji, więc komplet „własny kajak + klubowe wiosło"
+  // rozlicza się poprawnie.
+  const reserverEmail = norm(user.email).toLowerCase();
+  const ownerByKayakId = itemDetailsResult.ownerContactByKayakId;
+  const ownKayakIds = reserverEmail ?
+    kayakIds.filter((id) => ownerByKayakId[id] === reserverEmail) :
+    [];
+  const chargeableKayakIds = kayakIds.filter((id) => !ownKayakIds.includes(id));
+
+  const costHours = clubEvent ? 0 : quoteKayaksCostHours(vars, roleKey, effectiveStartDate, effectiveEndDate, chargeableKayakIds.length);
   // Zwolnieni nie płacą — koszt zapisujemy jako "waived" (saldo bez zmian), więc
   // pula godzinek potrzebna jest tylko dla normalnej dedukcji.
   const godzinkiVars = (!clubEvent && !feeExempt && costHours > 0) ? await getGodzinkiVars(db) : null;
@@ -727,6 +789,11 @@ export async function createBundleReservation(
     // Backward compat: legacy kayak fields
     kayakIds,
     kayakCount: kayakIds.length,
+    // Liczba sztuk faktycznie płatnych — bez kajaków własnych rezerwującego.
+    // Edycja terminu przelicza koszt z tego pola (fallback na kayakCount dla
+    // rezerwacji sprzed 24.09.2026).
+    chargeableKayakCount: chargeableKayakIds.length,
+    ownKayakIds,
 
     costHours,
     waived: !clubEvent && feeExempt && costHours > 0,
@@ -823,6 +890,9 @@ export async function createBundleReservation(
     primaryCategory: primaryItem.category,
     primaryItemId: primaryItem.itemId,
     eventId: clubEvent ? clubEvent.id : null,
+    // Kajaki „pół na pół" w tej rezerwacji — handler kolejkuje na ich podstawie
+    // maila do właściciela (gear.notifyHalfHalfOwner). Pusta tablica = nic nie robimy.
+    halfHalfKayakIds: itemDetailsResult.halfHalfKayakIds,
   } as const;
 }
 
@@ -975,7 +1045,10 @@ async function updateBundleReservationDates(
       } as const;
     }
 
-    const kayakCount = Number(r?.kayakCount ?? 0);
+    // Kajaki własne rezerwującego są bezpłatne — liczymy tylko płatne sztuki.
+    // Rezerwacje sprzed 24.09.2026 nie mają tego pola, więc fallback na kayakCount
+    // zachowuje dla nich dotychczasowe zachowanie.
+    const kayakCount = Number(r?.chargeableKayakCount ?? r?.kayakCount ?? 0);
     const newCostHours = quoteKayaksCostHours(vars, roleKey, args.startDate, args.endDate, kayakCount);
     const wasWaived = r?.waived === true;
     // Koszt realnie pobrany wcześniej: 0 jeśli rezerwacja była zwolniona (waived).
@@ -1223,6 +1296,15 @@ export async function updateBundleReservationItems(
     const primaryItem = itemDetails.find((i) => i.isPrimary) || itemDetails[0];
     const kayakIds = items.filter((i) => i.category === "kayaks").map((i) => i.itemId);
 
+    // Kajaki własne rezerwującego — patrz createBundleReservation. Tu tylko
+    // utrzymujemy licznik płatnych sztuk, żeby późniejsza edycja terminu
+    // liczyła koszt poprawnie.
+    const reserverEmailOnUpdate = norm(user.email).toLowerCase();
+    const ownerByKayakIdOnUpdate = itemDetailsResult.ownerContactByKayakId;
+    const ownKayakIdsOnUpdate = reserverEmailOnUpdate ?
+      kayakIds.filter((id) => ownerByKayakIdOnUpdate[id] === reserverEmailOnUpdate) :
+      [];
+
     // Impreza klubowa: mechanizm godzinkowy pomijany W CAŁOŚCI (decyzja
     // użytkownika 05.09.2026, patrz createBundleReservation) — edycja listy
     // NIGDY nie dotyka godzinki_ledger, niezależnie od liczby kajaków.
@@ -1238,6 +1320,10 @@ export async function updateBundleReservationItems(
         primaryItemId: norm(primaryItem.itemId),
         kayakIds,
         kayakCount: kayakIds.length,
+        chargeableKayakCount: kayakIds.filter(
+          (id) => !ownKayakIdsOnUpdate.includes(id)
+        ).length,
+        ownKayakIds: ownKayakIdsOnUpdate,
         updatedAt: now,
       },
       {merge: true}

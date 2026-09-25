@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-10T08:11:01`
+Generated at: `2026-09-23T08:41:42`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,11 +57,11 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `577`
+- Total scanned files: `578`
 - Python files: `41`
 - Script files JS/TS/GS/etc.: `394`
 - Config files: `19`
-- Markdown files: `96`
+- Markdown files: `97`
 - Internal dependency edges: `788`
 
 ## Project tree
@@ -87,6 +87,7 @@ Excluded sensitive files:
     - 09.09_audyt_niezalezny_v2.md
     - 10.06_session_summary.md
     - 10.07_audyt_kursant_błąd.md
+    - 10.09_audyt_wydajności_TO_DO.md
     - 11.08_blachy_i_brakujące_pola_TO_DO.md
     - 12.06_godzinki_audyt.md
     - 12.06_godzinki_podsumowanie.md
@@ -10242,6 +10243,60 @@ Excluded sensitive files:
   - `### E — stary backend`
   - `## 7. Weryfikacja po naprawie`
   - `## 8. Pliki potencjalnie do zmiany`
+
+### `DOCS/Sessions & TO DOs/10.09_audyt_wydajności_TO_DO.md`
+
+- Lines: `432`
+- Size: `50086` bytes
+- Headings:
+  - `# Audyt wydajności — 10.09.2026 (TO DO)`
+  - `## 1. Podsumowanie`
+  - `## 2. Start aplikacji — droga krytyczna`
+  - `### W1 — `googleapis` w cold starcie każdej funkcji HTTP`
+  - `### W2 — rejestr modułów ładuje wszystkie moduły przed pierwszym renderem`
+  - `### W3 — 9 arkuszy CSS blokuje pierwsze malowanie`
+  - `### W7 — wymuszone odświeżenie tokenu przy starcie`
+  - `### W8 — `/api/register` i `/api/setup` sekwencyjnie`
+  - `### W9 — brak `preconnect`, SDK Storage ładowany zawsze`
+  - `## 3. Renderowanie i sieć w modułach`
+  - `### W5 — szukajka sprzętu przebudowuje siatkę i odpytuje Storage na każdy znak`
+  - `### W11 — pełny katalog kajaków pobierany po same tytuły`
+  - `### W11b — MutationObserver bez `disconnect()``
+  - `### W16 — dashboard i profil dublują to samo żądanie`
+  - `## 4. Backend — koszt pojedynczego żądania`
+  - `### W10 — dokumenty `setup/vars_*` czytane przy każdym żądaniu`
+  - `### W10b — `vars_kurs` czytany trzykrotnie w jednym żądaniu`
+  - `### W12 — pełny odczyt bilansu otwarcia przy starcie aplikacji`
+  - `### W13 — sekwencyjne odczyty w `registerUser``
+  - `### W14 — `/api/godzinki?view=full` odpytuje ten sam zbiór dwa razy`
+  - `### W15 — N odczytów zamiast jednego `getAll``
+  - `### W19 — tworzenie rezerwacji czyta całe kolekcje kategorii`
+  - `### W20 — `/api/basen/sessions` czyta cały katalog kajaków`
+  - `### W21 — diagnostyczny log przy każdej operacji zapisu`
+  - `### W15b — trzy sekcje panelu Zarządu nadal sekwencyjne`
+  - `## 5. Wzorce zapytań Firestore — kolekcje rosnące bez końca`
+  - `### W6 — skan aktywnych rezerwacji bez dolnej granicy daty`
+  - `### W6b — pozostałe pełne skany kolekcji`
+  - `## 6. Zasoby statyczne, cache, PWA`
+  - `### W4 — `no-store` wymusza pełne pobranie 804 KB po każdym deployu`
+  - `### W17 — ciężkie obrazy`
+  - `### W18 — `maplibre-gl` z zewnętrznego CDN`
+  - `## 7. Spójny plan wdrożenia`
+  - `### Etap 1 — cold start i start aplikacji (największy efekt, zerowe ryzyko)`
+  - `### Etap 2 — frontend, ładowanie na żądanie`
+  - `### Etap 3 — waga startu i cache statyki`
+  - `### Etap 4 — do decyzji (zmiana zachowania lub ryzyko)`
+  - `### Etap 5 — porządki`
+  - `## 8. Relacja do audytów 01.09 i 09.09`
+  - `### Pozycje z 01.09 — stan na dziś`
+  - `### Pozycje z 09.09 (audyt v2) dotyczące wydajności`
+  - `## 9. Problemy, które pojawią się przy większej skali`
+  - `### 9.1 Kolekcje rosnące monotonicznie, czytane w całości`
+  - `### 9.2 65 osobnych funkcji HTTP = 65 osobnych zimnych startów`
+  - `### 9.3 Skanowanie w pamięci zamiast zapytań indeksowanych`
+  - `### 9.4 Kontencja transakcji`
+  - `### 9.5 Frontend przy większej ilości danych`
+  - `## 10. Sprawdzone, bez znaleziska`
 
 ### `DOCS/Sessions & TO DOs/11.08_blachy_i_brakujące_pola_TO_DO.md`
 

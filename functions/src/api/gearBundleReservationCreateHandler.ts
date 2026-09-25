@@ -1,8 +1,25 @@
 import type {Request, Response} from "express";
+import * as admin from "firebase-admin";
+import {logger} from "firebase-functions/v2";
 import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {createBundleReservation, BundleItemInput} from "../modules/equipment/bundle/gear_bundle_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {norm} from "../modules/shared/text_utils";
+
+/** Kolejkuje job serwisowy (fire-and-forget z gwarancją zapisu joba) — ten sam
+ * wzorzec co submitGearDamageReportHandler.ts. */
+async function enqueueJob(db: FirebaseFirestore.Firestore, taskId: string, payload: Record<string, any>): Promise<void> {
+  const jobRef = db.collection("service_jobs").doc();
+  await jobRef.set({
+    id: jobRef.id,
+    taskId,
+    payload,
+    status: "queued",
+    attempts: 0,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
 
 type TokenCheck =
   | {error: string}
@@ -114,6 +131,25 @@ export async function handleGearBundleReservationCreate(
       if (!out.ok) {
         res.status(400).json(out);
         return;
+      }
+
+      // Fire-and-forget: mail do właściciela kajaka „pół na pół" (decyzja
+      // użytkownika 23.09.2026 — taki kajak jest klubowy i bezpłatny, ale
+      // właściciel ma pierwszeństwo, więc musi wiedzieć o wypożyczeniu).
+      // Błąd kolejkowania NIE cofa rezerwacji — ten sam wzorzec co przy
+      // zgłoszeniu uszkodzenia (submitGearDamageReportHandler).
+      if (out.halfHalfKayakIds?.length) {
+        try {
+          await enqueueJob(db, "gear.notifyHalfHalfOwner", {
+            reservationId: out.reservationId,
+            kayakIds: out.halfHalfKayakIds,
+          });
+        } catch (e: any) {
+          logger.error("gearBundleReservationCreate: enqueue halfHalf notify failed", {
+            reservationId: out.reservationId,
+            message: e?.message,
+          });
+        }
       }
 
       res.status(200).json(out);

@@ -252,24 +252,6 @@ export async function getNextExpiry(
   return computeNextExpiry(records, now);
 }
 
-/**
- * Pobiera pełną historię rekordów godzinkowych użytkownika.
- * Sortowanie: od najnowszych.
- */
-export async function getHistory(
-  db: FirebaseFirestore.Firestore,
-  uid: string,
-  limit = 100
-): Promise<GodzinkiRecord[]> {
-  const snap = await db
-    .collection(COLLECTION)
-    .where("uid", "==", uid)
-    .orderBy("createdAt", "desc")
-    .limit(limit)
-    .get();
-  return snap.docs.map((d) => ({id: d.id, ...d.data()} as GodzinkiRecord));
-}
-
 export type SubmitEarningInput = {
   amount: number;
   grantedAt: string; // ISO date YYYY-MM-DD

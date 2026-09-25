@@ -1,3 +1,4 @@
+import {getCachedDoc} from "../setup/doc_cache";
 /**
  * km_vars.ts
  *
@@ -31,7 +32,7 @@ function toNumber(v: any, fallback: number): number {
 }
 
 export async function getKmVars(db: FirebaseFirestore.Firestore): Promise<KmVars> {
-  const snap = await db.collection("setup").doc("vars_kurs").get();
+  const snap = await getCachedDoc(db, "setup", "vars_kurs");
   const raw = (snap.exists ? (snap.data() as KmVarsDoc) : null) || null;
 
   return {

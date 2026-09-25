@@ -963,6 +963,25 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           listEl.querySelectorAll("img[data-cover-number]").forEach((imgEl) => {
             const num = String(imgEl.getAttribute("data-cover-number") || "");
             if (!num) return;
+            // photoState przeżywa przebudowę siatki (jest w zasięgu modułu, nie DOM-u),
+            // więc znany już adres wstawiamy OD RAZU, synchronicznie. Bez tego każda
+            // przebudowa — a szukajka przebudowuje siatkę przy wpisywaniu — pokazywała
+            // najpierw placeholder i podmieniała go dopiero po rozwiązaniu obietnicy,
+            // co dawało efekt migotania zdjęć. Żądanie i tak nie leci (cache w
+            // firebase_client.js), ale to nie wystarcza, żeby uniknąć mignięcia.
+            const known = photoState.get(num);
+            if (known && known.urls.length) {
+              imgEl.src = known.urls[known.idx] || known.urls[0];
+              imgEl.classList.add("gearCoverLoaded");
+              const knownBtn = imgEl.closest("[data-gear-kayak-cover]");
+              if (knownBtn) knownBtn.setAttribute("data-loaded-cover-url", known.urls[0]);
+              const knownCounter = knownBtn && knownBtn.querySelector(".gearImgCounter");
+              if (knownCounter && known.urls.length > 1) {
+                knownCounter.textContent = `${known.idx + 1}/${known.urls.length}`;
+                knownCounter.hidden = false;
+              }
+              return;
+            }
             storageFetchKayakCoverUrl(num)
               .then((url) => {
                 if (!url) return;
@@ -1326,7 +1345,14 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
       // AbortController: listener jest automatycznie usuwany gdy viewEl dostaje nową treść
       // (MutationObserver na firstChild) — zapobiega akumulacji listenerów przy nawigacji
       const keyAbort = new AbortController();
-      new MutationObserver(() => keyAbort.abort()).observe(viewEl, { childList: true });
+      // Obserwator jest jednorazowy z założenia (ma tylko przerwać listenery przy
+      // wyjściu z modułu), ale nigdy się nie rozłączał — przy sesji trwającej do
+      // 24 h obserwatory kumulowały się z każdym wejściem w moduł.
+      const keyObserver = new MutationObserver(() => {
+        keyAbort.abort();
+        keyObserver.disconnect();
+      });
+      keyObserver.observe(viewEl, { childList: true });
       window.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape" && !modalEl.classList.contains("hidden")) closeModal();
         if (ev.key === "Escape" && bundleModalEl && !bundleModalEl.classList.contains("hidden")) closeBundleModal();
@@ -1592,7 +1618,17 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         });
       }
 
-      searchEl.addEventListener("input", applyFilter);
+      // Debounce: filtr działa w pamięci, ale applyFilter kończy się render(),
+      // a render odpytuje Storage o zdjęcia każdej widocznej karty. Bez opóźnienia
+      // wpisanie „diesel" to sześć pełnych przebudów siatki i sześć fal żądań.
+      let searchDebounceTimer = null;
+      searchEl.addEventListener("input", () => {
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+          searchDebounceTimer = null;
+          applyFilter();
+        }, 200);
+      });
       if (filterWorkingOnlyEl) filterWorkingOnlyEl.addEventListener("change", applyFilter);
       if (filterAvailableNowOnlyEl) filterAvailableNowOnlyEl.addEventListener("change", applyFilter);
       if (filterFavoritesOnlyEl) filterFavoritesOnlyEl.addEventListener("change", applyFilter);
@@ -1674,6 +1710,13 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
   const isPrivate = toBool(k?.isPrivate);
   const privateRent = toBool(k?.privateForRent) || toBool(k?.isPrivateRentable);
 
+  // „Pół na pół" (kolumna arkusza „Pół na pół?") — kajak jest traktowany jak
+  // klubowy: rezerwuje go każdy, bez żadnych opłat. Flaga oznacza wyłącznie
+  // pierwszeństwo właściciela w realu, dlatego jest osobnym znacznikiem obok
+  // statusu sprawności, a nie zamiast niego (inaczej niż przy prywatnych).
+  // Przy rezerwacji właściciel dostaje maila (task gear.notifyHalfHalfOwner).
+  const isHalfHalf = toBool(k?.isHalfHalf);
+
   const canReserve = working && (!isPrivate || privateRent) && !isPool && canUserReserve;
 
   const title = buildKayakTitle(k);
@@ -1726,6 +1769,7 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
             ${isPrivate
               ? `<span class="gearMiniStatusIcon gearMiniPriv" title="Kajak prywatny">priv</span>`
               : `<span class="gearMiniStatusIcon ${working ? "gearMiniOk" : "gearMiniBad"}" title="${working ? "Sprawny" : "Niesprawny"}">${workingIconSvg(working)}</span>`}
+            ${isHalfHalf ? `<span class="gearMiniStatusIcon gearMiniHalf" title="Pół na pół — pierwszeństwo ma właściciel">${halfHalfIconSvg()}</span>` : ""}
             ${reservedNow ? `<span class="gearMiniStatusIcon gearMiniLocked" title="Zarezerwowany teraz">${lockIconSvg()}</span>` : ""}
             <button type="button" class="gearMiniMoreBtn gearMoreBtn" title="Szczegóły" aria-label="Szczegóły">${dotsIconSvg()}</button>
           </div>
@@ -1993,15 +2037,26 @@ function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
 }
 
 function buildKayakDetailsRows(k) {
+  // Pola własnościowe pokazujemy TYLKO gdy coś znaczą — zgłoszenie użytkownika
+  // 23.09.2026. Przed syncem arkusza te kolumny były w Firestore puste i wypadały
+  // z listy; sync wpisał wszystkim kajakom jawne `false`, więc każda karta dostała
+  // trzy wiersze „nie" i widok mobilny się rozjechał. „Nie jest prywatny" i „nie
+  // jest pół na pół" to domyślny stan klubowego kajaka — nie ma go po co pisać.
+  const isPrivate = toBool(k?.isPrivate);
+  const isHalfHalf = toBool(k?.isHalfHalf);
+  const privateRentable = toBool(k?.privateForRent) || toBool(k?.isPrivateRentable);
+
   const rows = [
     ["Rozmiar", k?.size],
     ["Litrów", k?.liters],
     ["Zakres wag", k?.weightRange],
     ["Kokpit", k?.cockpit],
-    ["Pół na pół?", toBoolOrNull(k?.isHalfHalf) === null ? "" : (toBool(k?.isHalfHalf) ? "tak" : "nie")],
+    ["Pół na pół?", isHalfHalf ? "tak" : ""],
     ["Składowany", k?.storage],
-    ["Prywatny?", toBoolOrNull(k?.isPrivate) === null ? "" : (toBool(k?.isPrivate) ? "tak" : "nie")],
-    ["Prywatny do wypożyczenia?", toBoolOrNull(k?.privateForRent) === null && toBoolOrNull(k?.isPrivateRentable) === null ? "" : ((toBool(k?.privateForRent) || toBool(k?.isPrivateRentable)) ? "tak" : "nie")],
+    ["Prywatny?", isPrivate ? "tak" : ""],
+    // Sensowne wyłącznie przy kajaku prywatnym: mówi, czy właściciel udostępnia
+    // go klubowi. Przy klubowym i „pół na pół" nie niesie żadnej informacji.
+    ["Prywatny do wypożyczenia?", isPrivate ? (privateRentable ? "tak" : "nie") : ""],
     ["Kontakt do właściciela", k?.ownerContact],
     ["Uwagi", k?.notes]
   ]
@@ -2179,6 +2234,15 @@ function workingIconSvg(ok) {
 
 function lockIconSvg() {
   return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="9.5" width="11" height="8" rx="1.5"/><path d="M7.5 9.5V7a2.5 2.5 0 015 0v2.5"/></svg>`;
+}
+
+// „Pół na pół" — koło z zamalowaną połową: klub / właściciel. Czytelne przy 16px,
+// nie myli się z ikoną sprawności (pełne koło z ptaszkiem) ani z kłódką.
+// Świadomie BEZ legendy nad listą (decyzja użytkownika 23.09.2026 — legenda
+// zaśmiecała obraz listy): wyjaśnienie niesie tooltip ikony i wiersz
+// „Pół na pół?" w szczegółach karty.
+function halfHalfIconSvg() {
+  return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="8.5"/><path d="M10 1.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg>`;
 }
 
 function dotsIconSvg() {

@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import {resolveFunctionRoleEmail} from "../setup/function_roles_service";
 import {computeBasenGodzinyBalance, blockBasenGodzinyInTx, refundBasenGodzinyInTx} from "./basen_godziny_service";
 import {norm} from "../shared/text_utils";
+import {getCachedDoc} from "../setup/doc_cache";
 
 /**
  * Błąd walidacji/reguły biznesowej (zły input, kolizja, stan konfliktowy) — zawsze 400
@@ -147,7 +148,7 @@ function splitEmails(raw: any): string[] {
 }
 
 export async function getBasenVars(db: FirebaseFirestore.Firestore): Promise<BasenVars> {
-  const snap = await db.collection("setup").doc("vars_basen").get();
+  const snap = await getCachedDoc(db, "setup", "vars_basen");
   const vars = (snap.exists ? (snap.data() as any)?.vars || {} : {}) as Record<string, any>;
 
   return {
@@ -275,13 +276,19 @@ export async function getAttendeesBySessionSlot(
 
   const enrollments = snap.docs.map((d) => d.data() as BasenEnrollment);
 
-  const uniqueUids = Array.from(new Set(enrollments.map((e) => e.userUid)));
+  // N pojedynczych odczytów (choć zrównoleglonych) → jedno wywołanie getAll:
+  // N round-tripów do Firestore zamienia się w jeden. Ten sam wzorzec, którego
+  // już używa getKayakReservationsHandler.ts i getAdminPendingHandler.ts.
+  const uniqueUids = Array.from(new Set(enrollments.map((e) => e.userUid))).filter(Boolean);
   const nicknameByUid = new Map<string, string>();
-  await Promise.all(uniqueUids.map(async (uid) => {
-    const userSnap = await db.collection("users_active").doc(uid).get();
-    const nick = String((userSnap.data() as any)?.profile?.nickname || "").trim();
-    if (nick) nicknameByUid.set(uid, nick);
-  }));
+  if (uniqueUids.length) {
+    const refs = uniqueUids.map((uid) => db.collection("users_active").doc(uid));
+    const userSnaps = await db.getAll(...refs);
+    for (const userSnap of userSnaps) {
+      const nick = String((userSnap.data() as any)?.profile?.nickname || "").trim();
+      if (nick) nicknameByUid.set(userSnap.id, nick);
+    }
+  }
 
   const byKey = new Map<string, SimpleAttendee[]>();
   for (const e of enrollments) {
@@ -942,20 +949,59 @@ function kayakCompactLabel(k: any, fallbackId: string): string {
 // Pełna i krótka etykieta w JEDNYM odczycie dokumentu — używane tam, gdzie oba
 // warianty są potrzebne naraz (getBasenSessionsHandler: pełna w "Moje konto"/modalu
 // edycji, krótka na liście uczestników), żeby nie odpytywać tego samego kajaka dwa razy.
-export async function resolveKayakLabels(
+/**
+ * Rozwiązuje etykiety kajaków (pełną i skróconą) dla zbioru ID — jedno
+ * wywołanie getAll zamiast N osobnych odczytów dokumentów. Wołane przy każdym GET /api/basen/sessions (ekran startowy
+ * i moduł Basen), więc N round-tripów było płacone na najczęściej odwiedzanym ekranie.
+ */
+export async function resolveKayakLabelsBulk(
   db: FirebaseFirestore.Firestore,
-  kayakId: string
-): Promise<{full: string; compact: string}> {
-  if (kayakId === "PRIVATE") return {full: "Kajak prywatny", compact: "Prywatny"};
-  const snap = await db.collection("gear_kayaks").doc(kayakId).get();
-  if (!snap.exists) return {full: `Kajak (nr ${kayakId})`, compact: `Kajak ${kayakId}`};
-  const data = snap.data();
-  return {full: kayakBaseLabel(data, kayakId), compact: kayakCompactLabel(data, kayakId)};
+  kayakIds: string[]
+): Promise<Map<string, {full: string; compact: string}>> {
+  const out = new Map<string, {full: string; compact: string}>();
+  const ids = Array.from(new Set(kayakIds.filter((id) => id && id !== "PRIVATE")));
+  if (!ids.length) return out;
+
+  const refs = ids.map((id) => db.collection("gear_kayaks").doc(id));
+  const snaps = await db.getAll(...refs);
+  for (const snap of snaps) {
+    const id = snap.id;
+    if (!snap.exists) {
+      out.set(id, {full: `Kajak (nr ${id})`, compact: `Kajak ${id}`});
+      continue;
+    }
+    const data = snap.data();
+    out.set(id, {full: kayakBaseLabel(data, id), compact: kayakCompactLabel(data, id)});
+  }
+  return out;
 }
 
 export interface AvailableKayak { id: string; label: string; isPrivate: boolean; ownerContact: string | null }
 
+// Katalog kajaków basenowych: pełny odczyt gear_kayaks przy KAŻDYM żądaniu
+// /api/basen/sessions (ekran startowy + moduł Basen), choć kajaków basenowych
+// jest garstka. Filtrowanie po stronie zapytania odpada: sync zapisuje pole
+// `storedAt`, starsze rekordy mają `storage`, a wartości są pisane z wielkiej
+// litery („Basen") — `where` jest wrażliwe na wielkość znaków i nazwę pola.
+// Zamiast tego cache w pamięci instancji: katalog zmienia się wyłącznie przy
+// syncu z arkusza, więc 60 s opóźnienia jest bez znaczenia operacyjnego.
+const POOL_KAYAKS_TTL_MS = process.env.VITEST ? 0 : 60 * 1000;
+let _poolKayaksCache: {ts: number; promise: Promise<any[]>} | null = null;
+
 async function fetchPoolKayaks(db: FirebaseFirestore.Firestore): Promise<any[]> {
+  const now = Date.now();
+  if (POOL_KAYAKS_TTL_MS > 0 && _poolKayaksCache && now - _poolKayaksCache.ts < POOL_KAYAKS_TTL_MS) {
+    return _poolKayaksCache.promise;
+  }
+  const promise = fetchPoolKayaksUncached(db).catch((err) => {
+    _poolKayaksCache = null;
+    throw err;
+  });
+  _poolKayaksCache = {ts: now, promise};
+  return promise;
+}
+
+async function fetchPoolKayaksUncached(db: FirebaseFirestore.Firestore): Promise<any[]> {
   const kayaksSnap = await db.collection("gear_kayaks").where("isActive", "==", true).get();
   return kayaksSnap.docs
     .map((d) => {

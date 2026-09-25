@@ -1,3 +1,4 @@
+import {getCachedDoc} from "./doc_cache";
 export type AppVarsDoc = {
   vars?: Record<string, { value?: any }>;
 };
@@ -28,7 +29,7 @@ function toNumber(v: any, fallback: number): number {
 }
 
 export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVars> {
-  const snap = await db.collection("setup").doc("vars_members").get();
+  const snap = await getCachedDoc(db, "setup", "vars_members");
   const raw = (snap.exists ? (snap.data() as AppVarsDoc) : null) || null;
 
   return {

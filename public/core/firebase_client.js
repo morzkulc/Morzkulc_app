@@ -8,12 +8,10 @@ import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getStorage,
-  ref,
-  listAll,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+// SDK Storage ładowany LENIWIE (patrz loadStorage niżej) — używa go wyłącznie
+// moduł Sprzęt (zdjęcia) i Klub (wideo), a import statyczny pobierał i inicjalizował
+// go przy każdym starcie aplikacji, także dla użytkowników, którzy tych ekranów
+// nigdy nie otwierają.
 
 // authDomain NIE jest tu wpisany na sztywno — patrz getFirebaseConfig(). Musi być
 // RÓWNY aktualnej domenie, z której otwarto apkę (host), inaczej signInWithRedirect
@@ -122,7 +120,39 @@ export function authGetBasicUser(user) {
   };
 }
 
-const storage = getStorage(app);
+// Jedna obietnica na całe życie karty: równoległe wywołania (siatka sprzętu woła
+// te funkcje dla wielu kart naraz) współdzielą ten sam import i tę samą instancję.
+let _storagePromise = null;
+function loadStorage() {
+  if (!_storagePromise) {
+    _storagePromise = import("https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js")
+      .then((mod) => ({
+        storage: mod.getStorage(app),
+        ref: mod.ref,
+        listAll: mod.listAll,
+        getDownloadURL: mod.getDownloadURL,
+      }));
+  }
+  return _storagePromise;
+}
+
+// Cache adresów ze Storage: klucz → Promise<url>. Bez niego każdy render siatki
+// sprzętu odpytywał Storage od nowa dla KAŻDEJ karty (listAll + getDownloadURL,
+// czyli do dwóch round-tripów na sztukę), a szukajka renderuje siatkę przy każdym
+// wpisanym znaku. Trzymamy obietnicę, nie wynik — równoległe wywołania dla tego
+// samego numeru współdzielą jedno żądanie zamiast się ścigać.
+// Adresy z getDownloadURL są stabilne w obrębie sesji; cache ginie przy przeładowaniu.
+const _urlCache = new Map();
+function cachedUrl(key, producer) {
+  if (!_urlCache.has(key)) {
+    _urlCache.set(key, producer().catch((err) => {
+      // Nie utrwalamy porażki — kolejne wejście ma prawo spróbować ponownie.
+      _urlCache.delete(key);
+      throw err;
+    }));
+  }
+  return _urlCache.get(key);
+}
 
 function kayakStorageNumber(number) {
   const n = String(number || "").trim();
@@ -137,7 +167,9 @@ function kayakStorageNumber(number) {
 //   GEAR/KAJAKS/013/COVER/
 export async function storageFetchKayakCoverUrl(number) {
   const { padded } = kayakStorageNumber(number);
+  return cachedUrl(`cover:${padded}`, async () => {
   try {
+    const { storage, ref, listAll, getDownloadURL } = await loadStorage();
     const coverRef = ref(storage, `GEAR/KAJAKS/${padded}/COVER`);
     const listing = await listAll(coverRef);
     if (!listing.items.length) return null;
@@ -147,11 +179,13 @@ export async function storageFetchKayakCoverUrl(number) {
   } catch {
     return null;
   }
+  });
 }
 
 // Galeria: wszystkie pliki z GEAR/KAJAKS/013/GALLERY/
 export async function storageFetchKayakGalleryUrls(number) {
   const { padded } = kayakStorageNumber(number);
+  const { storage, ref, listAll, getDownloadURL } = await loadStorage();
   const galleryRef = ref(storage, `GEAR/KAJAKS/${padded}/GALLERY`);
   const result = await listAll(galleryRef);
   if (!result.items.length) return [];
@@ -163,22 +197,28 @@ export async function storageFetchKayakGalleryUrls(number) {
 export async function storageFetchHelmetUrl(number) {
   const n = String(number || "").trim();
   if (!n) return null;
-  try {
-    return await getDownloadURL(ref(storage, `GEAR/HELMETS/${n}_bok.webp`));
-  } catch {
-    return null;
-  }
+  return cachedUrl(`helmet:${n}`, async () => {
+    try {
+      const { storage, ref, getDownloadURL } = await loadStorage();
+      return await getDownloadURL(ref(storage, `GEAR/HELMETS/${n}_bok.webp`));
+    } catch {
+      return null;
+    }
+  });
 }
 
 // Zdjęcie frontalne kasku: GEAR/HELMETS/<number>.webp
 export async function storageFetchHelmetFrontUrl(number) {
   const n = String(number || "").trim();
   if (!n) return null;
-  try {
-    return await getDownloadURL(ref(storage, `GEAR/HELMETS/${n}.webp`));
-  } catch {
-    return null;
-  }
+  return cachedUrl(`helmetFront:${n}`, async () => {
+    try {
+      const { storage, ref, getDownloadURL } = await loadStorage();
+      return await getDownloadURL(ref(storage, `GEAR/HELMETS/${n}.webp`));
+    } catch {
+      return null;
+    }
+  });
 }
 
 // Pojedyncze zdjęcie kamizelki: GEAR/LIFEJACKETS/<number>.webp
@@ -186,17 +226,21 @@ export async function storageFetchHelmetFrontUrl(number) {
 export async function storageFetchLifejacketUrl(number) {
   const n = String(number || "").trim();
   if (!n) return null;
-  try {
-    return await getDownloadURL(ref(storage, `GEAR/LIFEJACKETS/${n}.webp`));
-  } catch {
-    return null;
-  }
+  return cachedUrl(`lifejacket:${n}`, async () => {
+    try {
+      const { storage, ref, getDownloadURL } = await loadStorage();
+      return await getDownloadURL(ref(storage, `GEAR/LIFEJACKETS/${n}.webp`));
+    } catch {
+      return null;
+    }
+  });
 }
 
 // Wideo wprowadzające "Jak działa klub": video/Morzkulc_długi.mp4 (wgrane ręcznie
 // w konsoli Firebase Storage, patrz moduł Klub).
 export async function storageFetchKlubVideoUrl() {
   try {
+    const { storage, ref, getDownloadURL } = await loadStorage();
     return await getDownloadURL(ref(storage, "video/Morzkulc_długi.mp4"));
   } catch {
     return null;

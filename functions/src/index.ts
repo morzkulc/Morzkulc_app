@@ -1,6 +1,10 @@
 /* eslint-disable require-jsdoc */
 /* eslint-disable valid-jsdoc */
 
+// MUSI być pierwszym importem — mierzy koszt załadowania całej reszty grafu
+// modułów (patrz service/boot_timer.ts). Sam nie ładuje niczego.
+import {getModuleEvalMs, markModuleEvalDone} from "./service/boot_timer";
+
 import {onRequest} from "firebase-functions/v2/https";
 import {setGlobalOptions, logger} from "firebase-functions/v2";
 import * as admin from "firebase-admin";
@@ -128,7 +132,57 @@ function isAllowedHost(reqHost: string): boolean {
   return ALLOWED_HOSTS.has(reqHost);
 }
 
+// ── Server-Timing: pomiar czasu handlera i kosztu zimnego startu ─────────────
+// Wpinamy się w setCorsHeaders, bo to JEDYNA funkcja wołana dokładnie raz przez
+// każdy z 65 endpointów (bezpośrednio w index.ts albo przez deps.setCorsHeaders
+// w plikach api/*.ts) — dzięki temu instrumentacja nie wymaga dotykania żadnego
+// handlera z osobna.
+//
+// Po co: bez rozbicia `ms = net + cold + app` po stronie klienta każda poprawka
+// rzędu 50 ms tonie w wahaniach zimnego startu (rząd sekund) i nie da się
+// uczciwie powiedzieć, czy cokolwiek przyspieszyło.
+//
+// cold;dur = process.uptime() przy PIERWSZYM żądaniu obsłużonym przez instancję,
+// czyli czas od startu procesu Node (w tym ~1,4 s na require całego lib/index.js).
+// To dolna granica pełnego kosztu zimnego startu — nie obejmuje schedulingu
+// Cloud Run i pobrania obrazu sprzed startu procesu (ta część jest widoczna po
+// stronie klienta jako `net`). Dla ciepłej instancji zawsze 0.
+let instanceWarm = false;
+
+function attachServerTiming(req: Request, res: Response) {
+  const r = res as any;
+  if (r.__stAttached) return; // OPTIONS przechodzi przez sendPreflight → setCorsHeaders
+  r.__stAttached = true;
+
+  const t0 = process.hrtime.bigint();
+  const coldMs = instanceWarm ? 0 : Math.round(process.uptime() * 1000);
+  const bootMs = getModuleEvalMs();
+  if (!instanceWarm) {
+    instanceWarm = true;
+    // DOKŁADNIE JEDNA linia na cykl życia instancji (nie na żądanie) — pozwala
+    // policzyć zimne starty zapytaniem do logów, czego dziś nie da się zrobić.
+    logger.info("coldstart", {fn: process.env.K_SERVICE || "", ms: coldMs, bootMs});
+  }
+
+  // Nagłówek musi powstać tuż przed wypchnięciem nagłówków, bo w momencie
+  // wywołania setCorsHeaders czas handlera jeszcze nie istnieje. Technika jak
+  // w pakiecie `on-headers`, bez dokładania zależności.
+  const origWriteHead = res.writeHead.bind(res);
+  (res as any).writeHead = function(...args: any[]) {
+    try {
+      if (!res.headersSent) {
+        const appMs = Number(process.hrtime.bigint() - t0) / 1e6;
+        res.setHeader("Server-Timing", `app;dur=${appMs.toFixed(1)}, cold;dur=${coldMs}, boot;dur=${bootMs}`);
+      }
+    } catch {
+      // Telemetria nigdy nie może wywrócić odpowiedzi.
+    }
+    return (origWriteHead as any)(...args);
+  };
+}
+
 function setCorsHeaders(req: Request, res: Response) {
+  attachServerTiming(req, res);
   const origin = getRequestOrigin(req);
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
@@ -926,7 +980,7 @@ export const appsScriptSync = onRequest({invoker: "private"}, async (req, res) =
     const payload = {...inPayload, requestedBy: who.email};
 
     // Synchronicznie — żeby zwrócić użytkownikowi realne podsumowanie wyniku.
-    const result = await runTaskById(taskId, payload, {dryRun: false});
+    const result = await (await loadRunTaskById())(taskId, payload, {dryRun: false});
 
     if (!result.ok) {
       logger.warn("appsScriptSync: task failed", {taskId, who: who.email, message: result.message});
@@ -1755,28 +1809,66 @@ export const eventInterestToggle = onRequest({invoker: "private"}, async (req, r
 
 /**
  * SERVICE MODULE EXPORTS
+ *
+ * Ładowane WARUNKOWO, za bramką FUNCTION_TARGET. Powód: każdy z tych pięciu
+ * modułów ciągnie service/runner → registry → 35 tasków → cztery providery
+ * z `googleapis`. Przy imporcie statycznym ten łańcuch ładował się w zimnym
+ * starcie WSZYSTKICH 65 funkcji HTTP, mimo że potrzebuje go pięć z nich.
+ * Zmierzone na produkcji 23.09.2026: boot;dur = 4032 ms (lokalnie 1207 ms,
+ * 1739 modułów).
+ *
+ * Jak to działa: przy deployu FUNCTION_TARGET jest pusty, więc discovery
+ * Firebase widzi wszystkie eksporty i wdraża komplet funkcji. W runtime
+ * FUNCTION_TARGET niesie nazwę uruchamianej funkcji, więc ładuje się wyłącznie
+ * jej moduł. Dla pozostałych 60 funkcji ten łańcuch nie powstaje w ogóle.
  */
-export {onUsersActiveCreated} from "./service/triggers/onUsersActiveCreated";
-export {onEventApproved} from "./service/triggers/onEventApproved";
-export {onServiceJobCreated} from "./service/worker/onJobCreatedWorker";
-export {serviceFallbackDaily} from "./service/worker/fallbackDailyWorker";
-export {adminRunServiceTask} from "./service/admin/adminRunTask";
+const FUNCTION_TARGET = process.env.FUNCTION_TARGET || "";
+/** true przy deployu (brak zmiennej) albo gdy to właśnie ta funkcja jest uruchamiana. */
+function servingOrDiscovering(name: string): boolean {
+  return !FUNCTION_TARGET || FUNCTION_TARGET === name;
+}
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+if (servingOrDiscovering("onUsersActiveCreated")) {
+  exports.onUsersActiveCreated = require("./service/triggers/onUsersActiveCreated").onUsersActiveCreated;
+}
+if (servingOrDiscovering("onEventApproved")) {
+  exports.onEventApproved = require("./service/triggers/onEventApproved").onEventApproved;
+}
+if (servingOrDiscovering("onServiceJobCreated")) {
+  exports.onServiceJobCreated = require("./service/worker/onJobCreatedWorker").onServiceJobCreated;
+}
+if (servingOrDiscovering("serviceFallbackDaily")) {
+  exports.serviceFallbackDaily = require("./service/worker/fallbackDailyWorker").serviceFallbackDaily;
+}
+if (servingOrDiscovering("adminRunServiceTask")) {
+  exports.adminRunServiceTask = require("./service/admin/adminRunTask").adminRunServiceTask;
+}
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 /**
  * SCHEDULER: Miesięczna opłata za przechowywanie prywatnych kajaków w klubie.
  * Uruchamiany 1. dnia każdego miesiąca o 04:00 czasu warszawskiego.
  */
 import {onSchedule} from "firebase-functions/v2/scheduler";
-import {runTaskById} from "./service/runner";
+// runner ładowany DYNAMICZNIE (patrz loadRunTaskById niżej) — import statyczny
+// ciągnął za sobą registry.ts → 35 tasków → cztery providery z `googleapis`,
+// czyli ~4 s ładowania modułów w zimnym starcie KAŻDEJ z 65 funkcji HTTP, choć
+// runnera używa tylko appsScriptSync, adminRunServiceTask i schedulery.
+// Zmierzone na produkcji 23.09.2026: boot;dur=4032 ms.
+async function loadRunTaskById() {
+  const {runTaskById} = await import("./service/runner.js");
+  return runTaskById;
+}
 
 export const gearPrivateStorageMonthly = onSchedule(
   {schedule: "0 4 1 * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("gearPrivateStorageMonthly: start");
-    const result = await runTaskById("gear.chargePrivateStorage", {});
+    const result = await (await loadRunTaskById())("gear.chargePrivateStorage", {});
     logger.info("gearPrivateStorageMonthly: charge done", result as unknown as Record<string, unknown>);
     // Po naliczeniu opłat: przegląd sald (snapshot ujemnych do panelu zarządu + maile przy przekroczeniu limitu).
-    const review = await runTaskById("godzinki.monthlyBalanceReview", {});
+    const review = await (await loadRunTaskById())("godzinki.monthlyBalanceReview", {});
     logger.info("gearPrivateStorageMonthly: balance review done", review as unknown as Record<string, unknown>);
   }
 );
@@ -1790,7 +1882,7 @@ export const usersSyncRolesDaily = onSchedule(
   {schedule: "30 4 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("usersSyncRolesDaily: start");
-    const result = await runTaskById("users.syncRolesFromSheet", {});
+    const result = await (await loadRunTaskById())("users.syncRolesFromSheet", {});
     logger.info("usersSyncRolesDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1806,7 +1898,7 @@ export const usersReconcileWorkspaceGroupsDaily = onSchedule(
   {schedule: "40 4 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("usersReconcileWorkspaceGroupsDaily: start");
-    const result = await runTaskById("users.reconcileWorkspaceGroups", {});
+    const result = await (await loadRunTaskById())("users.reconcileWorkspaceGroups", {});
     logger.info("usersReconcileWorkspaceGroupsDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1825,7 +1917,7 @@ export const eventsSyncSheetDaily = onSchedule(
   {schedule: "45 4 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("eventsSyncSheetDaily: start");
-    const result = await runTaskById("events.syncFromSheet", {});
+    const result = await (await loadRunTaskById())("events.syncFromSheet", {});
     logger.info("eventsSyncSheetDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1838,7 +1930,7 @@ export const eventsSyncCalendarDaily = onSchedule(
   {schedule: "0 5 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("eventsSyncCalendarDaily: start");
-    const result = await runTaskById("events.syncCalendar", {});
+    const result = await (await loadRunTaskById())("events.syncCalendar", {});
     logger.info("eventsSyncCalendarDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1854,7 +1946,7 @@ export const eventsNotifyUpcomingDaily = onSchedule(
   {schedule: "10 5 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("eventsNotifyUpcomingDaily: start");
-    const result = await runTaskById("events.notifyUpcoming", {});
+    const result = await (await loadRunTaskById())("events.notifyUpcoming", {});
     logger.info("eventsNotifyUpcomingDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1867,7 +1959,7 @@ export const kmRebuildMapMonthly = onSchedule(
   {schedule: "30 3 1 * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("kmRebuildMapMonthly: start");
-    const result = await runTaskById("km.rebuildMapData", {});
+    const result = await (await loadRunTaskById())("km.rebuildMapData", {});
     logger.info("kmRebuildMapMonthly: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1881,7 +1973,7 @@ export const basenGrantInstructorRewardsDaily = onSchedule(
   {schedule: "45 3 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("basenGrantInstructorRewardsDaily: start");
-    const result = await runTaskById("basen.grantInstructorRewards", {});
+    const result = await (await loadRunTaskById())("basen.grantInstructorRewards", {});
     logger.info("basenGrantInstructorRewardsDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1896,7 +1988,7 @@ export const godzinkiSyncDaily = onSchedule(
   {schedule: "15 5 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("godzinkiSyncDaily: start");
-    const result = await runTaskById("godzinki.syncFromSheet", {});
+    const result = await (await loadRunTaskById())("godzinki.syncFromSheet", {});
     logger.info("godzinkiSyncDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1911,7 +2003,7 @@ export const godzinkiArchiveSheetDaily = onSchedule(
   {schedule: "20 5 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("godzinkiArchiveSheetDaily: start");
-    const result = await runTaskById("godzinki.archiveSheetRows", {});
+    const result = await (await loadRunTaskById())("godzinki.archiveSheetRows", {});
     logger.info("godzinkiArchiveSheetDaily: done", result as unknown as Record<string, unknown>);
   }
 );
@@ -1926,7 +2018,11 @@ export const adminPendingNotifyDaily = onSchedule(
   {schedule: "0 6 * * *", timeZone: "Europe/Warsaw"},
   async () => {
     logger.info("adminPendingNotifyDaily: start");
-    const result = await runTaskById("admin.notifyPendingApprovals", {});
+    const result = await (await loadRunTaskById())("admin.notifyPendingApprovals", {});
     logger.info("adminPendingNotifyDaily: done", result as unknown as Record<string, unknown>);
   }
 );
+
+// Ostatnia instrukcja pliku — domyka pomiar kosztu ładowania grafu modułów
+// (patrz service/boot_timer.ts i nagłówek Server-Timing: boot;dur).
+markModuleEvalDone();

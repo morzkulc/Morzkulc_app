@@ -318,14 +318,23 @@ export function createMyReservationsModule({ id, type, label, defaultRoute, orde
         listEl.innerHTML = `<div class="hint">Ładuję...</div>`;
 
         try {
-          await loadKayakMap();
-
           const resp = await apiGetJson({
             url: MY_RESERVATIONS_URL,
             idToken: ctx.idToken
           });
 
           reservations = Array.isArray(resp?.items) ? resp.items : [];
+
+          // /api/gear/kayaks to najdroższe zapytanie modułu Sprzęt (do 500 dokumentów
+          // plus skan aktywnych rezerwacji). getReservationKayakTitles i tak woli
+          // items[] z samej rezerwacji, więc katalog jest potrzebny WYŁĄCZNIE dla
+          // rekordów sprzed formatu bundle.
+          const needsCatalog = reservations.some(
+            (r) => !(Array.isArray(r?.items) && r.items.length) &&
+              Array.isArray(r?.kayakIds) && r.kayakIds.length
+          );
+          if (needsCatalog) await loadKayakMap();
+
           renderReservations();
         } catch (e) {
           setErr(mapUserFacingApiError(e, "Nie udało się pobrać rezerwacji."));
@@ -422,7 +431,13 @@ export function createMyReservationsModule({ id, type, label, defaultRoute, orde
       });
 
       const keyAbort = new AbortController();
-      new MutationObserver(() => keyAbort.abort()).observe(viewEl, { childList: true });
+      // Obserwator jednorazowy — bez disconnect() kumulował się przy każdym
+      // wejściu w moduł (sesja trwa do 24 h bez przeładowania).
+      const keyObserver = new MutationObserver(() => {
+        keyAbort.abort();
+        keyObserver.disconnect();
+      });
+      keyObserver.observe(viewEl, { childList: true });
       window.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape" && !editModalEl.classList.contains("hidden")) {
           closeEditModal();
@@ -448,16 +463,19 @@ async function renderDedicatedEditView({ viewEl, reservationId, ctx }) {
   let kayakMap = new Map();
 
   try {
-    const [rsvResp, kayaksResp] = await Promise.all([
-      apiGetJson({ url: MY_RESERVATIONS_URL, idToken: ctx.idToken }),
-      apiGetJson({ url: KAYAKS_URL, idToken: ctx.idToken })
-    ]);
+    const rsvResp = await apiGetJson({ url: MY_RESERVATIONS_URL, idToken: ctx.idToken });
 
     const reservations = Array.isArray(rsvResp?.items) ? rsvResp.items : [];
     rsv = reservations.find((x) => String(x?.id || "") === String(reservationId || "")) || null;
 
-    const kayaks = Array.isArray(kayaksResp?.kayaks) ? kayaksResp.kayaks : [];
-    kayakMap = new Map(kayaks.map((k) => [String(k?.id || ""), buildKayakTitle(k)]));
+    // Katalog kajaków tylko dla rekordów legacy — patrz komentarz przy liście.
+    const needsCatalog = rsv && !(Array.isArray(rsv?.items) && rsv.items.length) &&
+      Array.isArray(rsv?.kayakIds) && rsv.kayakIds.length;
+    if (needsCatalog) {
+      const kayaksResp = await apiGetJson({ url: KAYAKS_URL, idToken: ctx.idToken });
+      const kayaks = Array.isArray(kayaksResp?.kayaks) ? kayaksResp.kayaks : [];
+      kayakMap = new Map(kayaks.map((k) => [String(k?.id || ""), buildKayakTitle(k)]));
+    }
   } catch (e) {
     viewEl.innerHTML = `
       <div class="card center">

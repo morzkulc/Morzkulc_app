@@ -74,6 +74,28 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
             <div id="reportsPanel"></div>
           </div>
         </div>
+
+        <div id="adminRejectModal" class="gearModal hidden" aria-hidden="true">
+          <div class="gearModalBackdrop" data-reject-modal-close></div>
+          <div class="gearModalCard">
+            <div class="gearModalTop">
+              <h3 id="adminRejectModalTitle">Odrzucenie</h3>
+              <button type="button" class="moduleNavBtn" data-reject-modal-close title="Zamknij">${NAV_BACK_SVG}</button>
+            </div>
+            <div class="gearModalBody">
+              <p class="hint" id="adminRejectModalHint"></p>
+              <div>
+                <label for="adminRejectReason">Powód odrzucenia</label>
+                <textarea id="adminRejectReason" maxlength="500" placeholder="Napisz, dlaczego odrzucasz — ten tekst trafi mailem do osoby zgłaszającej."></textarea>
+              </div>
+              <div id="adminRejectModalErr" class="err hidden"></div>
+            </div>
+            <div class="gearModalActions">
+              <button type="button" class="ghost ghostCancel" data-reject-modal-close>Anuluj</button>
+              <button type="button" class="primary" id="adminRejectConfirmBtn" disabled>Odrzuć</button>
+            </div>
+          </div>
+        </div>
       `;
 
       viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => setHash("home", "home"));
@@ -454,6 +476,86 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
       // Delegowana obsługa przycisków Zatwierdź/Odrzuć (contentEl trwa między
       // przeładowaniami — podmieniane jest tylko innerHTML).
       const KIND_LABEL = { godzinki: "godzinkę", event: "imprezę" };
+
+      // ── Modal odrzucenia z powodem ────────────────────────────────────────
+      // Zgłoszenie użytkownika 23.09.2026: przy odrzucaniu ma być pole tekstowe
+      // na uzasadnienie. Backend (/api/admin/reject) przyjmował `reason` już
+      // wcześniej — brakowało wyłącznie miejsca, w którym da się je wpisać.
+      // Powód jest OBOWIĄZKOWY: dla godzinek leci mailem do zgłaszającego, a
+      // sam wpis znika z jego historii, więc bez uzasadnienia zostałby z niczym.
+      const rejectModalEl = viewEl.querySelector("#adminRejectModal");
+      const rejectTitleEl = viewEl.querySelector("#adminRejectModalTitle");
+      const rejectHintEl = viewEl.querySelector("#adminRejectModalHint");
+      const rejectReasonEl = viewEl.querySelector("#adminRejectReason");
+      const rejectErrEl = viewEl.querySelector("#adminRejectModalErr");
+      const rejectConfirmBtn = viewEl.querySelector("#adminRejectConfirmBtn");
+      let rejectTarget = null; // { kind, id, card }
+
+      const closeRejectModal = () => {
+        rejectModalEl?.classList.add("hidden");
+        rejectModalEl?.setAttribute("aria-hidden", "true");
+        // Przyciski karty są blokowane w chwili otwarcia modala — po rezygnacji
+        // trzeba je odblokować, inaczej karta zostaje martwa do przeładowania.
+        rejectTarget?.card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        rejectTarget = null;
+        if (rejectReasonEl) rejectReasonEl.value = "";
+        if (rejectConfirmBtn) {
+          rejectConfirmBtn.disabled = true;
+          rejectConfirmBtn.textContent = "Odrzuć";
+        }
+        rejectErrEl?.classList.add("hidden");
+      };
+
+      const openRejectModal = ({ kind, id, card }) => {
+        rejectTarget = { kind, id, card };
+        if (rejectTitleEl) rejectTitleEl.textContent = `Odrzuć ${KIND_LABEL[kind] || "pozycję"}`;
+        if (rejectHintEl) {
+          rejectHintEl.textContent = kind === "godzinki"
+            ? "Pozycja zostanie oznaczona jako ODRZUCONA w arkuszu, zniknie z historii zgłaszającego, a powód poleci do niego mailem."
+            : "Pozycja zostanie oznaczona jako ODRZUCONA w arkuszu.";
+        }
+        rejectErrEl?.classList.add("hidden");
+        rejectModalEl?.classList.remove("hidden");
+        rejectModalEl?.setAttribute("aria-hidden", "false");
+        rejectReasonEl?.focus();
+      };
+
+      viewEl.querySelectorAll("[data-reject-modal-close]").forEach((el) => {
+        el.addEventListener("click", closeRejectModal);
+      });
+      rejectReasonEl?.addEventListener("input", () => {
+        if (rejectConfirmBtn) rejectConfirmBtn.disabled = !rejectReasonEl.value.trim();
+      });
+
+      rejectConfirmBtn?.addEventListener("click", async () => {
+        if (!rejectTarget) return;
+        const reason = String(rejectReasonEl?.value || "").trim();
+        if (!reason) return;
+
+        const { kind, id, card } = rejectTarget;
+        rejectErrEl?.classList.add("hidden");
+        rejectConfirmBtn.disabled = true;
+        rejectConfirmBtn.textContent = "Odrzucam…";
+
+        try {
+          await apiPostJson({
+            url: ADMIN_REJECT_URL,
+            idToken: ctx.idToken,
+            body: { kind, id, reason },
+          });
+          closeRejectModal();
+          await load();
+        } catch (e) {
+          if (rejectErrEl) {
+            rejectErrEl.textContent = mapUserFacingApiError(e, "Nie udało się odrzucić.");
+            rejectErrEl.classList.remove("hidden");
+          }
+          rejectConfirmBtn.disabled = false;
+          rejectConfirmBtn.textContent = "Odrzuć";
+          card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        }
+      });
+
       contentEl.addEventListener("click", async (ev) => {
         const approveBtn = ev.target.closest?.("[data-approve]");
         const rejectBtn = ev.target.closest?.("[data-reject]");
@@ -465,25 +567,29 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         const id = btn.getAttribute("data-id");
         if (!kind || !id) return;
 
+        // Zablokuj wszystkie przyciski tej karty na czas żądania
+        const card = btn.closest(".gearCard");
+
         if (!isApprove) {
-          if (!window.confirm(`Odrzucić ${KIND_LABEL[kind] || "pozycję"}? Zostanie oznaczona jako ODRZUCONA w arkuszu.`)) return;
+          setErr("");
+          card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+          openRejectModal({ kind, id, card });
+          return;
         }
 
         setErr("");
-        // Zablokuj wszystkie przyciski tej karty na czas żądania
-        const card = btn.closest(".gearCard");
         card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
 
         try {
           await apiPostJson({
-            url: isApprove ? ADMIN_APPROVE_URL : ADMIN_REJECT_URL,
+            url: ADMIN_APPROVE_URL,
             idToken: ctx.idToken,
             body: { kind, id },
           });
           await load();
         } catch (e) {
           // Odmowy merytoryczne zatwierdzenia (422) niosą czytelny komunikat PL.
-          setErr(mapUserFacingApiError(e, isApprove ? "Nie udało się zatwierdzić." : "Nie udało się odrzucić."));
+          setErr(mapUserFacingApiError(e, "Nie udało się zatwierdzić."));
           card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
         }
       });

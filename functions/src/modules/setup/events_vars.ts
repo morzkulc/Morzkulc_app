@@ -1,3 +1,4 @@
+import {getCachedDoc} from "./doc_cache";
 export type EventsVarsDoc = {
   vars?: Record<string, { value?: any }>;
 };
@@ -18,7 +19,7 @@ function toNumber(v: any, fallback: number): number {
 }
 
 export async function getEventsVars(db: FirebaseFirestore.Firestore): Promise<EventsVars> {
-  const snap = await db.collection("setup").doc("vars_members").get();
+  const snap = await getCachedDoc(db, "setup", "vars_members");
   const raw = (snap.exists ? (snap.data() as EventsVarsDoc) : null) || null;
 
   const reminderDays = toNumber(getVar(raw, "powiadomienie_imprezy"), 3);

@@ -459,14 +459,19 @@ async function resolveSzkoleniowiec(db: FirebaseFirestore.Firestore): Promise<Sz
   let mailbox = FALLBACK_MAILBOX;
 
   try {
-    const stateSnap = await db.collection("service_state").doc("function_roles").get();
+    // Oba dokumenty czytane równolegle: vars_members służy tylko jako fallback,
+    // ale pobranie go „na zapas" kosztuje jeden równoległy odczyt zamiast
+    // drugiego round-tripu w najczęstszym przypadku braku operatora.
+    const [stateSnap, varsSnap] = await Promise.all([
+      db.collection("service_state").doc("function_roles").get(),
+      db.collection("setup").doc("vars_members").get(),
+    ]);
     const szk = stateSnap.exists ? (stateSnap.data() as any)?.szkoleniowiec : null;
     operatorEmail = String(szk?.email || "").trim().toLowerCase();
     mailbox = String(szk?.mailbox || "").trim() || FALLBACK_MAILBOX;
 
     // Fallback do setup vars, gdy stan funkcyjny nie zna jeszcze operatora.
     if (!operatorEmail) {
-      const varsSnap = await db.collection("setup").doc("vars_members").get();
       const raw = varsSnap.exists ? (varsSnap.data() as any)?.vars?.szkoleniowiec?.value : null;
       const fromVars = String(raw || "").trim().toLowerCase();
       if (fromVars && fromVars.includes("@") && !fromVars.includes(",") && !fromVars.includes(";")) {
@@ -621,8 +626,28 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         const statusKey = String((data as any).status_key || newUserStatusCode);
 
         // Jednorazowy fallback po imieniu+nazwisku (tylko gdy nie ma jeszcze trafienia z BO26)
+        //
+        // Sondowanie to PEŁNY odczyt kolekcji users_opening_balance_26 (bez where,
+        // bez limitu). Dla kont, które nigdy się nie dopasują — sympatycy, kursanci,
+        // każdy kto dołączył po migracji — warunek `!openingMatch` jest prawdziwy
+        // NA ZAWSZE, więc ten skan wykonywał się przy KAŻDYM otwarciu aplikacji.
+        //
+        // Znacznik z TTL 24 h: sondujemy najwyżej raz na dobę na konto. Świadoma
+        // konsekwencja: wiersz dopisany do bilansu otwarcia po nieudanym sondowaniu
+        // zostanie podchwycony przy następnym logowaniu po upływie doby, a nie
+        // natychmiast. Zmiana imienia/nazwiska resetuje znacznik (patrz niżej).
+        const OB_PROBE_TTL_MS = 24 * 60 * 60 * 1000;
+        const probeAtRaw = (data as any)?.service?.openingBalanceNameProbeAt;
+        const probeAtMs = probeAtRaw && typeof probeAtRaw.toMillis === "function" ? probeAtRaw.toMillis() : 0;
+        const probedName = String((data as any)?.service?.openingBalanceNameProbeFor || "");
+        const currentName = `${normalizeStr(incomingProfile.firstName)}|${normalizeStr(incomingProfile.lastName)}`.toLowerCase();
+        const probeStillFresh = probeAtMs > 0 &&
+          Date.now() - probeAtMs < OB_PROBE_TTL_MS &&
+          probedName === currentName;
+
         if (
           !(data as any).openingMatch &&
+          !probeStillFresh &&
           incomingProfile.firstName &&
           incomingProfile.lastName
         ) {
@@ -679,6 +704,19 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
               enqueueWorkspaceGroupsRoleSync(uid, email)
                 .catch((e: any) => console.error("enqueueWorkspaceGroupsRoleSync (opening balance match) failed", {uid, message: e?.message}));
             }
+          } else {
+            // Nie znaleziono — zapamiętaj, żeby nie skanować całej kolekcji przy
+            // każdym otwarciu aplikacji. Znacznik niesie też imię i nazwisko,
+            // dla których sondowaliśmy: ich zmiana unieważnia go natychmiast.
+            userRef.set(
+              {
+                service: {
+                  openingBalanceNameProbeAt: admin.firestore.FieldValue.serverTimestamp(),
+                  openingBalanceNameProbeFor: currentName,
+                },
+              },
+              {merge: true}
+            ).catch((e: any) => console.error("openingBalanceNameProbe marker failed", {uid, message: e?.message}));
           }
         }
 
@@ -774,11 +812,16 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
 
         // Opiekunowie stażu kandydata: #2 z arkusza (admin.mentor), #1 = aktualny
         // szkoleniowiec (rozwiązywany tylko dla kandydata — ogranicza odczyty).
-        const szkoleniowiec = roleKey === "rola_kandydat" ? await resolveSzkoleniowiec(db) : null;
-        const kierownikSummary = await resolveKierownikSummary(db, uid, roleKey, deps.memberRoleKeys);
+        // Trzy niezależne odczyty równolegle — wcześniej czekały jeden na drugi,
+        // a /api/register jest pierwszym żądaniem przy każdym otwarciu aplikacji.
+        const [szkoleniowiec, kierownikSummary, isBasenAdmin] = await Promise.all([
+          roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
+          resolveKierownikSummary(db, uid, roleKey, deps.memberRoleKeys),
+          resolveBasenAdminGrant(db, email),
+        ]);
 
         const allowedActions = deps.computeAllowedActions(roleKey);
-        if (await resolveBasenAdminGrant(db, email)) {
+        if (isBasenAdmin) {
           if (!allowedActions.includes("basen.admin")) allowedActions.push("basen.admin");
         }
 
@@ -928,10 +971,13 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
 
       // Opiekunowie stażu (jak w gałęzi istniejącego usera). Nowy kandydat zwykle nie ma
       // jeszcze admin.mentor (trafia syncem z arkusza) — wtedy null.
-      const szkoleniowiec = roleKey === "rola_kandydat" ? await resolveSzkoleniowiec(db) : null;
+      const [szkoleniowiec, isBasenAdmin] = await Promise.all([
+        roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
+        resolveBasenAdminGrant(db, email),
+      ]);
 
       const allowedActions = deps.computeAllowedActions(roleKey);
-      if (await resolveBasenAdminGrant(db, email)) {
+      if (isBasenAdmin) {
         if (!allowedActions.includes("basen.admin")) allowedActions.push("basen.admin");
       }
 

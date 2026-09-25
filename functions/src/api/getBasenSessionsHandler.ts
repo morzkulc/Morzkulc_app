@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {listUpcomingSessions, getUserEnrollments, computeSlotAvailability, resolveKayakLabels, getBasenVars, sessionSlotDatetimeMs, getAttendeesBySessionSlot, getAvailableKayaksBySessionSlot} from "../modules/basen/basen_service";
+import {listUpcomingSessions, getUserEnrollments, computeSlotAvailability, resolveKayakLabelsBulk, getBasenVars, sessionSlotDatetimeMs, getAttendeesBySessionSlot, getAvailableKayaksBySessionSlot} from "../modules/basen/basen_service";
 import {getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 
 type Deps = {
@@ -61,10 +61,7 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
       const kayakIds = Array.from(new Set(
         userEnrollments.map((e) => e.kayakId).filter((id): id is string => Boolean(id) && id !== "PRIVATE")
       ));
-      const kayakLabels = new Map<string, {full: string; compact: string}>();
-      await Promise.all(kayakIds.map(async (id) => {
-        kayakLabels.set(id, await resolveKayakLabels(deps.db, id));
-      }));
+      const kayakLabels = await resolveKayakLabelsBulk(deps.db, kayakIds);
       const resolveOwnKayakLabel = (kayakId: string | null | undefined): string | null => {
         if (!kayakId) return null;
         if (kayakId === "PRIVATE") return "Kajak prywatny";

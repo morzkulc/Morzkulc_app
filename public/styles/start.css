@@ -228,6 +228,13 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
+/* Kafelek „Dysk klubowy" jest linkiem (<a>), nie przyciskiem — patrz komentarz
+   w klub_module.js. Bez tego przeglądarka podkreśliłaby jego etykietę. */
+a.klubTile { text-decoration: none; }
+/* Adresy w module Klub prowadzą do nawigacji — podkreślenie kropkowane sygnalizuje
+   klikalność, nie krzycząc kolorem linku w gęstym bloku danych. */
+.klubAddrLink { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.klubAddrLink:hover { color: var(--accent, #5b9dff); }
 :root[data-theme="light"] .klubTile { background: rgba(12, 18, 32, 0.03); }
 .klubTile svg { flex-shrink: 0; display: block; }
 .klubTile.active, .klubTile:hover { border-color: var(--accent, #3b82f6); background: rgba(59, 130, 246, 0.14); }

@@ -373,6 +373,10 @@ function seedDb(): FakeFirestore {
       kayak("K02"),
       kayak("K03", {isOperational: false}),
       kayak("K04", {isPrivate: true}),
+      // Kajak „pół na pół" należący do U1 (u1@x.pl) i kajak cudzy — do testów
+      // zwolnienia właściciela z opłaty godzinkowej.
+      kayak("K20", {isHalfHalf: true, ownerContact: "u1@x.pl"}),
+      kayak("K21", {isHalfHalf: true, ownerContact: "kto@inny.pl"}),
       kayak("K05", {isPrivate: true, isPrivateRentable: true}),
       kayak("K06", {storedAt: "Basen"}),
       kayak("K07", {isActive: false}),
@@ -509,7 +513,9 @@ describe("fetchItemDetails — walidacja sztuk", () => {
 describe("getItemsWithAvailability", () => {
   it("kajaki: pomija niesprawne/prywatne-bez-zgody/nieaktywne/złomowane, sortuje numerycznie", async () => {
     const {items} = await getItemsWithAvailability(seedDb().asDb(), "kayaks", START, END, 1);
-    expect(items.map((i) => i.id)).toEqual(["K01", "K02", "K05", "K06", "K10", "K11"]);
+    // K20/K21 to kajaki „pół na pół" — klubowe, więc normalnie dostępne
+    // (sortowanie numeryczne po `number`, stąd ich pozycja na końcu).
+    expect(items.map((i) => i.id)).toEqual(["K01", "K02", "K05", "K06", "K10", "K11", "K20", "K21"]);
     expect(items.every((i) => i.isAvailableForRange)).toBe(true);
     expect(items.find((i) => i.id === "K06")?.storage).toBe("Basen");
   });
@@ -724,6 +730,32 @@ describe("createBundleReservation — role i status", () => {
     const r = mustOk(await reserve(db, "U4", [kay("K01")]));
     expect(r).toMatchObject({costHours: 30, waived: false});
     expect(balance(db, "U4")).toBe(70);
+  });
+});
+
+describe("createBundleReservation — właściciel nie płaci za własny kajak", () => {
+  it("właściciel rezerwuje swój kajak → koszt 0, saldo bez zmian, brak wpisu spend", async () => {
+    const db = seedDb();
+    const r = mustOk(await reserve(db, "U1", [kay("K20")]));
+    expect(r).toMatchObject({costHours: 0});
+    expect(reservationDoc(db, r.reservationId)).toMatchObject({costHours: 0, chargeableKayakCount: 0, kayakCount: 1});
+    expect(spends(db, "U1")).toHaveLength(0);
+    expect(balance(db, "U1")).toBe(100);
+  });
+
+  it("ten sam kajak u kogoś, kto nie jest właścicielem → koszt normalny", async () => {
+    const db = seedDb();
+    const r = mustOk(await reserve(db, "U1", [kay("K21")]));
+    expect(r).toMatchObject({costHours: 30});
+    expect(balance(db, "U1")).toBe(70);
+  });
+
+  it("komplet własny + klubowy → płatny tylko klubowy", async () => {
+    const db = seedDb();
+    const r = mustOk(await reserve(db, "U1", [kay("K20"), kay("K01")]));
+    expect(r).toMatchObject({costHours: 30});
+    expect(reservationDoc(db, r.reservationId)).toMatchObject({kayakCount: 2, chargeableKayakCount: 1});
+    expect(balance(db, "U1")).toBe(70);
   });
 });
 

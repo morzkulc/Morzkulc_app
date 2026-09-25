@@ -148,18 +148,33 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
       // (współdzielona z usersNotifyAkademikAccessChanged.ts — treść maila o
       // nadaniu/cofnięciu dostępu do akademika). adres_siedziby: nowa, puste
       // dopóki użytkownik nie doda wiersza w arkuszu.
+      // adres_klub: adres samego klubu, dodany przez użytkownika 24.09.2026.
+      // Fallback na starszą nazwę adres_siedziby — ta nigdy nie została wpisana
+      // w arkuszu, ale kod ją czytał, więc zostaje dla zgodności.
       const adresy = {
         siedziba: String(vars?.adres_siedziby?.value || "").trim(),
         akademik: String(vars?.akademik_adres?.value || "").trim(),
+        klub: String(vars?.adres_klub?.value || vars?.adres_siedziby?.value || "").trim(),
       };
 
       // 5) Linki/dokumenty — tylko gdy zmienne istnieją.
+      // dysk_url: folder Dysku z regulaminami i statutem. Zgłoszenie użytkownika
+      // 23.09.2026 — „ludzie pytają, gdzie znaleźć regulaminy i statut".
       const linki: Record<string, string> = {};
       const statut = String(vars?.statut_url?.value || "").trim();
       const regulamin = String(vars?.regulamin_url?.value || "").trim();
+      const dysk = String(vars?.dysk_url?.value || "").trim();
+      // regulaminy / infografiki: katalogi Dysku z dodatkowymi materiałami o klubie
+      // (zgłoszenie użytkownika 24.09.2026). Każdy dostaje własny kafelek w module
+      // Klub — patrz LINK_TILES w klub_module.js.
+      const regulaminy = String(vars?.regulaminy?.value || "").trim();
+      const infografiki = String(vars?.infografiki?.value || "").trim();
       const klucze = String(vars?.klucze?.value || "").trim();
       if (statut) linki.statut = statut;
       if (regulamin) linki.regulamin = regulamin;
+      if (dysk) linki.dysk = dysk;
+      if (regulaminy) linki.regulaminy = regulaminy;
+      if (infografiki) linki.infografiki = infografiki;
       if (klucze) linki.klucze = klucze;
 
       // 6) Osoby z kluczami do siedziby / dostępem do akademika — widoczne dla

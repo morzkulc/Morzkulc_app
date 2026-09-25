@@ -10,6 +10,11 @@ import { apiPostJson, apiGetJson, setApiTokenGetter } from "/core/api_client.js"
 import { buildModulesFromSetup } from "/core/modules_registry.js";
 import { renderNav, renderView, spinnerHtml } from "/core/render_shell.js";
 import { hardReloadApp } from "/core/sw_update.js";
+import { mark } from "/core/perf.js";
+
+// Graf modułów core+modules jest już w tym momencie pobrany, sparsowany
+// i skompilowany — różnica js0→shell to jego koszt (metryka ms:jsGraph).
+mark("shell");
 
 const SW_UPDATE_CHECK_INTERVAL_MS = 20 * 60 * 1000; // 20 min — patrz komentarz przy setInterval
 
@@ -141,8 +146,20 @@ profileBtn?.addEventListener("click", () => {
   location.hash = "#/home/profile";
 });
 
+// Ustawienie location.hash przy starcie (gdy adres nie miał hasha) odpala to
+// zdarzenie, a trzy linie niżej renderView i tak jest wołane jawnie — przez co
+// dashboard budował się DWA RAZY, a każdy endpoint ekranu startowego leciał
+// podwójnie. Zmierzone 23.09.2026: 12 żądań zamiast 6, druga kopia z `net`
+// 438–991 ms zamiast 179–201 ms (konkurencja o łącze). Flaga gasi dokładnie
+// tamten jeden hashchange; zwykła nawigacja po aplikacji działa bez zmian.
+let suppressNextHashRender = false;
+
 window.addEventListener("hashchange", async () => {
   if (!ctx.session) return;
+  if (suppressNextHashRender) {
+    suppressNextHashRender = false;
+    return;
+  }
   await renderView({ viewEl, ctx });
 });
 
@@ -157,12 +174,15 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
   let redirectError = null;
   try {
     await authHandleRedirectResult();
+    mark("redirect");
   } catch (e) {
+    mark("redirect");
     redirectError = e?.message || String(e || "Błąd logowania");
     console.error("[Auth] getRedirectResult error:", e?.code, e?.message);
   }
 
   authOnChange(async (user) => {
+    mark("auth");
     if (!user) {
       hardResetUi();
       if (redirectError) {
@@ -192,7 +212,15 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
   viewEl.innerHTML = spinnerHtml();
 
   try {
-    const idToken = await authGetIdToken(user, true);
+    // forceRefresh=false: SDK Firebase trzyma ważny token przez godzinę i sam go
+    // odświeża przed wygaśnięciem, a linia niżej reszta aplikacji i tak korzysta
+    // z tego cache (authGetIdToken(ctx.user, false)). Wymuszenie dokładało round-trip
+    // do securetoken.googleapis.com przed pierwszym żądaniem do backendu —
+    // zmierzone 23.09.2026: 199 / 987 / 1010 ms czystego czekania.
+    // Custom claims nie są używane (role czytane z users_active), więc jedyny
+    // scenariusz, w którym forceRefresh cokolwiek zmieniał, tu nie występuje.
+    const idToken = await authGetIdToken(user, false);
+    mark("token");
     ctx.idToken = idToken;
     window.__APP_CTX__ = ctx;
 
@@ -200,14 +228,38 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
     // Wszystkie moduły korzystają z api_client.js, który wywołuje ten getter automatycznie.
     setApiTokenGetter(() => authGetIdToken(ctx.user, false));
 
-    const session = await apiPostJson({
+    // /api/register i /api/setup szły dotąd jeden po drugim — razem ~800 ms
+    // z ~2300 ms całego startu (zmierzone 23.09.2026). Równolegle wolno je puścić
+    // TYLKO dla konta, które już raz przeszło rejestrację: getSetup czyta
+    // users_active/{uid} po role_key, a registerUser ten dokument dopiero TWORZY
+    // przy pierwszym logowaniu — równoległe wywołanie dałoby wtedy pusty zestaw
+    // modułów. Znacznik trzymamy w localStorage per uid, więc powracający
+    // użytkownik korzysta z równoległości już przy pierwszym otwarciu karty.
+    const registeredKey = `mk.registered.${user.uid}`;
+    let knownRegistered = false;
+    try {
+      knownRegistered = localStorage.getItem(registeredKey) === "1";
+    } catch { /* tryb prywatny — zostaje ścieżka sekwencyjna */ }
+
+    const registerPromise = apiPostJson({
       url: REGISTER_URL,
       idToken,
       body: { hello: "world" }
     });
+    // Odpalamy setup od razu tylko dla znanego konta; inaczej dopiero po rejestracji.
+    const earlySetupPromise = knownRegistered
+      ? apiGetJson({ url: SETUP_URL, idToken }).catch(() => null)
+      : null;
 
+    const session = await registerPromise;
+
+    mark("register");
     ctx.session = session;
     window.__APP_CTX__ = ctx;
+
+    try {
+      localStorage.setItem(registeredKey, "1");
+    } catch { /* ignore */ }
 
     // Zapisz timestamp startu sesji (tylko przy świeżym logowaniu)
     if (!sessionStorage.getItem("morzkulc_session_started")) {
@@ -219,7 +271,13 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
     window.__APP_CTX__ = ctx;
 
     try {
-      const setupResp = await apiGetJson({ url: SETUP_URL, idToken });
+      // Samonaprawa: gdyby równoległy setup wrócił pusty (np. znacznik w
+      // localStorage był nieaktualny, bo konto usunięto i tworzy się od nowa),
+      // pobieramy go jeszcze raz — już po rejestracji.
+      let setupResp = earlySetupPromise ? await earlySetupPromise : null;
+      if (!setupResp?.setup?.modules) {
+        setupResp = await apiGetJson({ url: SETUP_URL, idToken });
+      }
       ctx.setup = setupResp?.setup || null;
       ctx.kursPreviewMode = setupResp?.kursPreviewMode === true;
       ctx.kursWypozycza = setupResp?.kursWypozycza === true;
@@ -233,21 +291,26 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
       window.__APP_CTX__ = ctx;
     }
 
+    mark("setup");
     ctx.modules = buildModulesFromSetup(ctx.setup, ctx.session?.allowed_actions ?? []);
+    mark("modules");
     window.__APP_CTX__ = ctx;
 
     renderNav({ navEl, ctx });
+    mark("nav");
 
     if (!location.hash) {
       const screenId = String(ctx.session?.screen || "");
       const targetModule = screenId
         ? (ctx.modules || []).find((m) => m.id === screenId)
         : null;
+      suppressNextHashRender = true;
       location.hash = targetModule
         ? `#/${targetModule.id}/${targetModule.defaultRoute || "home"}`
         : "#/home/home";
     }
     await renderView({ viewEl, ctx });
+    mark("view");
 
 
   } catch (e) {

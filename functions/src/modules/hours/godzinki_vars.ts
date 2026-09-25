@@ -1,3 +1,4 @@
+import {getCachedDoc} from "../setup/doc_cache";
 export type GodzinkiVarsDoc = {
   vars?: Record<string, { value?: any }>;
 };
@@ -36,7 +37,7 @@ function toDateUtc(v: any, fallback: Date): Date {
 }
 
 export async function getGodzinkiVars(db: FirebaseFirestore.Firestore): Promise<GodzinkiVars> {
-  const snap = await db.collection("setup").doc("vars_godzinki").get();
+  const snap = await getCachedDoc(db, "setup", "vars_godzinki");
   const raw = (snap.exists ? (snap.data() as GodzinkiVarsDoc) : null) || null;
 
   return {

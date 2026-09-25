@@ -1,25 +1,88 @@
 import { createGenericModule } from "/core/module_stub.js";
-import { createGearModule } from "/modules/gear_module.js";
-import { createMyReservationsModule } from "/modules/my_reservations_module.js";
-import { createGodzinkiModule } from "/modules/godzinki_module.js";
-import { createImprezaModule } from "/modules/impreza_module.js";
-import { createBasenModule } from "/modules/basen_module.js";
-import { createAdminPendingModule } from "/modules/admin_pending_module.js";
-import { createKmModule } from "/modules/km_module.js";
-import { createKursModule } from "/modules/kurs_module.js";
-import { createKursGodzinkiModule } from "/modules/kurs_godzinki_module.js";
-import { createKlubModule } from "/modules/klub_module.js";
+
+/**
+ * MODUŁY ŁADOWANE LENIWIE
+ *
+ * Wcześniej ten plik importował statycznie 11 modułów, a app_shell.js importuje
+ * rejestr — więc przeglądarka musiała pobrać, sparsować i SKOMPILOWAĆ 430 KB kodu
+ * modułów (plus 139 KB core) zanim wykonała pierwszą linię aplikacji. Użytkownik
+ * wchodzący tylko na ekran startowy płacił za moduł Sprzętu (146 KB), Basenu
+ * (71 KB), Kilometrówki (55 KB) i pozostałe. Na telefonie to koszt CPU przy
+ * KAŻDYM uruchomieniu, także z ciepłym cache.
+ *
+ * Teraz: rejestr zna wyłącznie metadane (id, label, order, defaultRoute, access),
+ * które i tak pochodzą z setup/app. Kod modułu pobierany jest dopiero przy
+ * pierwszym wejściu w ten moduł — routing jest asynchroniczny (render_shell.js
+ * robi `await mod.render(...)`) i ma już spinner, więc nic po drodze nie miga.
+ *
+ * Nawigacja (renderNav), kontrola dostępu (canSeeModule) i routing
+ * (getModuleRouteByType) używają wyłącznie metadanych — zweryfikowane.
+ */
+
+const KNOWN_MODULE_TYPES = new Set(["gear", "godzinki", "imprezy", "basen", "km", "admin_pending", "kurs", "kurs_godzinki", "klub"]);
+
+/**
+ * type → { load: () => import(...), factory: nazwa eksportowanej fabryki }
+ * Dodanie modułu: jeden wpis tutaj (plus typ w KNOWN_MODULE_TYPES powyżej).
+ */
+const MODULE_LOADERS = {
+  gear: { load: () => import("/modules/gear_module.js"), factory: "createGearModule" },
+  godzinki: { load: () => import("/modules/godzinki_module.js"), factory: "createGodzinkiModule" },
+  imprezy: { load: () => import("/modules/impreza_module.js"), factory: "createImprezaModule" },
+  basen: { load: () => import("/modules/basen_module.js"), factory: "createBasenModule" },
+  km: { load: () => import("/modules/km_module.js"), factory: "createKmModule" },
+  admin_pending: { load: () => import("/modules/admin_pending_module.js"), factory: "createAdminPendingModule" },
+  kurs: { load: () => import("/modules/kurs_module.js"), factory: "createKursModule" },
+  kurs_godzinki: { load: () => import("/modules/kurs_godzinki_module.js"), factory: "createKursGodzinkiModule" },
+  klub: { load: () => import("/modules/klub_module.js"), factory: "createKlubModule" },
+  my_reservations: { load: () => import("/modules/my_reservations_module.js"), factory: "createMyReservationsModule" },
+};
+
+/**
+ * Zwraca obiekt modułu z metadanymi dostępnymi od razu i `render()`, który przy
+ * pierwszym wywołaniu dociąga kod.
+ *
+ * Instancja fabryki jest tworzona RAZ i zapamiętywana — moduły trzymają stan
+ * w domknięciach (np. wybrane filtry, cache zdjęć w module Sprzęt), więc
+ * tworzenie jej przy każdym renderze gubiłoby ten stan.
+ */
+function createLazyModule(base) {
+  const entry = MODULE_LOADERS[base.type];
+  if (!entry) return createGenericModule(base);
+
+  let instancePromise = null;
+
+  return {
+    ...base,
+    async render(args) {
+      if (!instancePromise) {
+        instancePromise = entry.load()
+          .then((mod) => {
+            const factory = mod[entry.factory];
+            if (typeof factory !== "function") {
+              throw new Error(`Moduł ${base.type}: brak eksportu ${entry.factory}`);
+            }
+            return factory(base);
+          })
+          .catch((err) => {
+            // Nie utrwalamy porażki (np. chwilowy brak sieci przy pierwszym
+            // wejściu) — kolejna próba ma prawo się powieść.
+            instancePromise = null;
+            throw err;
+          });
+      }
+      const instance = await instancePromise;
+      return instance.render(args);
+    },
+  };
+}
 
 /**
  * Resolves the module component type from setup config.
  *
  * Priority: explicit `type` field (only if it matches a known type) → derived from PL label.
  * Returns a stable lowercase type string or null for unknown/generic modules.
- *
- * Known types: "gear" | "godzinki" | "imprezy" | "basen" | "km" | "admin_pending" | "kurs" | "klub"
  */
-const KNOWN_MODULE_TYPES = new Set(["gear", "godzinki", "imprezy", "basen", "km", "admin_pending", "kurs", "kurs_godzinki", "klub"]);
-
 function resolveModuleType(cfg) {
   const typeField = String(cfg?.type || "").trim().toLowerCase();
   if (typeField && KNOWN_MODULE_TYPES.has(typeField)) return typeField;
@@ -40,13 +103,25 @@ function resolveModuleType(cfg) {
 }
 
 /**
+ * Domyślna trasa modułu, gdy setup podaje "home" (czyli nic konkretnego).
+ * Wydzielone z buildModulesFromSetup, żeby metadane dało się policzyć bez
+ * dotykania kodu modułu.
+ */
+const DEFAULT_ROUTE_BY_TYPE = {
+  gear: "kayaks",
+  godzinki: "balance",
+  basen: "sessions",
+  km: "form",
+  kurs: "skrypt",
+  kurs_godzinki: "info",
+  klub: "klucze",
+};
+
+/**
  * NEW FORMAT ONLY
  * setup.modules = {
  *   modul_1: { label, type, order, enabled, access, defaultRoute }
  * }
- *
- * `type` is the preferred field for component resolution.
- * PL `label` is used as fallback when `type` is absent (backwards compatibility).
  */
 export function buildModulesFromSetup(setup, allowedActions) {
   const modulesCfg = setup?.modules;
@@ -57,90 +132,36 @@ export function buildModulesFromSetup(setup, allowedActions) {
 
   const modules = Object.entries(modulesCfg).map(([id, cfg]) => {
     const moduleType = resolveModuleType(cfg);
+    const rawDefaultRoute = String(cfg?.defaultRoute || "home");
+
+    // Imprezy: menu zawsze ląduje na liście (formularz dodawania jest zakładką
+    // wewnątrz modułu) — niezależnie od defaultRoute w setup.
+    // Zarząd: zawsze lista.
+    let defaultRoute = rawDefaultRoute;
+    if (moduleType === "imprezy" || moduleType === "admin_pending") {
+      defaultRoute = "list";
+    } else if (rawDefaultRoute === "home" && DEFAULT_ROUTE_BY_TYPE[moduleType]) {
+      defaultRoute = DEFAULT_ROUTE_BY_TYPE[moduleType];
+    }
+
     const base = {
       id,
       type: moduleType,
-      label: String(cfg?.label || id),
-      defaultRoute: String(cfg?.defaultRoute || "home"),
+      label: moduleType === "kurs" ? "Skrypt" : String(cfg?.label || id),
+      defaultRoute,
       order: Number(cfg?.order ?? 9999),
       enabled: Boolean(cfg?.enabled ?? false),
       access: cfg?.access || {}
     };
 
-    if (moduleType === "gear") {
-      return createGearModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "kayaks" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "godzinki") {
-      return createGodzinkiModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "balance" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "imprezy") {
-      return createImprezaModule({
-        ...base,
-        // Menu „Imprezy" zawsze ląduje na liście (formularz dodawania jest zakładką
-        // wewnątrz modułu) — niezależnie od defaultRoute w setup.
-        defaultRoute: "list"
-      });
-    }
-
-    if (moduleType === "basen") {
-      return createBasenModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "sessions" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "km") {
-      return createKmModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "form" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "admin_pending") {
-      return createAdminPendingModule({
-        ...base,
-        defaultRoute: "list"
-      });
-    }
-
-    if (moduleType === "kurs") {
-      return createKursModule({
-        ...base,
-        label: "Skrypt",
-        defaultRoute: base.defaultRoute === "home" ? "skrypt" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "kurs_godzinki") {
-      return createKursGodzinkiModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "info" : base.defaultRoute
-      });
-    }
-
-    if (moduleType === "klub") {
-      return createKlubModule({
-        ...base,
-        defaultRoute: base.defaultRoute === "home" ? "klucze" : base.defaultRoute
-      });
-    }
-
-    return createGenericModule(base);
+    return createLazyModule(base);
   });
 
   const gearModule = modules.find((m) => m?.type === "gear") || null;
 
   if (gearModule) {
     modules.push(
-      createMyReservationsModule({
+      createLazyModule({
         id: "my_reservations",
         type: "my_reservations",
         label: "Moje rezerwacje",
@@ -153,11 +174,10 @@ export function buildModulesFromSetup(setup, allowedActions) {
   }
 
   // Fallback: create admin_pending only when setup/app has no admin_pending type module.
-  // When modul_X has label "Zarząd" or type "admin_pending", it already handles this.
   const hasAdminModule = modules.some((m) => m?.type === "admin_pending");
   if (!hasAdminModule && Array.isArray(allowedActions) && allowedActions.includes("admin.pending")) {
     modules.push(
-      createAdminPendingModule({
+      createLazyModule({
         id: "admin_pending",
         type: "admin_pending",
         label: "Zarząd",

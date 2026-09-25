@@ -1,3 +1,4 @@
+import {getCachedDoc} from "./doc_cache";
 export type GearVarsDoc = {
   vars?: Record<string, { value?: any }>;
 };
@@ -36,7 +37,7 @@ function toBool(v: any, fallback: boolean): boolean {
 }
 
 export async function getGearVars(db: FirebaseFirestore.Firestore): Promise<GearVars> {
-  const snap = await db.collection("setup").doc("vars_gear").get();
+  const snap = await getCachedDoc(db, "setup", "vars_gear");
   const raw = (snap.exists ? (snap.data() as GearVarsDoc) : null) || null;
 
   const offsetDays = toNumber(getVar(raw, "offset_rezerwacji"), 1);

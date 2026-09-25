@@ -14,6 +14,7 @@ import {norm} from "../../modules/shared/text_utils";
  *   isPrivate === true
  *   storage (case-insensitive) === "klub"
  *   isPrivateRentable !== true   (kajak rentable → nie naliczamy)
+ *   isHalfHalf !== true          („pół na pół" → kajak klubowy, zero opłat)
  *   ownerContact                 (email właściciela — użytkownik w users_active)
  *   privatesinceinclub           (data wejścia do klubu, format "YYYY-MM-DD")
  *
@@ -135,6 +136,14 @@ async function processKayakChargeForMonth(args: {
 
   // Jeśli kajak jest wypożyczalny → nie naliczamy
   if (kayak?.isPrivateRentable === true) {
+    return "notEligible";
+  }
+
+  // „Pół na pół" → nigdy nie naliczamy. Decyzja użytkownika 23.09.2026: taki
+  // kajak jest traktowany jak klubowy (zero opłat), a flaga oznacza wyłącznie
+  // pierwszeństwo właściciela w realu. Siatka bezpieczeństwa na wypadek
+  // zaznaczenia w arkuszu obu kolumn naraz („Prywatny?" + „Pół na pół?").
+  if (kayak?.isHalfHalf === true) {
     return "notEligible";
   }
 

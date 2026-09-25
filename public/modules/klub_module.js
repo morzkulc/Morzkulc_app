@@ -32,6 +32,31 @@ const KLUB_TABS = [
 // ten sam skrót ma być dostępny też z sekcji Klub, bez przechodzenia przez ranking.
 const MAP_TILE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>`;
 
+// Kafelki prowadzące do katalogów Dysku Google z materiałami o klubie. Kolejność
+// z tej tablicy = kolejność na ekranie; kafelek pojawia się tylko wtedy, gdy
+// odpowiadająca mu zmienna istnieje w arkuszu SETUP (Vars_CZLONKOWIE).
+// Dodanie kolejnego katalogu = jeden wiersz tutaj + jeden w getKlubInfoHandler.ts.
+const LINK_TILES = [
+  {
+    key: "dysk",
+    label: "Dysk klubowy",
+    title: "Dysk klubowy — dokumenty i regulaminy",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  },
+  {
+    key: "regulaminy",
+    label: "Regulaminy",
+    title: "Katalog z regulaminami klubu",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  },
+  {
+    key: "infografiki",
+    label: "Infografiki",
+    title: "Katalog z infografikami",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  },
+];
+
 // Ten sam wzorzec otwierania mapy co w render_shell.js (kafelek "mapa" na
 // stronie głównej) i km_module.js::openMap().
 function openMap() {
@@ -45,6 +70,14 @@ function openMap() {
   } else {
     window.open(mapUrl, "_blank", "noopener");
   }
+}
+
+// Adres jako link do nawigacji. `dir/?api=1&destination=` to uniwersalna forma
+// Google Maps: na telefonie z zainstalowaną aplikacją otwiera ją od razu
+// z wyznaczoną trasą, na desktopie — mapę w przeglądarce. Nie wymaga klucza API
+// ani znajomości współrzędnych, wystarczy adres tekstowy.
+function mapsDirectionsUrl(address) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 }
 
 // Dopuszczamy tylko http(s) jako href (ochrona przed javascript: itp.).
@@ -138,11 +171,31 @@ function renderHeaderInfo(data) {
     blocks.push(`<div class="profileBlock"><h3 class="profileBlockTitle">Konto klubowe</h3>${kontoLine}${finanse}</div>`);
   }
 
-  if (siedziba || akademik) {
+  // Kolejność zgodna ze zgłoszeniem użytkownika 24.09.2026: adres klubu pod
+  // adresem akademika z kluczami. Oba adresy są klikalne — prowadzą do nawigacji.
+  const klub = String(data?.adresy?.klub || "").trim();
+  if (siedziba || akademik || klub) {
+    const addrRow = (label, value) => `<div class="mentorRow"><span class="mentorRole">${escapeHtml(label)}</span><span class="mentorName"><a class="klubAddrLink" href="${escapeAttr(mapsDirectionsUrl(value))}" target="_blank" rel="noopener" title="Otwórz nawigację do: ${escapeAttr(value)}">${escapeHtml(value)}</a></span></div>`;
     blocks.push(`<div class="profileBlock">
-      ${siedziba ? `<div class="mentorRow"><span class="mentorRole">Siedziba</span><span class="mentorName">${escapeHtml(siedziba)}</span></div>` : ""}
-      ${akademik ? `<div class="mentorRow"><span class="mentorRole">Akademik (klucze)</span><span class="mentorName">${escapeHtml(akademik)}</span></div>` : ""}
+      ${siedziba && siedziba !== klub ? addrRow("Siedziba", siedziba) : ""}
+      ${akademik ? addrRow("Akademik (klucze)", akademik) : ""}
+      ${klub ? addrRow("Klub", klub) : ""}
     </div>`);
+  }
+
+  // Dokumenty — moduł do tej pory w ogóle nie renderował data.linki (były tylko
+  // w boksie profilu). Zgłoszenie użytkownika 23.09.2026: „ludzie pytają, gdzie
+  // znaleźć regulaminy i statut" — link ma być tam, gdzie szukają informacji o klubie.
+  // Dysk klubowy ma tu własny kafelek (patrz niżej), więc w tym bloku go NIE ma —
+  // inaczej ten sam link byłby na ekranie dwa razy. Zostają pojedyncze dokumenty,
+  // jeśli kiedyś pojawią się w arkuszu jako osobne zmienne.
+  const statut = safeUrl(data?.linki?.statut);
+  const regulamin = safeUrl(data?.linki?.regulamin);
+  if (statut || regulamin) {
+    const links = [];
+    if (statut) links.push(`<a href="${escapeAttr(statut)}" target="_blank" rel="noopener">Statut</a>`);
+    if (regulamin) links.push(`<a href="${escapeAttr(regulamin)}" target="_blank" rel="noopener">Regulamin</a>`);
+    blocks.push(`<div class="profileBlock"><h3 class="profileBlockTitle">Dokumenty</h3><div class="klubLinks">${links.join("")}</div></div>`);
   }
 
   if (!blocks.length) return "";
@@ -251,6 +304,32 @@ export function createKlubModule({ id, type, label, defaultRoute, order, enabled
 
       viewEl.querySelector("[data-klub-action='mapa']")?.addEventListener("click", openMap);
 
+      // Kafelki z linkami — dokładane dopiero, gdy /api/klub przyniesie adresy.
+      // Świadomie <a target="_blank">, a nie window.location jak przy mapie: mapa
+      // to nasza własna podstrona, a katalogi Dysku są zewnętrzne — nawigacja
+      // „w miejscu" wyrzuciłaby użytkownika z aplikacji zainstalowanej na telefonie
+      // bez możliwości powrotu (brak paska adresu w trybie standalone). Zwykły link
+      // w nowej karcie otwiera się na telefonie w przeglądarce wewnętrznej
+      // z przyciskiem powrotu.
+      const mountLinkTiles = (linki) => {
+        const grid = viewEl.querySelector(".klubTileGrid");
+        if (!grid) return;
+        for (const tile of LINK_TILES) {
+          const url = safeUrl(linki?.[tile.key]);
+          if (!url) continue;
+          if (grid.querySelector(`[data-klub-tile="${tile.key}"]`)) continue;
+          const a = document.createElement("a");
+          a.className = "klubTile";
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.title = tile.title;
+          a.setAttribute("data-klub-tile", tile.key);
+          a.innerHTML = `${tile.icon}<span class="klubTileTitle">${escapeHtml(tile.label)}</span>`;
+          grid.appendChild(a);
+        }
+      };
+
       try {
         // storageFetchKlubVideoUrl() nigdy nie odrzuca obietnicy (własny try/catch →
         // null), więc Promise.all może się nie powieść tylko z powodu apiGetJson —
@@ -263,6 +342,7 @@ export function createKlubModule({ id, type, label, defaultRoute, order, enabled
         videoUrl = klubVideoUrl;
         headerEl.innerHTML = renderHeaderInfo(data) || "";
         wireCopyButtons(headerEl);
+        mountLinkTiles(data?.linki);
         renderActiveTab();
       } catch (e) {
         const msg = escapeHtml(mapUserFacingApiError(e, "Nie udało się pobrać informacji o klubie."));

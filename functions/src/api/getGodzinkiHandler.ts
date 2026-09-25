@@ -1,6 +1,6 @@
 import type {Request, Response} from "express";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
-import {getAllRecords, getHistory, computeBalance, computeNextExpiry, computeEarnedTotal, GodzinkiRecord} from "../modules/hours/godzinki_service";
+import {getAllRecords, computeBalance, computeNextExpiry, computeEarnedTotal, GodzinkiRecord} from "../modules/hours/godzinki_service";
 
 type TokenCheck =
   | {error: string}
@@ -14,6 +14,22 @@ export type GetGodzinkiDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
+
+/**
+ * Rekordy odrzucone przez zarząd znikają z widoku członka — zgłoszenie
+ * użytkownika 23.09.2026. Wcześniej zostawały z approved=false i front
+ * renderował je bezterminowo jako „oczekuje", co było mylące. Powód odrzucenia
+ * idzie do członka mailem (task godzinki.notifyRejected).
+ *
+ * UWAGA: filtrujemy wyłącznie listy prezentacyjne (history, recentEarnings).
+ * Bilans, wygasanie i suma wypracowanych liczone są nadal ze WSZYSTKICH rekordów
+ * (allRecords) — rekord odrzucony ma approved=false, więc computeBalance
+ * i computeEarnedTotal i tak liczą z niego zero. Dzięki temu ukrycie w UI jest
+ * całkowicie neutralne dla salda.
+ */
+function isVisibleToMember(r: GodzinkiRecord): boolean {
+  return (r as any)?.rejected !== true;
+}
 
 function serializeRecord(r: GodzinkiRecord): Record<string, any> {
   const out: Record<string, any> = {
@@ -105,7 +121,7 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
           null;
 
         const recentEarnings = allRecords
-          .filter((r) => r.type === "earn")
+          .filter((r) => r.type === "earn" && isVisibleToMember(r))
           .sort((a, b) => {
             const aTs = (a.createdAt as any)?.toMillis?.() ?? 0;
             const bTs = (b.createdAt as any)?.toMillis?.() ?? 0;
@@ -130,11 +146,23 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
       // Bilans i wygasanie liczymy ze WSZYSTKICH rekordów (bez limitu) — inaczej przy >200 wpisach
       // stare pule earn wypadałyby z okna i bilans byłby zaniżony.
       // Historia do wyświetlenia jest ograniczona do 200 najnowszych rekordów.
-      const [vars, allRecords, history] = await Promise.all([
+      // Drugie zapytanie (getHistory: where uid==X, orderBy, limit 200) zwracało
+      // PODZBIÓR pierwszego (getAllRecords: where uid==X, bez limitu). Sortowanie
+      // i przycięcie w pamięci daje ten sam wynik za jedno zapytanie i połowę
+      // odczytanych dokumentów — tak jak już było robione dla recentEarnings.
+      const [vars, allRecords] = await Promise.all([
         getGodzinkiVars(db),
         getAllRecords(db, uid),
-        getHistory(db, uid, 200),
       ]);
+
+      const history = allRecords
+        .slice()
+        .sort((a, b) => {
+          const aTs = (a.createdAt as any)?.toMillis?.() ?? 0;
+          const bTs = (b.createdAt as any)?.toMillis?.() ?? 0;
+          return bTs - aTs;
+        })
+        .slice(0, 200);
 
       const balance = computeBalance(allRecords, now);
       const nextExpiry = computeNextExpiry(allRecords, now);
@@ -142,7 +170,7 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
       // recentEarnings budujemy in-memory z allRecords — tak samo jak widok home
       // (D4: wcześniej osobne zapytanie getRecentEarnings dublowało tę logikę).
       const recentEarnings = allRecords
-        .filter((r) => r.type === "earn")
+        .filter((r) => r.type === "earn" && isVisibleToMember(r))
         .sort((a, b) => {
           const aTs = (a.createdAt as any)?.toMillis?.() ?? 0;
           const bTs = (b.createdAt as any)?.toMillis?.() ?? 0;
@@ -162,7 +190,7 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
         // Suma wypracowanych godzinek (kumulacyjnie, niezależnie od salda) — progres stażu kandydata.
         earnedApprovedTotal: computeEarnedTotal(allRecords),
         recentEarnings: recentEarnings.map(serializeRecord),
-        history: history.map(serializeRecord),
+        history: history.filter(isVisibleToMember).map(serializeRecord),
       });
     } catch (err: any) {
       res.status(500).json({error: "Server error", message: err?.message || String(err)});

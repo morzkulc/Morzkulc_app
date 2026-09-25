@@ -56,7 +56,7 @@
       {
         "source": "/core/**",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" },
           { "key": "Pragma", "value": "no-cache" },
           { "key": "Expires", "value": "0" }
         ]
@@ -64,7 +64,7 @@
       {
         "source": "/modules/**",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" },
           { "key": "Pragma", "value": "no-cache" },
           { "key": "Expires", "value": "0" }
         ]
@@ -72,7 +72,7 @@
       {
         "source": "/styles/**",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" },
           { "key": "Pragma", "value": "no-cache" },
           { "key": "Expires", "value": "0" }
         ]

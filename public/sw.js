@@ -14,10 +14,16 @@
  * Stary cache jest automatycznie czyszczony w activate.
  */
 
-const CACHE_VERSION = "mtu5a1me";
+const CACHE_VERSION = "mufak789";
 const STATIC_CACHE  = `morzkulc-static-${CACHE_VERSION}`;
 
 // Pliki precachowane przy instalacji SW
+// Moduły funkcjonalne (/modules/**) świadomie NIE są tu wymienione: po przejściu
+// na leniwe ładowanie (core/modules_registry.js) wpadają do cache przy pierwszym
+// wejściu w dany moduł — obsługuje to strategia cache-first w handlerze fetch
+// niżej. Precache ogranicza się do rdzenia potrzebnego do pokazania ekranu
+// startowego, dzięki czemu instalacja nowej wersji po deployu pobiera ułamek
+// tego co wcześniej (było 804 KB przy każdym deployu, dla każdego użytkownika).
 const PRECACHE_URLS = [
   "/",
   "/index.html",
@@ -30,6 +36,7 @@ const PRECACHE_URLS = [
   "/core/modules_registry.js",
   "/core/firebase_client.js",
   "/core/api_client.js",
+  "/core/perf.js",
   "/core/access_control.js",
   "/core/sw_update.js",
   "/core/router.js",
@@ -41,24 +48,6 @@ const PRECACHE_URLS = [
   "/core/format_utils.js",
   "/core/club_badges.js",
   "/core/date_range_calendar.js",
-  "/modules/gear_module.js",
-  "/modules/my_reservations_module.js",
-  "/modules/godzinki_module.js",
-  "/modules/impreza_module.js",
-  "/modules/basen_module.js",
-  "/modules/admin_pending_module.js",
-  "/modules/km_module.js",
-  "/modules/klub_module.js",
-  "/modules/kurs_module.js",
-  "/modules/kurs_godzinki_module.js",
-  "/modules/raporty/registry.js",
-  "/modules/raporty/reports_panel.js",
-  "/modules/raporty/gear_rentals.js",
-  "/modules/raporty/top_rentals.js",
-  "/modules/raporty/gear_damage_reports.js",
-  "/modules/raporty/member_activity.js",
-  "/modules/raporty/member_dues.js",
-  "/modules/raporty/user_activity.js",
   "/styles/base.css",
   "/styles/dashboard.css",
   "/styles/gear.css",

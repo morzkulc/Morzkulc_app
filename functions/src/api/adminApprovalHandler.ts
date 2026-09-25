@@ -174,6 +174,15 @@ export async function handleAdminReject(req: Request, res: Response, deps: Admin
       const {kind, id} = parsed;
       const reason = norm((req.body as any)?.reason).slice(0, 500);
 
+      // Powód jest obowiązkowy dla godzinek: odrzucony wpis znika z historii
+      // zgłaszającego, a jedynym kanałem informacji zwrotnej jest mail z tym
+      // tekstem (zgłoszenie użytkownika 23.09.2026). Bez powodu członek
+      // zostałby bez wpisu i bez wyjaśnienia.
+      if (kind === "godzinki" && !reason) {
+        res.status(400).json({ok: false, code: "reason_required", message: "Podaj powód odrzucenia."});
+        return;
+      }
+
       const collection = kind === "godzinki" ? "godzinki_ledger" : "events";
       const ref = db.collection(collection).doc(id);
       const snap = await ref.get();
@@ -208,6 +217,9 @@ export async function handleAdminReject(req: Request, res: Response, deps: Admin
       // Impreza mogła być wcześniej zatwierdzona i trafić do kalendarza — sync
       // kalendarza usunie wpis dla rejected==true (pass usuwający).
       if (kind === "event") await enqueueJob(db, "events.syncCalendar", {});
+      // Godzinki: odrzucony wpis znika z historii członka, więc powód musi do
+      // niego dojść mailem (zgłoszenie użytkownika 23.09.2026).
+      if (kind === "godzinki") await enqueueJob(db, "godzinki.notifyRejected", {recordId: id, reason});
 
       logger.info("adminReject: rejected", {kind, id, by: auth.email});
       res.status(200).json({ok: true});

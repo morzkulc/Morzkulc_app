@@ -21,19 +21,12 @@ export async function isUserStatusBlocked(
   const data = snap.data() as any;
   const mappings = data?.statusMappings || {};
   const entry = mappings[statusKey];
-  const result = entry?.blocksAccess === true;
 
-  logger.info("isUserStatusBlocked", {
-    statusKey,
-    docExists: snap.exists,
-    setupAppTopLevelKeys: Object.keys(data || {}),
-    hasStatusMappings: "statusMappings" in (data || {}),
-    mappingKeys: Object.keys(mappings),
-    entry: JSON.stringify(entry),
-    blocksAccess: entry?.blocksAccess,
-    blocksAccessType: typeof entry?.blocksAccess,
-    result,
-  });
-
-  return result;
+  // Pozostałość po diagnostyce (pola `setupAppTopLevelKeys`, `blocksAccessType`)
+  // usunięta 23.09.2026: funkcja ma 11 miejsc wywołania na ścieżkach zapisu
+  // (rezerwacje, basen, godzinki, imprezy), więc każda operacja zapisu w aplikacji
+  // serializowała pełną mapę statusów i zapisywała ją do Cloud Logging.
+  // Log zawierał też status użytkownika przy każdej akcji (N19 z audytu 09.09).
+  // logger.warn powyżej zostaje — brak setup/app to realny problem.
+  return entry?.blocksAccess === true;
 }

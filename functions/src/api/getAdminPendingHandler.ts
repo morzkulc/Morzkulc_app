@@ -117,12 +117,67 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
         return;
       }
 
+      const LIMIT = 50;
+
+      // ── ?view=badge — wyłącznie odpowiedź „czy jest coś do zatwierdzenia" ──
+      //
+      // Ekran startowy rysuje odznakę na kafelku „Zarząd" i do tej pory wołał po nią
+      // TEN endpoint w pełnej postaci: 10 zapytań w 7 kolekcjach, w tym pełny odczyt
+      // godzinki_ledger (computeNegativeBalances, bez filtra). Z całej odpowiedzi
+      // używał jednej liczby. Zmierzone na iPhonie 24.09.2026: 1 474 ms, i to ono
+      // wyznaczało moment „ekran gotowy" — cały zysk z optymalizacji etapów 1–4
+      // szedł w to jedno żądanie.
+      //
+      // Tryb badge wykonuje trzy zapytania, które i tak są potrzebne panelowi:
+      // oczekujące godzinki (earn + purchase) i oczekujące imprezy. Wszystkie
+      // indeksowane, z limitem, z .select("rejected") — pobieramy jedno pole,
+      // bo tylko ono decyduje o odfiltrowaniu pozycji już odrzuconych (dokładnie
+      // ten sam filtr co w pełnym panelu niżej).
+      //
+      // Zwracamy `pending: boolean`, nie liczbę: decyzja użytkownika 24.09.2026 —
+      // odznaka ma sygnalizować, że jest co kliknąć, a nie ile.
+      if (norm(req.query?.view).toLowerCase() === "badge") {
+        const notRejected = (snap: FirebaseFirestore.QuerySnapshot) =>
+          snap.docs.some((d) => (d.data() as any)?.rejected !== true);
+
+        const badgeSettled = await Promise.allSettled([
+          db.collection("godzinki_ledger")
+            .where("approved", "==", false)
+            .where("type", "==", "earn")
+            .orderBy("createdAt", "asc")
+            .limit(LIMIT)
+            .select("rejected")
+            .get(),
+          db.collection("godzinki_ledger")
+            .where("approved", "==", false)
+            .where("type", "==", "purchase")
+            .orderBy("createdAt", "asc")
+            .limit(LIMIT)
+            .select("rejected")
+            .get(),
+          db.collection("events")
+            .where("approved", "==", false)
+            .orderBy("createdAt", "asc")
+            .limit(LIMIT)
+            .select("rejected")
+            .get(),
+        ]);
+
+        // Awaria pojedynczego zapytania nie może zapalić odznaki „na wszelki
+        // wypadek" ani wywalić ekranu startowego — pomijamy je.
+        const pending = badgeSettled.some(
+          (r) => r.status === "fulfilled" && notRejected(r.value)
+        );
+
+        res.status(200).json({ok: true, pending});
+        return;
+      }
+
       const svcCfg = getServiceConfig();
       const godzinkiSheetUrl = svcCfg.godzinki?.spreadsheetId ?
         `https://docs.google.com/spreadsheets/d/${svcCfg.godzinki.spreadsheetId}` :
         null;
 
-      const LIMIT = 50;
       const currentYear = String(new Date().getFullYear());
 
       // Promise.allSettled (Z12 z planu panelu): awaria pojedynczego zapytania
@@ -398,58 +453,65 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
       const emptyGearSync: GearSyncReport = {
         hasWarnings: false, ranAt: null, blocked: false, privateKayakErrors: [], duplicateIdErrors: [], totals: {}, perCategory: [], error: null,
       };
+      // Trzy poniższe sekcje są od siebie niezależne, a wykonywały się kolejno
+      // (pozycja #3 audytu 01.09, nadal otwarta). Każda dostaje własną obietnicę,
+      // a czekamy na nie razem — patrz Promise.all niżej.
       let gearSync: GearSyncReport = emptyGearSync;
-      try {
-        const reportSnap = await db.collection("service_reports").doc("gearSync").get();
-        if (reportSnap.exists) {
-          const d = reportSnap.data() as any;
-          gearSync = {
-            hasWarnings: d?.hasWarnings === true,
-            ranAt: tsToIso(d?.ranAt),
-            blocked: d?.blocked === true,
-            privateKayakErrors: Array.isArray(d?.privateKayakErrors) ?
-              d.privateKayakErrors.map((x: any) => ({id: norm(x?.id), reason: norm(x?.reason)})) : [],
-            duplicateIdErrors: Array.isArray(d?.duplicateIdErrors) ?
-              d.duplicateIdErrors.map((x: any) => ({category: norm(x?.category), id: norm(x?.id), rowNumber: norm(x?.rowNumber)})) : [],
-            totals: (d?.totals as Record<string, number>) || {},
-            perCategory: Array.isArray(d?.perCategory) ?
-              d.perCategory
-                .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0)
-                .map((c: any) => ({
-                  key: norm(c?.key),
-                  label: norm(c?.label),
-                  sheetRows: Number(c?.sheetRows ?? 0),
-                  upserted: Number(c?.upserted ?? 0),
-                  duplicateId: Number(c?.duplicateId ?? 0),
-                  duplicates: Array.isArray(c?.duplicates) ? c.duplicates.map((x: any) => ({
-                    id: norm(x?.id), number: norm(x?.number), model: norm(x?.model), rowNumber: norm(x?.rowNumber),
-                  })) : [],
-                  skippedNoId: Number(c?.skippedNoId ?? 0),
-                  skippedNotReal: Number(c?.skippedNotReal ?? 0),
-                  scrapped: Number(c?.scrapped ?? 0),
-                })) :
-              [],
-            error: null,
-          };
+      const gearSyncPromise = (async () => {
+        try {
+          const reportSnap = await db.collection("service_reports").doc("gearSync").get();
+          if (reportSnap.exists) {
+            const d = reportSnap.data() as any;
+            gearSync = {
+              hasWarnings: d?.hasWarnings === true,
+              ranAt: tsToIso(d?.ranAt),
+              blocked: d?.blocked === true,
+              privateKayakErrors: Array.isArray(d?.privateKayakErrors) ?
+                d.privateKayakErrors.map((x: any) => ({id: norm(x?.id), reason: norm(x?.reason)})) : [],
+              duplicateIdErrors: Array.isArray(d?.duplicateIdErrors) ?
+                d.duplicateIdErrors.map((x: any) => ({category: norm(x?.category), id: norm(x?.id), rowNumber: norm(x?.rowNumber)})) : [],
+              totals: (d?.totals as Record<string, number>) || {},
+              perCategory: Array.isArray(d?.perCategory) ?
+                d.perCategory
+                  .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0)
+                  .map((c: any) => ({
+                    key: norm(c?.key),
+                    label: norm(c?.label),
+                    sheetRows: Number(c?.sheetRows ?? 0),
+                    upserted: Number(c?.upserted ?? 0),
+                    duplicateId: Number(c?.duplicateId ?? 0),
+                    duplicates: Array.isArray(c?.duplicates) ? c.duplicates.map((x: any) => ({
+                      id: norm(x?.id), number: norm(x?.number), model: norm(x?.model), rowNumber: norm(x?.rowNumber),
+                    })) : [],
+                    skippedNoId: Number(c?.skippedNoId ?? 0),
+                    skippedNotReal: Number(c?.skippedNotReal ?? 0),
+                    scrapped: Number(c?.scrapped ?? 0),
+                  })) :
+                [],
+              error: null,
+            };
+          }
+        } catch (e: any) {
+          logger.error("getAdminPending: gearSync report read failed", {message: e?.message});
+          gearSync = {...emptyGearSync, error: "Sekcja chwilowo niedostępna"};
         }
-      } catch (e: any) {
-        logger.error("getAdminPending: gearSync report read failed", {message: e?.message});
-        gearSync = {...emptyGearSync, error: "Sekcja chwilowo niedostępna"};
-      }
+      })();
 
       // Ujemne salda — liczone NA ŻYWO (computeNegativeBalances, ta sama funkcja co
       // miesięczny task godzinki.monthlyBalanceReview). Wcześniej panel czytał tu
       // miesięczny snapshot z service_reports/negativeBalances, co dawało nawet
       // miesiąc rozjazdu względem realnego salda widocznego w raportach/koncie usera.
       let negativeBalances: NegativeBalancesReport = {items: [], error: null};
-      try {
-        const godzinkiVars = await getGodzinkiVars(db);
-        const items = await computeNegativeBalances(db, new Date(), godzinkiVars.negativeBalanceLimit);
-        negativeBalances = {items, error: null};
-      } catch (e: any) {
-        logger.error("getAdminPending: negativeBalances live compute failed", {message: e?.message});
-        negativeBalances = {items: [], error: "Sekcja chwilowo niedostępna"};
-      }
+      const negativeBalancesPromise = (async () => {
+        try {
+          const godzinkiVars = await getGodzinkiVars(db);
+          const items = await computeNegativeBalances(db, new Date(), godzinkiVars.negativeBalanceLimit);
+          negativeBalances = {items, error: null};
+        } catch (e: any) {
+          logger.error("getAdminPending: negativeBalances live compute failed", {message: e?.message});
+          negativeBalances = {items: [], error: "Sekcja chwilowo niedostępna"};
+        }
+      })();
 
       // Kursanci po terminie (P6): role_key == rola_kursant, którzy minęli okno
       // wypożyczeń (30 września roku szkoleniówki). role_key NIE jest zmieniany
@@ -457,33 +519,37 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
       // sekcja przypomina, kogo trzeba przepisać.
       type ExpiredKursant = {uid: string; email: string; displayName: string; schoolYear: number};
       let expiredKursants: {count: number; items: ExpiredKursant[]; error: string | null} = {count: 0, items: [], error: null};
-      try {
-        const kursantsSnap = await db.collection("users_active")
-          .where("role_key", "==", "rola_kursant")
-          .get();
-        const todayIso = new Date().toISOString().slice(0, 10);
-        const windowEndSuffix = await getKursWindowEndSuffix(db);
-        const items: ExpiredKursant[] = [];
-        for (const d of kursantsSnap.docs) {
-          const data = d.data() as any;
-          const email = norm(data?.email).toLowerCase();
-          if (!email) continue;
-          const rok = parseSchoolYear(data?.admin?.schoolYear ?? null);
-          if (rok === null) continue;
-          if (todayIso > `${rok}-${windowEndSuffix}`) {
-            const nickname = norm(data?.profile?.nickname);
-            const firstName = norm(data?.profile?.firstName);
-            const lastName = norm(data?.profile?.lastName);
-            const displayName = [firstName, lastName].filter(Boolean).join(" ") || nickname || email;
-            items.push({uid: d.id, email, displayName, schoolYear: rok});
+      const expiredKursantsPromise = (async () => {
+        try {
+          const kursantsSnap = await db.collection("users_active")
+            .where("role_key", "==", "rola_kursant")
+            .get();
+          const todayIso = new Date().toISOString().slice(0, 10);
+          const windowEndSuffix = await getKursWindowEndSuffix(db);
+          const items: ExpiredKursant[] = [];
+          for (const d of kursantsSnap.docs) {
+            const data = d.data() as any;
+            const email = norm(data?.email).toLowerCase();
+            if (!email) continue;
+            const rok = parseSchoolYear(data?.admin?.schoolYear ?? null);
+            if (rok === null) continue;
+            if (todayIso > `${rok}-${windowEndSuffix}`) {
+              const nickname = norm(data?.profile?.nickname);
+              const firstName = norm(data?.profile?.firstName);
+              const lastName = norm(data?.profile?.lastName);
+              const displayName = [firstName, lastName].filter(Boolean).join(" ") || nickname || email;
+              items.push({uid: d.id, email, displayName, schoolYear: rok});
+            }
           }
+          items.sort((a, b) => a.displayName.localeCompare(b.displayName, "pl"));
+          expiredKursants = {count: items.length, items, error: null};
+        } catch (e: any) {
+          logger.error("getAdminPending: expiredKursants read failed", {message: e?.message});
+          expiredKursants = {count: 0, items: [], error: "Sekcja chwilowo niedostępna"};
         }
-        items.sort((a, b) => a.displayName.localeCompare(b.displayName, "pl"));
-        expiredKursants = {count: items.length, items, error: null};
-      } catch (e: any) {
-        logger.error("getAdminPending: expiredKursants read failed", {message: e?.message});
-        expiredKursants = {count: 0, items: [], error: "Sekcja chwilowo niedostępna"};
-      }
+      })();
+
+      await Promise.all([gearSyncPromise, negativeBalancesPromise, expiredKursantsPromise]);
 
       res.status(200).json({
         ok: true,

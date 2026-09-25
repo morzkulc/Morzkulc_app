@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "date": "2026-09-23",
+    "device": "desktop, Chrome, Windows 11",
+    "account": "rola_zarzad",
+    "app": "https://app.morzkulc.pl/",
+    "note": "Stan: master + zadanie A + przyrządy pomiarowe. Zero optymalizacji wydajnościowych."
+  },
+  "runs": [
+    {"t": "12:02:42", "scenario": "cache zimny (po wyczyszczeniu SW), backend ciepły", "home": 3917, "boot": 3104, "jsGraph": 1245, "redirectWait": 1499, "tokenWait": 199, "register": 456, "setup": 252, "firstRender": 3, "fanout": 814, "coldSum": 0, "apiAtGate": 11, "apiTotal": 14, "apiUniq": 8},
+    {"t": "12:03:39", "scenario": "cache ciepły, backend ZIMNY", "home": 9930, "boot": 3768, "jsGraph": 1092, "redirectWait": 1531, "tokenWait": 987, "register": 525, "setup": 250, "fanout": 6162, "coldSum": 4730, "apiAtGate": 8, "apiUniq": 8},
+    {"t": "12:04:02", "scenario": "cache ciepły, backend ciepły", "home": 3233, "boot": 2749, "jsGraph": 25, "redirectWait": 707, "tokenWait": 1010, "register": 488, "setup": 232, "fanout": 484, "coldSum": 0, "apiAtGate": 7, "apiTotal": 12, "apiUniq": 7},
+    {"t": "12:04:31", "scenario": "cache ciepły, backend ciepły", "home": 2903, "jsGraph": 42, "fanout": 506, "coldSum": 0, "apiAtGate": 10},
+    {"t": "12:04:46", "scenario": "cache ciepły, backend ciepły", "home": 3175, "jsGraph": 60, "fanout": 473, "coldSum": 0, "apiAtGate": 7},
+    {"t": "12:04:51", "scenario": "cache ciepły, backend ciepły", "home": 3259, "jsGraph": 34, "fanout": 383, "coldSum": 0, "apiAtGate": 7}
+  ],
+  "summary": {
+    "warm_cache_warm_backend": {"median": 3204, "min": 2903, "max": 3259, "n": 4},
+    "cold_cache_warm_backend": {"value": 3917, "n": 1},
+    "cold_backend": {"value": 9930, "n": 1}
+  },
+  "backend_cold_start": {
+    "endpoint": "/api/klub",
+    "cold_total_ms": 6636,
+    "module_graph_boot_ms": 4032,
+    "remainder_container_node_framework_ms": 2604,
+    "warm_handler_ms": [6.3, 0.6, 0.3],
+    "local_reference": {"module_eval_ms": 1207, "modules_in_cache": 1739, "googleapis_require_ms": 1339, "runner_require_ms": 1447, "firebase_admin_require_ms": 80}
+  },
+  "warm_handler_costs_ms": {
+    "/api/admin/pending": 627,
+    "/api/basen/sessions": 463,
+    "/api/km/stats": 72,
+    "/api/godzinki?view=home": 76,
+    "/api/events/interests": 157,
+    "/api/events": 58,
+    "/api/register": 277,
+    "/api/setup": 71
+  },
+  "w22_duplicate_render": {
+    "trigger": "wejście na adres BEZ hasha (ikona PWA, zakładka, wpisany adres)",
+    "observed": "każdy z 6 endpointów ekranu startowego wywołany 2x, t0 różnica ~1 ms",
+    "cause": "app_shell.js ustawia location.hash → hashchange → renderView, a zaraz potem woła renderView jawnie",
+    "net_ms_first_copy": [179, 181, 201, 196, 202, 193],
+    "net_ms_second_copy": [438, 527, 457, 463, 835, 991]
+  }
+}

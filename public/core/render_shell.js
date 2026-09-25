@@ -2,6 +2,7 @@
 import { canSeeModule } from "/core/access_control.js";
 import { setHash, parseHash } from "/core/router.js";
 import { apiPostJson, apiGetJson } from "/core/api_client.js";
+import { mark, homeStart, homeDone } from "/core/perf.js";
 import { formatFreeText, isUrlOnly } from "/core/text_format.js";
 import { renderClubBadgeHtml } from "/core/club_badges.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
@@ -65,6 +66,15 @@ export async function renderView({ viewEl, ctx }) {
   document.body.style.overflow = "";
 
   const { moduleId, routeId } = parseHash();
+
+  // Ekran diagnostyczny z pomiarami startu — PRZED bramką profileComplete, żeby
+  // dało się go otworzyć także na koncie z niekompletnym profilem. Widok ładowany
+  // leniwie: nie może obciążać ścieżki, którą mierzy.
+  if (moduleId === "home" && routeId === "perf") {
+    const { renderPerfView } = await import("/core/perf_view.js");
+    renderPerfView({ viewEl });
+    return;
+  }
 
   if (!ctx.session?.profileComplete) {
     renderProfileForm({ viewEl, ctx });
@@ -319,6 +329,23 @@ async function renderHomeDashboard({ viewEl, ctx }) {
   `;
 
 
+  // ── Bramka pomiarowa „ekran startowy gotowy" ───────────────────────────────
+  // Zbiór oczekiwanych ładowań deklarujemy Z GÓRY, tymi samymi warunkami, których
+  // używają bloki niżej — dzięki temu zamknięcie bramki nie zależy od kolejności
+  // odpowiedzi. Każdy łańcuch domyka się przez .finally (nie .then), bo błąd
+  // sieci też kończy ładowanie ekranu: użytkownik widzi wtedy komunikat.
+  const basenModule = (ctx.modules || []).find((m) => m?.type === "basen" && m.enabled);
+  const perfExpected = [];
+  if (ctx?.idToken) {
+    if (dash.isKursant) perfExpected.push("kursantStats");
+    else perfExpected.push("godzinki", "kmStats");
+  }
+  if (!dash.isKursant) perfExpected.push("events");
+  if (basenModule) perfExpected.push("basen");
+  if (dash.isKursant && ctx?.idToken) perfExpected.push("kursEvents");
+  if (dash.isAdmin && ctx?.idToken) perfExpected.push("adminPending");
+  homeStart(perfExpected);
+
   // Kafelek „Imprezy" oraz „Zobacz wszystkie" w sekcji wydarzeń → lista imprez.
   viewEl.querySelectorAll("[data-home-action='events-list'], [data-home-action='all-events']").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -339,7 +366,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
   }
 
   if (dash.isAdmin && ctx?.idToken) {
-    loadAdminPendingBadge(ctx, viewEl).catch(() => {});
+    loadAdminPendingBadge(ctx, viewEl).catch(() => {}).finally(() => homeDone("adminPending"));
   }
 
   const reserveBtn = viewEl.querySelector("[data-home-action='reserve-gear']");
@@ -426,14 +453,14 @@ async function renderHomeDashboard({ viewEl, ctx }) {
           if (capsizesEl) capsizesEl.innerHTML = `wywrotolotek: <strong class="startStatVal">${Number(data?.myCapsizes) || 0}</strong> punkty`;
           const rankEl = viewEl.querySelector("#homeKursantRankCell");
           if (rankEl) rankEl.innerHTML = `<strong class="startStatVal">${data?.myRank ?? "—"}</strong> miejsce`;
-        }).catch(() => { /* cicha porażka */ });
+        }).catch(() => { /* cicha porażka */ }).finally(() => homeDone("kursantStats"));
     } else {
       buildHomeHoursCell(ctx).then((html) => {
         const cell = viewEl.querySelector("#homeGodzinkiTileBalance");
         if (cell) cell.innerHTML = html;
       }).catch(() => {
         // cicha porażka — komórka zostaje z placeholder "…"
-      });
+      }).finally(() => homeDone("godzinki"));
 
       // Km/wywrotolotek/godziny na wodzie — jedno zapytanie, trzy komórki
       // (te same pola co zakładka "Moje statystyki" w module Kilometrówka).
@@ -445,7 +472,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
         if (capsizesCell) capsizesCell.textContent = `${fmtKmValue(stats.yearPoints ?? 0)} pkt`;
         const waterHoursCell = viewEl.querySelector("#homeWaterHoursCell");
         if (waterHoursCell) waterHoursCell.textContent = `${fmtKmValue(stats.yearHours ?? 0)} h`;
-      }).catch(() => { /* cicha porażka — komórki zostają z placeholder "…" */ });
+      }).catch(() => { /* cicha porażka — komórki zostają z placeholder "…" */ }).finally(() => homeDone("kmStats"));
     }
   }
 
@@ -460,13 +487,11 @@ async function renderHomeDashboard({ viewEl, ctx }) {
     }).catch(() => {
       const listEl = viewEl.querySelector("#homeEventsList");
       if (listEl) listEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Nie udało się pobrać imprez.</div></div></div>`;
-    });
+    }).finally(() => homeDone("events"));
   }
 
   // Ładuj zajęcia basenowe — sekcja widoczna tylko jeśli moduł "Basen" dostępny
-  const basenModule = (ctx.modules || []).find((m) =>
-    m?.type === "basen" && m.enabled
-  );
+  // (basenModule policzony wyżej, przy bramce pomiarowej)
   if (basenModule) {
     const basenSection = viewEl.querySelector("#homeBasenSection");
     if (basenSection) basenSection.style.display = "";
@@ -475,7 +500,9 @@ async function renderHomeDashboard({ viewEl, ctx }) {
     if (basenListEl) {
       renderHomeBasenCalendar(basenListEl, ctx, dash.isKursant).catch(() => {
         basenListEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Nie udało się pobrać zajęć.</div></div></div>`;
-      });
+      }).finally(() => homeDone("basen"));
+    } else {
+      homeDone("basen");
     }
   }
 
@@ -487,7 +514,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
     }).catch(() => {
       const listEl = viewEl.querySelector("#homeKursEventsList");
       if (listEl) listEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Nie udało się pobrać imprez kursowych.</div></div></div>`;
-    });
+    }).finally(() => homeDone("kursEvents"));
   }
 }
 
@@ -603,6 +630,9 @@ function renderHomeProfile({ viewEl, ctx }) {
 
       <div class="actions" style="margin-top:16px;">
         <button type="button" class="ghost" id="profileBackBtn">← Wróć</button>
+        ${dash.isAdmin ? `
+        <button type="button" class="ghost" id="profilePerfBtn" title="Ekran diagnostyczny: czasy ładowania aplikacji na tym urządzeniu">Pomiary startu</button>
+        ` : ""}
       </div>
     </div>
 
@@ -621,6 +651,11 @@ function renderHomeProfile({ viewEl, ctx }) {
 
   const backBtn = viewEl.querySelector("#profileBackBtn");
   if (backBtn) backBtn.addEventListener("click", () => setHash("home", "home"));
+
+  // Jedyne dojście do ekranu pomiarów w aplikacji zainstalowanej na telefonie —
+  // w trybie standalone nie ma paska adresu, więc hasha nie da się wpisać ręcznie.
+  // Tylko dla zarządu/KR: to diagnostyka, nie funkcja dla członków.
+  viewEl.querySelector("#profilePerfBtn")?.addEventListener("click", () => setHash("home", "perf"));
 
   viewEl.querySelectorAll("[data-profile-action='all-reservations']").forEach((btn) => {
     btn.addEventListener("click", () => setHash("my_reservations", "list"));
@@ -665,7 +700,7 @@ function renderHomeProfile({ viewEl, ctx }) {
     const balEl = viewEl.querySelector("#profileGodzinkiBalance");
     const stazEarnedEl = viewEl.querySelector("#profileStazEarned");
     if (balEl || stazEarnedEl) {
-      apiGetJson({ url: GODZINKI_URL + "?view=home", idToken: ctx.idToken })
+      fetchGodzinkiHome(ctx)
         .then((data) => {
           if (balEl) {
             const balance = Number(data?.balance ?? 0);
@@ -745,10 +780,14 @@ function buildKlubBoxHtml(data) {
 
   const statut = safeUrl(linki.statut);
   const regulamin = safeUrl(linki.regulamin);
+  const dysk = safeUrl(linki.dysk);
   const klucze = String(linki.klucze || "").trim();
   const docLinks = [];
   if (statut) docLinks.push(`<a href="${escapeAttr(statut)}" target="_blank" rel="noopener">Statut</a>`);
   if (regulamin) docLinks.push(`<a href="${escapeAttr(regulamin)}" target="_blank" rel="noopener">Regulamin</a>`);
+  // Dysk klubowy — cały folder z regulaminami i statutem. Ostatni w kolejności,
+  // bo to "wszystko pozostałe", a nie konkretny dokument.
+  if (dysk) docLinks.push(`<a href="${escapeAttr(dysk)}" target="_blank" rel="noopener">Dysk klubowy</a>`);
   if (docLinks.length || klucze) {
     blocks.push(`<div class="profileBlock"><h3 class="profileBlockTitle">Dokumenty i dostęp</h3>${
       docLinks.length ? `<div class="klubLinks">${docLinks.join("")}</div>` : ""
@@ -845,42 +884,67 @@ function wireKlubBox(viewEl, ctx) {
     });
 }
 
-const _ADMIN_BADGE_CACHE_KEY = "adminPendingGodzinkiCount";
+// v2: wpis trzyma boolean, nie liczbę — stare wpisy mają nie pasować.
+const _ADMIN_BADGE_CACHE_KEY = "adminPendingFlag_v2";
 const _ADMIN_BADGE_CACHE_TTL = 5 * 60 * 1000;
 
 async function loadAdminPendingBadge(ctx, viewEl) {
-  const updateBadge = (count) => {
+  // Odznaka sygnalizuje, że JEST co zatwierdzić — bez liczby (decyzja użytkownika
+  // 24.09.2026). Sama kropka wystarczy: .tileNotifBadge ma stały rozmiar 18×18,
+  // więc pusty element jest widoczny.
+  const updateBadge = (pending) => {
     const badge = viewEl.querySelector("#adminPendingBadge");
     if (!badge) return;
-    if (count > 0) {
-      badge.textContent = count > 99 ? "99+" : String(count);
-      badge.classList.remove("hidden");
-    } else {
-      badge.classList.add("hidden");
-    }
+    badge.textContent = "";
+    badge.classList.toggle("hidden", !pending);
   };
 
   try {
     const cached = JSON.parse(sessionStorage.getItem(_ADMIN_BADGE_CACHE_KEY) || "null");
-    if (cached && Date.now() - cached.ts < _ADMIN_BADGE_CACHE_TTL) {
-      updateBadge(cached.count);
+    if (cached && typeof cached.pending === "boolean" && Date.now() - cached.ts < _ADMIN_BADGE_CACHE_TTL) {
+      updateBadge(cached.pending);
       return;
     }
   } catch { /* ignore */ }
 
   try {
-    const data = await apiGetJson({ url: ADMIN_PENDING_URL, idToken: ctx.idToken });
-    const count = Number(data?.godzinki?.count ?? 0);
-    sessionStorage.setItem(_ADMIN_BADGE_CACHE_KEY, JSON.stringify({ count, ts: Date.now() }));
-    updateBadge(count);
+    // ?view=badge zamiast pełnej odpowiedzi panelu: trzy indeksowane zapytania
+    // zamiast dziesięciu i pełnego odczytu godzinki_ledger — patrz komentarz
+    // w getAdminPendingHandler.ts. To żądanie leży na ścieżce „ekran gotowy".
+    const data = await apiGetJson({ url: ADMIN_PENDING_URL + "?view=badge", idToken: ctx.idToken });
+    const pending = data?.pending === true;
+    sessionStorage.setItem(_ADMIN_BADGE_CACHE_KEY, JSON.stringify({ pending, ts: Date.now() }));
+    updateBadge(pending);
   } catch { /* cicha porażka */ }
+}
+
+// Saldo godzinek pobierają dwa ekrany — dashboard (kafelek) i profil. Przejście
+// dashboard → profil, najczęstsza nawigacja w aplikacji, wykonywało to zapytanie
+// drugi raz. Cache w zmiennej modułowej (NIE w sessionStorage — saldo nie ma
+// prawa przeżyć wylogowania, patrz czyszczenie klubInfoCache w app_shell.js).
+const _GODZINKI_HOME_TTL_MS = 60 * 1000;
+let _godzinkiHomeCache = null; // { ts, promise }
+
+function fetchGodzinkiHome(ctx) {
+  const now = Date.now();
+  if (_godzinkiHomeCache && now - _godzinkiHomeCache.ts < _GODZINKI_HOME_TTL_MS) {
+    return _godzinkiHomeCache.promise;
+  }
+  const promise = apiGetJson({ url: GODZINKI_URL + "?view=home", idToken: ctx.idToken })
+    .catch((err) => {
+      // Porażki nie utrwalamy — następne wejście ma prawo spróbować ponownie.
+      _godzinkiHomeCache = null;
+      throw err;
+    });
+  _godzinkiHomeCache = { ts: now, promise };
+  return promise;
 }
 
 async function buildHomeHoursCell(ctx) {
   if (!ctx?.idToken) return `<strong class="startStatVal">—</strong>`;
 
   try {
-    const data = await apiGetJson({ url: GODZINKI_URL + "?view=home", idToken: ctx.idToken });
+    const data = await fetchGodzinkiHome(ctx);
     const balance = Number(data?.balance ?? 0);
     const sign = balance > 0 ? "+" : "";
     const cls = balance < 0 ? "startStatValNeg" : "";
@@ -1250,28 +1314,32 @@ async function buildHomeReservationsSection(ctx) {
   }
 
   try {
-    const [reservationsResp, kayaksResp] = await Promise.all([
-      apiGetJson({
-        url: MY_RESERVATIONS_URL,
-        idToken: ctx.idToken
-      }),
-      apiGetJson({
-        url: KAYAKS_URL,
-        idToken: ctx.idToken
-      })
-    ]);
+    const reservationsResp = await apiGetJson({
+      url: MY_RESERVATIONS_URL,
+      idToken: ctx.idToken
+    });
 
     const reservations = Array.isArray(reservationsResp?.items) ? reservationsResp.items : [];
-    const kayaks = Array.isArray(kayaksResp?.kayaks) ? kayaksResp.kayaks : [];
-
-    const kayakMap = new Map(
-      kayaks.map((k) => [String(k?.id || ""), buildKayakTitle(k)])
-    );
 
     const todayIso = new Date().toISOString().slice(0, 10);
     const activeReservations = reservations
       .filter((r) => String(r?.status || "") === "active" && String(r?.endDate || "") >= todayIso)
       .slice(0, 3);
+
+    // Katalog kajaków (/api/gear/kayaks: do 500 dokumentów PLUS skan aktywnych
+    // rezerwacji — najdroższe zapytanie modułu Sprzęt) pobieramy WYŁĄCZNIE wtedy,
+    // gdy któraś z trzech pokazywanych rezerwacji jest w starym formacie, czyli
+    // ma same kayakIds bez items[]. Rezerwacje w formacie bundle niosą już
+    // zdenormalizowane itemLabel/itemNumber i nie potrzebują katalogu w ogóle.
+    const needsCatalog = activeReservations.some(
+      (r) => !Array.isArray(r?.items) && Array.isArray(r?.kayakIds) && r.kayakIds.length
+    );
+    let kayakMap = new Map();
+    if (needsCatalog) {
+      const kayaksResp = await apiGetJson({ url: KAYAKS_URL, idToken: ctx.idToken });
+      const kayaks = Array.isArray(kayaksResp?.kayaks) ? kayaksResp.kayaks : [];
+      kayakMap = new Map(kayaks.map((k) => [String(k?.id || ""), buildKayakTitle(k)]));
+    }
 
     if (!activeReservations.length) {
       return `
@@ -1369,6 +1437,22 @@ function wireHomeReservations(viewEl, ctx) {
 }
 
 function getReservationKayakTitles(rsv, kayakMap) {
+  // Format bundle: etykieta jest już w dokumencie rezerwacji (itemLabel/itemNumber),
+  // więc katalog kajaków nie jest do niczego potrzebny.
+  if (Array.isArray(rsv?.items) && rsv.items.length) {
+    const titles = rsv.items
+      .filter((it) => String(it?.category || "") === "kayaks")
+      .map((it) => {
+        const label = String(it?.itemLabel || "").trim();
+        const number = String(it?.itemNumber || "").trim();
+        if (label && number) return `${label} (nr ${number})`;
+        return label || (number ? `Kajak nr ${number}` : "");
+      })
+      .filter(Boolean);
+    if (titles.length) return titles;
+  }
+
+  // Ścieżka legacy: rezerwacje sprzed formatu bundle mają tylko kayakIds.
   const kayakIds = Array.isArray(rsv?.kayakIds) ? rsv.kayakIds.map(String) : [];
   return kayakIds.map((id) => kayakMap.get(id) || `Kajak ID ${id}`);
 }
