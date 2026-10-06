@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-23T08:41:42",
+  "generated_at": "2026-10-06T20:36:59",
   "project_root": "C:\\Users\\kswitek\\Documents\\morzkulc_app",
   "settings": {
     "excluded_dirs": [
@@ -42,6 +42,102 @@
     "max_read_file_size_bytes": 1500000
   },
   "files": [
+    {
+      "path": ".claude/hooks/session_context.py",
+      "extension": ".py",
+      "size_bytes": 2809,
+      "line_count": 77,
+      "sha1_short": "b8fbddde2f",
+      "kind": "python",
+      "module_aliases": [
+        ".claude.hooks.session_context"
+      ],
+      "imports": [
+        {
+          "raw": "from __future__ import annotations",
+          "module": "__future__",
+          "names": [
+            "annotations"
+          ],
+          "level": 0,
+          "type": "from"
+        },
+        {
+          "raw": "import json",
+          "module": "json",
+          "names": [],
+          "level": 0,
+          "type": "import"
+        },
+        {
+          "raw": "import subprocess",
+          "module": "subprocess",
+          "names": [],
+          "level": 0,
+          "type": "import"
+        },
+        {
+          "raw": "import sys",
+          "module": "sys",
+          "names": [],
+          "level": 0,
+          "type": "import"
+        },
+        {
+          "raw": "from collections import defaultdict",
+          "module": "collections",
+          "names": [
+            "defaultdict"
+          ],
+          "level": 0,
+          "type": "from"
+        },
+        {
+          "raw": "from pathlib import Path",
+          "module": "pathlib",
+          "names": [
+            "Path"
+          ],
+          "level": 0,
+          "type": "from"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "main",
+          "type": "function",
+          "line_start": 22,
+          "line_end": 63,
+          "signature": "main()",
+          "decorators": [],
+          "returns": "None",
+          "doc": null
+        },
+        {
+          "name": "emit",
+          "type": "function",
+          "line_start": 66,
+          "line_end": 72,
+          "signature": "emit(lines: list[str])",
+          "decorators": [],
+          "returns": "None",
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [
+        "BUDGET",
+        "JSON_PATH",
+        "MD",
+        "OUT_DIR",
+        "ROOT",
+        "SCRIPT"
+      ],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
     {
       "path": ".claude/settings.local.json",
       "extension": ".json",
@@ -3210,6 +3306,72 @@
       "notes": []
     },
     {
+      "path": "DOCS/Sessions & TO DOs/23.09_feedback_uzytkownika_i_wydajnosc.md",
+      "extension": ".md",
+      "size_bytes": 11984,
+      "line_count": 155,
+      "sha1_short": "9987cf3c81",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# 23.09.2026 — feedback użytkownika + mierzalna wydajność",
+        "## ZADANIE A — feedback użytkownika",
+        "### A1. Odnośnik do dysku (regulaminy, statut) — WDROŻONE, czeka na dane",
+        "### A2. „Pół na pół\" (Dynamo) — WDROŻONE",
+        "### A3. Odrzucanie godzinek z powodem — WDROŻONE",
+        "### A3b. Legenda „pół na pół\" — DODANA I USUNIĘTA",
+        "### A3c. Właściciel nie płaci za własny kajak — WDROŻONE 24.09",
+        "### A3d. Moduł Klub: kafelek „Dysk klubowy\" + adres klubu — WDROŻONE 24.09",
+        "### A4. Pola własnościowe na liście sprzętu — WDROŻONE",
+        "## ZADANIE B — wydajność",
+        "### Przyrządy (wdrożone jako pierwsze, przed optymalizacjami)",
+        "### Wyniki",
+        "### Nowe znalezisko — W22, podwójny render",
+        "### Co zostało",
+        "## Uwagi operacyjne z tej sesji"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/23.09_pomiary_wydajnosci_METODA.md",
+      "extension": ".md",
+      "size_bytes": 9937,
+      "line_count": 192,
+      "sha1_short": "34dbe256a7",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Pomiary wydajności — metoda (kontrakt)",
+        "## 1. Trzy kanały pomiarowe",
+        "## 2. Przyrządy",
+        "### 2.1 Backend — `Server-Timing`",
+        "# HTTP/1.1 401 Unauthorized",
+        "# Server-Timing: app;dur=2.1, cold;dur=32548",
+        "### 2.2 Frontend — `public/core/perf.js`",
+        "## 3. Procedura przebiegu (lab)",
+        "## 4. Polecenia gcloud",
+        "# realne nazwy usług Cloud Run",
+        "# latencja żądań (zawiera zimny start — żądanie czeka na instancję)",
+        "# zimne starty co do sztuki (dostępne od 23.09.2026)",
+        "## 5. Bramka lokalna dla W1 (bez produkcji, deterministyczna)",
+        "## 6. Czego uczciwie nie udowodnimy",
+        "## 7. Układ katalogów"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "DOCS/Sessions & TO DOs/24.07_klucze.md",
       "extension": ".md",
       "size_bytes": 11719,
@@ -4386,6 +4548,200 @@
       "notes": []
     },
     {
+      "path": "DOCS/Sessions & TO DOs/perf/2026-09-23_po_etapie_1/SUMMARY.md",
+      "extension": ".md",
+      "size_bytes": 3334,
+      "line_count": 56,
+      "sha1_short": "b28ba29654",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Po Etapie 1 — 23.09.2026",
+        "## 1. Główne KPI",
+        "## 2. Backend — koszt zimnego startu",
+        "## 3. Pozycje potwierdzone pojedynczo",
+        "## 4. Liczba żądań ekranu startowego",
+        "## 5. Czego ten pomiar nie obejmuje"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/perf/2026-09-24_telefon/SUMMARY.md",
+      "extension": ".md",
+      "size_bytes": 4298,
+      "line_count": 88,
+      "sha1_short": "f817fe7c81",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Pomiar z telefonu — 24.09.2026",
+        "## 1. Wniosek najważniejszy",
+        "## 2. Dlaczego zysk zniknął",
+        "## 3. Co działa zgodnie z planem (potwierdzone na telefonie)",
+        "## 4. Skala problemu dla reszty klubu",
+        "## 5. Proponowany następny krok (poza uzgodnionymi etapami 1–4)",
+        "## 6. Historia przebiegów z tego urządzenia"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/perf/baseline_2026-09-23/runs.json",
+      "extension": ".json",
+      "size_bytes": 2794,
+      "line_count": 48,
+      "sha1_short": "d4db022099",
+      "kind": "config",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [
+        "backend_cold_start",
+        "meta",
+        "runs",
+        "summary",
+        "w22_duplicate_render",
+        "warm_handler_costs_ms"
+      ],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/perf/baseline_2026-09-23/SUMMARY.md",
+      "extension": ".md",
+      "size_bytes": 4975,
+      "line_count": 93,
+      "sha1_short": "3e059e089f",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Punkt odniesienia — 23.09.2026",
+        "## 1. Główne KPI — `ms:home` (od otwarcia do kompletnego ekranu startowego)",
+        "## 2. Rozbicie startu (mediana z przebiegów z ciepłym cache)",
+        "## 3. Backend — zimny start (zmierzone na `/api/klub`, produkcja)",
+        "## 4. NOWE ZNALEZISKO — W22: podwójny render ekranu startowego",
+        "## 5. Pliki",
+        "## 6. Czego tu nie ma"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/perf/POROWNANIE.md",
+      "extension": ".md",
+      "size_bytes": 8055,
+      "line_count": 128,
+      "sha1_short": "46509d33ea",
+      "kind": "markdown",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [
+        "# Wydajność — porównanie etapów",
+        "## 1. Główne KPI — `ms:home` (od otwarcia aplikacji do kompletnego ekranu startowego)",
+        "## 2. Backend — zimny start",
+        "## 3. Ekran startowy — co się dzieje w sieci",
+        "## 4. Moduł Sprzęt — szukajka",
+        "## 5. Pozycje wdrożone, których NIE potwierdzam pomiarem",
+        "## 6. Pozycja niewdrożona",
+        "## 7. Telefon — POMIAR WYKONANY 24.09, wynik niewygodny",
+        "## 8. Czego ten pomiar nadal nie obejmuje",
+        "## 9. `?view=badge` — 24.09, po pomiarze z telefonu"
+      ],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "DOCS/Sessions & TO DOs/perf/snapshot.js",
+      "extension": ".js",
+      "size_bytes": 3222,
+      "line_count": 79,
+      "sha1_short": "2f7ecedebf",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "R",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isCss",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isJs",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "pick",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "sum",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "DOCS/Sessions & TO DOs/plan_audyt_v2.md",
       "extension": ".md",
       "size_bytes": 28332,
@@ -5003,9 +5359,9 @@
     {
       "path": "firebase.json",
       "extension": ".json",
-      "size_bytes": 14188,
+      "size_bytes": 14158,
       "line_count": 563,
-      "sha1_short": "378eae1c33",
+      "sha1_short": "382864d76f",
       "kind": "config",
       "module_aliases": [],
       "imports": [],
@@ -5079,9 +5435,9 @@
     {
       "path": "functions/lib/api/adminApprovalHandler.js",
       "extension": ".js",
-      "size_bytes": 10898,
-      "line_count": 230,
-      "sha1_short": "76e5a252a0",
+      "size_bytes": 11702,
+      "line_count": 242,
+      "sha1_short": "12efab672c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -6024,9 +6380,9 @@
     {
       "path": "functions/lib/api/gearBundleReservationCreateHandler.js",
       "extension": ".js",
-      "size_bytes": 5125,
-      "line_count": 102,
-      "sha1_short": "e5d19a40b4",
+      "size_bytes": 8180,
+      "line_count": 170,
+      "sha1_short": "ea912d339a",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -6057,6 +6413,20 @@
           "names": [],
           "level": 0,
           "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
         }
       ],
       "internal_dependencies": [
@@ -6067,6 +6437,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "enqueueJob",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "handleGearBundleReservationCreate",
           "type": "function",
@@ -6786,9 +7166,9 @@
     {
       "path": "functions/lib/api/getAdminPendingHandler.js",
       "extension": ".js",
-      "size_bytes": 27416,
-      "line_count": 410,
-      "sha1_short": "6e92c70dc6",
+      "size_bytes": 31257,
+      "line_count": 468,
+      "sha1_short": "e214e0855d",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -6865,7 +7245,47 @@
           "doc": null
         },
         {
+          "name": "expiredKursantsPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "gearSyncPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "handleGetAdminPending",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "negativeBalancesPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "notRejected",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -7300,9 +7720,9 @@
     {
       "path": "functions/lib/api/getBasenSessionsHandler.js",
       "extension": ".js",
-      "size_bytes": 6462,
-      "line_count": 115,
-      "sha1_short": "18733c3eaf",
+      "size_bytes": 6348,
+      "line_count": 112,
+      "sha1_short": "13f6e78fb6",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -7683,9 +8103,9 @@
     {
       "path": "functions/lib/api/getGodzinkiHandler.js",
       "extension": ".js",
-      "size_bytes": 7862,
-      "line_count": 150,
-      "sha1_short": "ab1f160bd2",
+      "size_bytes": 9607,
+      "line_count": 177,
+      "sha1_short": "0386062f8c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -7712,6 +8132,16 @@
       "functions": [
         {
           "name": "handleGetGodzinki",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isVisibleToMember",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -7794,9 +8224,9 @@
     {
       "path": "functions/lib/api/getKlubInfoHandler.js",
       "extension": ".js",
-      "size_bytes": 11965,
-      "line_count": 191,
-      "sha1_short": "16752eaa4f",
+      "size_bytes": 13650,
+      "line_count": 209,
+      "sha1_short": "77086b438a",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -8590,9 +9020,9 @@
     {
       "path": "functions/lib/api/registerUserHandler.js",
       "extension": ".js",
-      "size_bytes": 42245,
-      "line_count": 772,
-      "sha1_short": "0a28b85916",
+      "size_bytes": 45392,
+      "line_count": 815,
+      "sha1_short": "d97abc997c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9178,9 +9608,9 @@
     {
       "path": "functions/lib/index.js",
       "extension": ".js",
-      "size_bytes": 76506,
-      "line_count": 1754,
-      "sha1_short": "06565c3f78",
+      "size_bytes": 80487,
+      "line_count": 1840,
+      "sha1_short": "19f3d0087e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -9626,8 +10056,8 @@
           "type": "script_import"
         },
         {
-          "raw": "import/require ./service/runner",
-          "module": "./service/runner",
+          "raw": "import/require ./service/boot_timer",
+          "module": "./service/boot_timer",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -9767,7 +10197,7 @@
         "functions/lib/api/userWeightHandler.js",
         "functions/lib/modules/equipment/bundle/gear_bundle_service.js",
         "functions/lib/service/admin/adminRunTask.js",
-        "functions/lib/service/runner.js",
+        "functions/lib/service/boot_timer.js",
         "functions/lib/service/service_config.js",
         "functions/lib/service/triggers/onEventApproved.js",
         "functions/lib/service/triggers/onUsersActiveCreated.js",
@@ -9776,6 +10206,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "attachServerTiming",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "buildAppsScriptSyncSummary",
           "type": "function",
@@ -9927,6 +10367,16 @@
           "doc": null
         },
         {
+          "name": "loadRunTaskById",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "n",
           "type": "function",
           "line_start": null,
@@ -9988,6 +10438,16 @@
         },
         {
           "name": "sendPreflight",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "servingOrDiscovering",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -10121,12 +10581,19 @@
     {
       "path": "functions/lib/modules/basen/basen_service.js",
       "extension": ".js",
-      "size_bytes": 49921,
-      "line_count": 903,
-      "sha1_short": "2300530f1d",
+      "size_bytes": 51973,
+      "line_count": 945,
+      "sha1_short": "8ab7712d43",
       "kind": "script",
       "module_aliases": [],
       "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
         {
           "raw": "import/require ../setup/function_roles_service",
           "module": "../setup/function_roles_service",
@@ -10158,6 +10625,7 @@
       ],
       "internal_dependencies": [
         "functions/lib/modules/basen/basen_godziny_service.js",
+        "functions/lib/modules/setup/doc_cache.js",
         "functions/lib/modules/setup/function_roles_service.js",
         "functions/lib/modules/shared/text_utils.js"
       ],
@@ -10275,6 +10743,16 @@
         },
         {
           "name": "fetchPoolKayaks",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "fetchPoolKayaksUncached",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -10414,7 +10892,7 @@
           "doc": null
         },
         {
-          "name": "resolveKayakLabels",
+          "name": "resolveKayakLabelsBulk",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -10724,9 +11202,9 @@
     {
       "path": "functions/lib/modules/equipment/bundle/gear_bundle_service.js",
       "extension": ".js",
-      "size_bytes": 63076,
-      "line_count": 1146,
-      "sha1_short": "64e90a1f44",
+      "size_bytes": 68542,
+      "line_count": 1227,
+      "sha1_short": "97d2ea92d1",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -10761,6 +11239,13 @@
         {
           "raw": "import/require ../../hours/hours_quote",
           "module": "../../hours/hours_quote",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../../setup/doc_cache",
+          "module": "../../setup/doc_cache",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -10809,6 +11294,7 @@
         "functions/lib/modules/hours/godzinki_service.js",
         "functions/lib/modules/hours/godzinki_vars.js",
         "functions/lib/modules/hours/hours_quote.js",
+        "functions/lib/modules/setup/doc_cache.js",
         "functions/lib/modules/setup/setup_gear_vars.js",
         "functions/lib/modules/shared/text_utils.js",
         "functions/lib/modules/users/userStatusCheck.js"
@@ -11452,9 +11938,9 @@
     {
       "path": "functions/lib/modules/hours/godzinki_service.js",
       "extension": ".js",
-      "size_bytes": 42763,
-      "line_count": 931,
-      "sha1_short": "12c7e72bb8",
+      "size_bytes": 42332,
+      "line_count": 917,
+      "sha1_short": "fea6703d29",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -11580,16 +12066,6 @@
           "doc": null
         },
         {
-          "name": "getHistory",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
           "name": "getNextExpiry",
           "type": "function",
           "line_start": null,
@@ -11698,13 +12174,23 @@
     {
       "path": "functions/lib/modules/hours/godzinki_vars.js",
       "extension": ".js",
-      "size_bytes": 1637,
-      "line_count": 32,
-      "sha1_short": "8815cf0563",
+      "size_bytes": 1698,
+      "line_count": 33,
+      "sha1_short": "d4810789fa",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/doc_cache.js"
+      ],
       "classes": [],
       "functions": [
         {
@@ -12061,13 +12547,23 @@
     {
       "path": "functions/lib/modules/km/km_vars.js",
       "extension": ".js",
-      "size_bytes": 1206,
-      "line_count": 33,
-      "sha1_short": "6b07a1e5ae",
+      "size_bytes": 933,
+      "line_count": 23,
+      "sha1_short": "73f1ae83b3",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/doc_cache.js"
+      ],
       "classes": [],
       "functions": [
         {
@@ -12109,13 +12605,23 @@
     {
       "path": "functions/lib/modules/setup/app_vars.js",
       "extension": ".js",
-      "size_bytes": 1119,
-      "line_count": 26,
-      "sha1_short": "3d825d5075",
+      "size_bytes": 1173,
+      "line_count": 27,
+      "sha1_short": "5924fe65f7",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/doc_cache.js"
+      ],
       "classes": [],
       "functions": [
         {
@@ -12165,15 +12671,63 @@
       "notes": []
     },
     {
-      "path": "functions/lib/modules/setup/events_vars.js",
+      "path": "functions/lib/modules/setup/doc_cache.js",
       "extension": ".js",
-      "size_bytes": 750,
-      "line_count": 18,
-      "sha1_short": "06a802b7e3",
+      "size_bytes": 2242,
+      "line_count": 49,
+      "sha1_short": "7b74e26e13",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
       "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "clearDocCache",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getCachedDoc",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/lib/modules/setup/events_vars.js",
+      "extension": ".js",
+      "size_bytes": 804,
+      "line_count": 19,
+      "sha1_short": "5b29a6f6f7",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/doc_cache.js"
+      ],
       "classes": [],
       "functions": [
         {
@@ -12253,13 +12807,23 @@
     {
       "path": "functions/lib/modules/setup/setup_gear_vars.js",
       "extension": ".js",
-      "size_bytes": 2821,
-      "line_count": 66,
-      "sha1_short": "6e451facd0",
+      "size_bytes": 2875,
+      "line_count": 67,
+      "sha1_short": "ae503cc4ea",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/setup/doc_cache.js"
+      ],
       "classes": [],
       "functions": [
         {
@@ -12525,9 +13089,9 @@
     {
       "path": "functions/lib/modules/users/userStatusCheck.js",
       "extension": ".js",
-      "size_bytes": 1576,
-      "line_count": 36,
-      "sha1_short": "ab7119378e",
+      "size_bytes": 1542,
+      "line_count": 30,
+      "sha1_short": "b6c8d98c47",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -12604,6 +13168,44 @@
       "functions": [
         {
           "name": "verifyIdToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/lib/service/boot_timer.js",
+      "extension": ".js",
+      "size_bytes": 1614,
+      "line_count": 33,
+      "sha1_short": "bbea4c0c3b",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "getModuleEvalMs",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "markModuleEvalDone",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -12972,9 +13574,9 @@
     {
       "path": "functions/lib/service/registry.js",
       "extension": ".js",
-      "size_bytes": 5110,
-      "line_count": 85,
-      "sha1_short": "b80a3d552f",
+      "size_bytes": 5380,
+      "line_count": 89,
+      "sha1_short": "1958a953a5",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -13049,6 +13651,13 @@
           "type": "script_import"
         },
         {
+          "raw": "import/require ./tasks/gearNotifyHalfHalfOwner",
+          "module": "./tasks/gearNotifyHalfHalfOwner",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
           "raw": "import/require ./tasks/gearNotifyReservationCancelledByAdmin",
           "module": "./tasks/gearNotifyReservationCancelledByAdmin",
           "names": [],
@@ -13093,6 +13702,13 @@
         {
           "raw": "import/require ./tasks/godzinkiMonthlyBalanceReview",
           "module": "./tasks/godzinkiMonthlyBalanceReview",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/godzinkiNotifyRejected",
+          "module": "./tasks/godzinkiNotifyRejected",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -13228,6 +13844,7 @@
         "functions/lib/service/tasks/eventsSyncCalendar.js",
         "functions/lib/service/tasks/eventsSyncFromSheet.js",
         "functions/lib/service/tasks/gearNotifyDamageReport.js",
+        "functions/lib/service/tasks/gearNotifyHalfHalfOwner.js",
         "functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js",
         "functions/lib/service/tasks/gearPrivateStorage.js",
         "functions/lib/service/tasks/gearSyncAllFromSheet.js",
@@ -13235,6 +13852,7 @@
         "functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js",
         "functions/lib/service/tasks/godzinkiMergeHistoricalUser.js",
         "functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js",
+        "functions/lib/service/tasks/godzinkiNotifyRejected.js",
         "functions/lib/service/tasks/godzinkiSyncFromSheet.js",
         "functions/lib/service/tasks/groupsDiagnose.js",
         "functions/lib/service/tasks/kmMergeHistoricalUser.js",
@@ -14032,6 +14650,71 @@
       "notes": []
     },
     {
+      "path": "functions/lib/service/tasks/gearNotifyHalfHalfOwner.js",
+      "extension": ".js",
+      "size_bytes": 8366,
+      "line_count": 163,
+      "sha1_short": "735e446a43",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/shared/text_utils.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "displayNameOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "findKayak",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDatePL",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js",
       "extension": ".js",
       "size_bytes": 9945,
@@ -14107,9 +14790,9 @@
     {
       "path": "functions/lib/service/tasks/gearPrivateStorage.js",
       "extension": ".js",
-      "size_bytes": 16102,
-      "line_count": 345,
-      "sha1_short": "616cb9909b",
+      "size_bytes": 16560,
+      "line_count": 352,
+      "sha1_short": "07afd7fd1d",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -14732,6 +15415,71 @@
         },
         {
           "name": "monthKeyOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/lib/service/tasks/godzinkiNotifyRejected.js",
+      "extension": ".js",
+      "size_bytes": 6079,
+      "line_count": 118,
+      "sha1_short": "e303aecdb8",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/lib/modules/shared/text_utils.js"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "displayNameOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDatePL",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "p",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -17111,6 +17859,31 @@
       "notes": []
     },
     {
+      "path": "functions/scripts/enqueueGearSyncAllFromSheet.js",
+      "extension": ".js",
+      "size_bytes": 1794,
+      "line_count": 47,
+      "sha1_short": "6298001f1c",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/scripts/enqueueGodzinkiTransitionImport.js",
       "extension": ".js",
       "size_bytes": 2544,
@@ -17964,9 +18737,9 @@
     {
       "path": "functions/src/api/adminApprovalHandler.ts",
       "extension": ".ts",
-      "size_bytes": 8684,
-      "line_count": 220,
-      "sha1_short": "52c5103679",
+      "size_bytes": 9399,
+      "line_count": 232,
+      "sha1_short": "3d0c29e720",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -18736,9 +19509,9 @@
     {
       "path": "functions/src/api/gearBundleReservationCreateHandler.ts",
       "extension": ".ts",
-      "size_bytes": 4647,
-      "line_count": 125,
-      "sha1_short": "818c64dd71",
+      "size_bytes": 6112,
+      "line_count": 161,
+      "sha1_short": "366d328b0e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -18776,6 +19549,20 @@
           "names": [],
           "level": 0,
           "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-functions/v2",
+          "module": "firebase-functions/v2",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
         }
       ],
       "internal_dependencies": [
@@ -18786,6 +19573,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "enqueueJob",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "handleGearBundleReservationCreate",
           "type": "function",
@@ -19544,9 +20341,9 @@
     {
       "path": "functions/src/api/getAdminPendingHandler.ts",
       "extension": ".ts",
-      "size_bytes": 21430,
-      "line_count": 508,
-      "sha1_short": "4d82545297",
+      "size_bytes": 24543,
+      "line_count": 574,
+      "sha1_short": "a8be716131",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -19620,7 +20417,47 @@
           "doc": null
         },
         {
+          "name": "expiredKursantsPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "gearSyncPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "handleGetAdminPending",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "negativeBalancesPromise",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "notRejected",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -20011,9 +20848,9 @@
     {
       "path": "functions/src/api/getBasenSessionsHandler.ts",
       "extension": ".ts",
-      "size_bytes": 5470,
-      "line_count": 127,
-      "sha1_short": "a0a7fe96eb",
+      "size_bytes": 5339,
+      "line_count": 124,
+      "sha1_short": "752752b4bb",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -20422,9 +21259,9 @@
     {
       "path": "functions/src/api/getGodzinkiHandler.ts",
       "extension": ".ts",
-      "size_bytes": 6373,
-      "line_count": 172,
-      "sha1_short": "a8181ef35d",
+      "size_bytes": 7761,
+      "line_count": 200,
+      "sha1_short": "40323219a3",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -20458,6 +21295,16 @@
       "functions": [
         {
           "name": "handleGetGodzinki",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "isVisibleToMember",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -20547,9 +21394,9 @@
     {
       "path": "functions/src/api/getKlubInfoHandler.ts",
       "extension": ".ts",
-      "size_bytes": 10005,
-      "line_count": 222,
-      "sha1_short": "1b984971b8",
+      "size_bytes": 11075,
+      "line_count": 237,
+      "sha1_short": "bcb19706bf",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -21269,9 +22116,9 @@
     {
       "path": "functions/src/api/registerUserHandler.ts",
       "extension": ".ts",
-      "size_bytes": 38867,
-      "line_count": 971,
-      "sha1_short": "bf95a3286b",
+      "size_bytes": 41463,
+      "line_count": 1017,
+      "sha1_short": "f87df11a11",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -21906,9 +22753,9 @@
     {
       "path": "functions/src/index.ts",
       "extension": ".ts",
-      "size_bytes": 65058,
-      "line_count": 1933,
-      "sha1_short": "b0aca6fdc4",
+      "size_bytes": 70021,
+      "line_count": 2029,
+      "sha1_short": "364790a330",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -22354,8 +23201,8 @@
           "type": "script_import"
         },
         {
-          "raw": "import/require ./service/runner",
-          "module": "./service/runner",
+          "raw": "import/require ./service/boot_timer",
+          "module": "./service/boot_timer",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -22502,7 +23349,7 @@
         "functions/src/api/userWeightHandler.ts",
         "functions/src/modules/equipment/bundle/gear_bundle_service.ts",
         "functions/src/service/admin/adminRunTask.ts",
-        "functions/src/service/runner.ts",
+        "functions/src/service/boot_timer.ts",
         "functions/src/service/service_config.ts",
         "functions/src/service/triggers/onEventApproved.ts",
         "functions/src/service/triggers/onUsersActiveCreated.ts",
@@ -22511,6 +23358,16 @@
       ],
       "classes": [],
       "functions": [
+        {
+          "name": "attachServerTiming",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
         {
           "name": "buildAppsScriptSyncSummary",
           "type": "function",
@@ -22662,6 +23519,16 @@
           "doc": null
         },
         {
+          "name": "loadRunTaskById",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "n",
           "type": "function",
           "line_start": null,
@@ -22723,6 +23590,16 @@
         },
         {
           "name": "sendPreflight",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "servingOrDiscovering",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -22856,12 +23733,19 @@
     {
       "path": "functions/src/modules/basen/basen_service.ts",
       "extension": ".ts",
-      "size_bytes": 50634,
-      "line_count": 1150,
-      "sha1_short": "9046644675",
+      "size_bytes": 52731,
+      "line_count": 1196,
+      "sha1_short": "027cf636c2",
       "kind": "script",
       "module_aliases": [],
       "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
         {
           "raw": "import/require ../setup/function_roles_service",
           "module": "../setup/function_roles_service",
@@ -22893,6 +23777,7 @@
       ],
       "internal_dependencies": [
         "functions/src/modules/basen/basen_godziny_service.ts",
+        "functions/src/modules/setup/doc_cache.ts",
         "functions/src/modules/setup/function_roles_service.ts",
         "functions/src/modules/shared/text_utils.ts"
       ],
@@ -23000,6 +23885,16 @@
         },
         {
           "name": "fetchPoolKayaks",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "fetchPoolKayaksUncached",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -23139,7 +24034,7 @@
           "doc": null
         },
         {
-          "name": "resolveKayakLabels",
+          "name": "resolveKayakLabelsBulk",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -23449,9 +24344,9 @@
     {
       "path": "functions/src/modules/equipment/bundle/gear_bundle_service.ts",
       "extension": ".ts",
-      "size_bytes": 56220,
-      "line_count": 1350,
-      "sha1_short": "b30079b079",
+      "size_bytes": 61203,
+      "line_count": 1436,
+      "sha1_short": "8750d4b13c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -23486,6 +24381,13 @@
         {
           "raw": "import/require ../../hours/hours_quote",
           "module": "../../hours/hours_quote",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../../setup/doc_cache",
+          "module": "../../setup/doc_cache",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -23534,6 +24436,7 @@
         "functions/src/modules/hours/godzinki_service.ts",
         "functions/src/modules/hours/godzinki_vars.ts",
         "functions/src/modules/hours/hours_quote.ts",
+        "functions/src/modules/setup/doc_cache.ts",
         "functions/src/modules/setup/setup_gear_vars.ts",
         "functions/src/modules/shared/text_utils.ts",
         "functions/src/modules/users/userStatusCheck.ts"
@@ -24167,9 +25070,9 @@
     {
       "path": "functions/src/modules/hours/godzinki_service.ts",
       "extension": ".ts",
-      "size_bytes": 42598,
-      "line_count": 1144,
-      "sha1_short": "389e80a8c9",
+      "size_bytes": 42140,
+      "line_count": 1126,
+      "sha1_short": "e7102fa5fc",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -24304,16 +25207,6 @@
           "doc": null
         },
         {
-          "name": "getHistory",
-          "type": "function",
-          "line_start": null,
-          "line_end": null,
-          "signature": null,
-          "decorators": [],
-          "returns": null,
-          "doc": null
-        },
-        {
           "name": "getNextExpiry",
           "type": "function",
           "line_start": null,
@@ -24422,13 +25315,23 @@
     {
       "path": "functions/src/modules/hours/godzinki_vars.ts",
       "extension": ".ts",
-      "size_bytes": 2317,
-      "line_count": 52,
-      "sha1_short": "0dc5049914",
+      "size_bytes": 2359,
+      "line_count": 53,
+      "sha1_short": "f72be9f82d",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/doc_cache.ts"
+      ],
       "classes": [],
       "functions": [
         {
@@ -24811,13 +25714,23 @@
     {
       "path": "functions/src/modules/km/km_vars.ts",
       "extension": ".ts",
-      "size_bytes": 1199,
-      "line_count": 44,
-      "sha1_short": "9d0e84afb3",
+      "size_bytes": 1241,
+      "line_count": 45,
+      "sha1_short": "f1b9bf8b6e",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ../setup/doc_cache",
+          "module": "../setup/doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/doc_cache.ts"
+      ],
       "classes": [],
       "functions": [
         {
@@ -24859,13 +25772,23 @@
     {
       "path": "functions/src/modules/setup/app_vars.ts",
       "extension": ".ts",
-      "size_bytes": 1494,
-      "line_count": 41,
-      "sha1_short": "eeffa456ee",
+      "size_bytes": 1529,
+      "line_count": 42,
+      "sha1_short": "db1feaf37c",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/doc_cache.ts"
+      ],
       "classes": [],
       "functions": [
         {
@@ -24915,15 +25838,63 @@
       "notes": []
     },
     {
-      "path": "functions/src/modules/setup/events_vars.ts",
+      "path": "functions/src/modules/setup/doc_cache.ts",
       "extension": ".ts",
-      "size_bytes": 860,
-      "line_count": 28,
-      "sha1_short": "b0d01b9f31",
+      "size_bytes": 2242,
+      "line_count": 56,
+      "sha1_short": "df80b03158",
       "kind": "script",
       "module_aliases": [],
       "imports": [],
       "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "clearDocCache",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "getCachedDoc",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/src/modules/setup/events_vars.ts",
+      "extension": ".ts",
+      "size_bytes": 895,
+      "line_count": 29,
+      "sha1_short": "e365cf938a",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/doc_cache.ts"
+      ],
       "classes": [],
       "functions": [
         {
@@ -25003,13 +25974,23 @@
     {
       "path": "functions/src/modules/setup/setup_gear_vars.ts",
       "extension": ".ts",
-      "size_bytes": 3165,
-      "line_count": 88,
-      "sha1_short": "bf1fcaa4ef",
+      "size_bytes": 3200,
+      "line_count": 89,
+      "sha1_short": "850a20199c",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
-      "internal_dependencies": [],
+      "imports": [
+        {
+          "raw": "import/require ./doc_cache",
+          "module": "./doc_cache",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/setup/doc_cache.ts"
+      ],
       "classes": [],
       "functions": [
         {
@@ -25275,9 +26256,9 @@
     {
       "path": "functions/src/modules/users/userStatusCheck.ts",
       "extension": ".ts",
-      "size_bytes": 1214,
-      "line_count": 40,
-      "sha1_short": "2d998f58f7",
+      "size_bytes": 1306,
+      "line_count": 33,
+      "sha1_short": "976e8242ef",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -25354,6 +26335,44 @@
       "functions": [
         {
           "name": "verifyIdToken",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/src/service/boot_timer.ts",
+      "extension": ".ts",
+      "size_bytes": 1386,
+      "line_count": 31,
+      "sha1_short": "8d4a3e33f3",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "getModuleEvalMs",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "markModuleEvalDone",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -25712,9 +26731,9 @@
     {
       "path": "functions/src/service/registry.ts",
       "extension": ".ts",
-      "size_bytes": 4130,
-      "line_count": 84,
-      "sha1_short": "22eaacac92",
+      "size_bytes": 4347,
+      "line_count": 88,
+      "sha1_short": "ede3e9e87a",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -25789,6 +26808,13 @@
           "type": "script_import"
         },
         {
+          "raw": "import/require ./tasks/gearNotifyHalfHalfOwner",
+          "module": "./tasks/gearNotifyHalfHalfOwner",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
           "raw": "import/require ./tasks/gearNotifyReservationCancelledByAdmin",
           "module": "./tasks/gearNotifyReservationCancelledByAdmin",
           "names": [],
@@ -25833,6 +26859,13 @@
         {
           "raw": "import/require ./tasks/godzinkiMonthlyBalanceReview",
           "module": "./tasks/godzinkiMonthlyBalanceReview",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ./tasks/godzinkiNotifyRejected",
+          "module": "./tasks/godzinkiNotifyRejected",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -25975,6 +27008,7 @@
         "functions/src/service/tasks/eventsSyncCalendar.ts",
         "functions/src/service/tasks/eventsSyncFromSheet.ts",
         "functions/src/service/tasks/gearNotifyDamageReport.ts",
+        "functions/src/service/tasks/gearNotifyHalfHalfOwner.ts",
         "functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts",
         "functions/src/service/tasks/gearPrivateStorage.ts",
         "functions/src/service/tasks/gearSyncAllFromSheet.ts",
@@ -25982,6 +27016,7 @@
         "functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts",
         "functions/src/service/tasks/godzinkiMergeHistoricalUser.ts",
         "functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts",
+        "functions/src/service/tasks/godzinkiNotifyRejected.ts",
         "functions/src/service/tasks/godzinkiSyncFromSheet.ts",
         "functions/src/service/tasks/groupsDiagnose.ts",
         "functions/src/service/tasks/kmMergeHistoricalUser.ts",
@@ -26868,6 +27903,79 @@
       "notes": []
     },
     {
+      "path": "functions/src/service/tasks/gearNotifyHalfHalfOwner.ts",
+      "extension": ".ts",
+      "size_bytes": 6331,
+      "line_count": 159,
+      "sha1_short": "d5f5120268",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../types",
+          "module": "../types",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/shared/text_utils.ts",
+        "functions/src/service/types.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "displayNameOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "findKayak",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDatePL",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts",
       "extension": ".ts",
       "size_bytes": 7237,
@@ -26951,9 +28059,9 @@
     {
       "path": "functions/src/service/tasks/gearPrivateStorage.ts",
       "extension": ".ts",
-      "size_bytes": 14668,
-      "line_count": 400,
-      "sha1_short": "e4553d9b62",
+      "size_bytes": 15150,
+      "line_count": 409,
+      "sha1_short": "46172ec4cb",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -27551,6 +28659,79 @@
         },
         {
           "name": "monthKeyOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "functions/src/service/tasks/godzinkiNotifyRejected.ts",
+      "extension": ".ts",
+      "size_bytes": 4128,
+      "line_count": 113,
+      "sha1_short": "4b0d82b378",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require ../../modules/shared/text_utils",
+          "module": "../../modules/shared/text_utils",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require ../types",
+          "module": "../types",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require firebase-admin",
+          "module": "firebase-admin",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [
+        "functions/src/modules/shared/text_utils.ts",
+        "functions/src/service/types.ts"
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "displayNameOf",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "formatDatePL",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "p",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -29434,9 +30615,9 @@
     {
       "path": "functions/test/gear_bundle_core.test.ts",
       "extension": ".ts",
-      "size_bytes": 59523,
-      "line_count": 1069,
-      "sha1_short": "f6b3f653f2",
+      "size_bytes": 61157,
+      "line_count": 1101,
+      "sha1_short": "ab3459a60e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -30995,12 +32176,20 @@
     {
       "path": "public/core/api_client.js",
       "extension": ".js",
-      "size_bytes": 3116,
-      "line_count": 94,
-      "sha1_short": "3833edb436",
+      "size_bytes": 4175,
+      "line_count": 130,
+      "sha1_short": "39c8cbb7a3",
       "kind": "script",
       "module_aliases": [],
-      "imports": [],
+      "imports": [
+        {
+          "raw": "import/require /core/perf.js",
+          "module": "/core/perf.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
       "internal_dependencies": [],
       "classes": [],
       "functions": [
@@ -31035,6 +32224,16 @@
           "doc": null
         },
         {
+          "name": "parseOrThrow",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "resolveToken",
           "type": "function",
           "line_start": null,
@@ -31053,6 +32252,26 @@
           "decorators": [],
           "returns": null,
           "doc": null
+        },
+        {
+          "name": "t0",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "timedFetch",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
         }
       ],
       "top_level_symbols": [],
@@ -31063,9 +32282,9 @@
     {
       "path": "public/core/app_shell.js",
       "extension": ".js",
-      "size_bytes": 11887,
-      "line_count": 326,
-      "sha1_short": "9810134e42",
+      "size_bytes": 14993,
+      "line_count": 389,
+      "sha1_short": "93cf9a6f4e",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -31079,6 +32298,13 @@
         {
           "raw": "import/require /core/modules_registry.js",
           "module": "/core/modules_registry.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require /core/perf.js",
+          "module": "/core/perf.js",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -31389,9 +32615,9 @@
     {
       "path": "public/core/firebase_client.js",
       "extension": ".js",
-      "size_bytes": 7197,
-      "line_count": 205,
-      "sha1_short": "8ba2124208",
+      "size_bytes": 9379,
+      "line_count": 249,
+      "sha1_short": "412927ccdd",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -31467,6 +32693,16 @@
           "doc": null
         },
         {
+          "name": "cachedUrl",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "getFirebaseConfig",
           "type": "function",
           "line_start": null,
@@ -31478,6 +32714,16 @@
         },
         {
           "name": "kayakStorageNumber",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "loadStorage",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -31707,85 +32953,15 @@
     {
       "path": "public/core/modules_registry.js",
       "extension": ".js",
-      "size_bytes": 5802,
-      "line_count": 176,
-      "sha1_short": "bd622dd282",
+      "size_bytes": 7344,
+      "line_count": 196,
+      "sha1_short": "596678c1bd",
       "kind": "script",
       "module_aliases": [],
       "imports": [
         {
           "raw": "import/require /core/module_stub.js",
           "module": "/core/module_stub.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/admin_pending_module.js",
-          "module": "/modules/admin_pending_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/basen_module.js",
-          "module": "/modules/basen_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/gear_module.js",
-          "module": "/modules/gear_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/godzinki_module.js",
-          "module": "/modules/godzinki_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/impreza_module.js",
-          "module": "/modules/impreza_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/klub_module.js",
-          "module": "/modules/klub_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/km_module.js",
-          "module": "/modules/km_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/kurs_godzinki_module.js",
-          "module": "/modules/kurs_godzinki_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/kurs_module.js",
-          "module": "/modules/kurs_module.js",
-          "names": [],
-          "level": 0,
-          "type": "script_import"
-        },
-        {
-          "raw": "import/require /modules/my_reservations_module.js",
-          "module": "/modules/my_reservations_module.js",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -31796,6 +32972,16 @@
       "functions": [
         {
           "name": "buildModulesFromSetup",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "createLazyModule",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -31821,11 +33007,202 @@
       "notes": []
     },
     {
+      "path": "public/core/perf.js",
+      "extension": ".js",
+      "size_bytes": 6464,
+      "line_count": 206,
+      "sha1_short": "34ee06648b",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "clearStoredRuns",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "closeHome",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "dump",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "homeDone",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "homeStart",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "mark",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "measure",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "now",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "parseServerTiming",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "persist",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "readStoredRuns",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "recordApi",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
+      "path": "public/core/perf_view.js",
+      "extension": ".js",
+      "size_bytes": 7644,
+      "line_count": 178,
+      "sha1_short": "5eac429118",
+      "kind": "script",
+      "module_aliases": [],
+      "imports": [
+        {
+          "raw": "import/require /core/html_utils.js",
+          "module": "/core/html_utils.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require /core/perf.js",
+          "module": "/core/perf.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        }
+      ],
+      "internal_dependencies": [],
+      "classes": [],
+      "functions": [
+        {
+          "name": "MS",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "renderPerfView",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        }
+      ],
+      "top_level_symbols": [],
+      "headings": [],
+      "config_keys": [],
+      "notes": []
+    },
+    {
       "path": "public/core/render_shell.js",
       "extension": ".js",
-      "size_bytes": 82201,
-      "line_count": 1794,
-      "sha1_short": "4304aa9a16",
+      "size_bytes": 87364,
+      "line_count": 1878,
+      "sha1_short": "650f40485c",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -31860,6 +33237,13 @@
         {
           "raw": "import/require /core/html_utils.js",
           "module": "/core/html_utils.js",
+          "names": [],
+          "level": 0,
+          "type": "script_import"
+        },
+        {
+          "raw": "import/require /core/perf.js",
+          "module": "/core/perf.js",
           "names": [],
           "level": 0,
           "type": "script_import"
@@ -31974,6 +33358,16 @@
         },
         {
           "name": "draw",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "fetchGodzinkiHome",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -32699,9 +34093,9 @@
     {
       "path": "public/index.html",
       "extension": ".html",
-      "size_bytes": 2804,
-      "line_count": 64,
-      "sha1_short": "69df5b9fa2",
+      "size_bytes": 4168,
+      "line_count": 81,
+      "sha1_short": "ec3e4477c1",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -32762,9 +34156,9 @@
     {
       "path": "public/modules/admin_pending_module.js",
       "extension": ".js",
-      "size_bytes": 28767,
-      "line_count": 516,
-      "sha1_short": "cbb9b98d7d",
+      "size_bytes": 33727,
+      "line_count": 622,
+      "sha1_short": "16606e588d",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -32822,6 +34216,16 @@
       "classes": [],
       "functions": [
         {
+          "name": "closeRejectModal",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "createAdminPendingModule",
           "type": "function",
           "line_start": null,
@@ -32833,6 +34237,16 @@
         },
         {
           "name": "load",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "openRejectModal",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -33456,9 +34870,9 @@
     {
       "path": "public/modules/gear_module.js",
       "extension": ".js",
-      "size_bytes": 146226,
-      "line_count": 3197,
-      "sha1_short": "9382ff515e",
+      "size_bytes": 150114,
+      "line_count": 3261,
+      "sha1_short": "b5b31f4ced",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -33760,6 +35174,16 @@
         },
         {
           "name": "getSelectedClubEvent",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "halfHalfIconSvg",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -34843,9 +36267,9 @@
     {
       "path": "public/modules/klub_module.js",
       "extension": ".js",
-      "size_bytes": 13003,
-      "line_count": 275,
-      "sha1_short": "5d36b16602",
+      "size_bytes": 17868,
+      "line_count": 355,
+      "sha1_short": "3ddf02a052",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -34889,6 +36313,16 @@
       "classes": [],
       "functions": [
         {
+          "name": "addrRow",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
           "name": "createKlubModule",
           "type": "function",
           "line_start": null,
@@ -34900,6 +36334,26 @@
         },
         {
           "name": "formatNrb",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "mapsDirectionsUrl",
+          "type": "function",
+          "line_start": null,
+          "line_end": null,
+          "signature": null,
+          "decorators": [],
+          "returns": null,
+          "doc": null
+        },
+        {
+          "name": "mountLinkTiles",
           "type": "function",
           "line_start": null,
           "line_end": null,
@@ -35456,9 +36910,9 @@
     {
       "path": "public/modules/my_reservations_module.js",
       "extension": ".js",
-      "size_bytes": 26491,
-      "line_count": 639,
-      "sha1_short": "7e3c710092",
+      "size_bytes": 27496,
+      "line_count": 657,
+      "sha1_short": "6651d29647",
       "kind": "script",
       "module_aliases": [],
       "imports": [
@@ -36536,9 +37990,9 @@
     {
       "path": "public/styles/gear.css",
       "extension": ".css",
-      "size_bytes": 34013,
-      "line_count": 1692,
-      "sha1_short": "8c506d23b2",
+      "size_bytes": 34048,
+      "line_count": 1693,
+      "sha1_short": "20bafe0911",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -36604,9 +38058,9 @@
     {
       "path": "public/styles/start.css",
       "extension": ".css",
-      "size_bytes": 11835,
-      "line_count": 241,
-      "sha1_short": "c86b0b8377",
+      "size_bytes": 12348,
+      "line_count": 248,
+      "sha1_short": "9bbbc5e211",
       "kind": "text",
       "module_aliases": [],
       "imports": [],
@@ -36621,9 +38075,9 @@
     {
       "path": "public/sw.js",
       "extension": ".js",
-      "size_bytes": 5992,
-      "line_count": 173,
-      "sha1_short": "707fcdabb7",
+      "size_bytes": 5874,
+      "line_count": 162,
+      "sha1_short": "ac8c0d9715",
       "kind": "script",
       "module_aliases": [],
       "imports": [],

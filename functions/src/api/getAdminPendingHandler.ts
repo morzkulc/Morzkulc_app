@@ -75,6 +75,8 @@ type GearSyncReport = {
     upserted: number;
     duplicateId: number;
     duplicates: Array<{id: string; number: string; model: string; rowNumber: string}>;
+    duplicateNumber: number;
+    duplicateNumbers: Array<{number: string; items: Array<{id: string; model: string; rowNumber: string}>}>;
     skippedNoId: number;
     skippedNotReal: number;
     scrapped: number;
@@ -473,7 +475,7 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
               totals: (d?.totals as Record<string, number>) || {},
               perCategory: Array.isArray(d?.perCategory) ?
                 d.perCategory
-                  .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0)
+                  .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.duplicateNumber) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0)
                   .map((c: any) => ({
                     key: norm(c?.key),
                     label: norm(c?.label),
@@ -482,6 +484,11 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
                     duplicateId: Number(c?.duplicateId ?? 0),
                     duplicates: Array.isArray(c?.duplicates) ? c.duplicates.map((x: any) => ({
                       id: norm(x?.id), number: norm(x?.number), model: norm(x?.model), rowNumber: norm(x?.rowNumber),
+                    })) : [],
+                    duplicateNumber: Number(c?.duplicateNumber ?? 0),
+                    duplicateNumbers: Array.isArray(c?.duplicateNumbers) ? c.duplicateNumbers.map((g: any) => ({
+                      number: norm(g?.number),
+                      items: Array.isArray(g?.items) ? g.items.map((x: any) => ({id: norm(x?.id), model: norm(x?.model), rowNumber: norm(x?.rowNumber)})) : [],
                     })) : [],
                     skippedNoId: Number(c?.skippedNoId ?? 0),
                     skippedNotReal: Number(c?.skippedNotReal ?? 0),

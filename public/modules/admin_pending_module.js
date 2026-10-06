@@ -174,7 +174,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           const ranStr = gearSync.ranAt ? formatDatePL(gearSync.ranAt.slice(0, 10)) : "—";
           html += `<div style="border:1px solid var(--border);border-left:4px solid #c0392b;border-radius:8px;padding:12px;margin-bottom:20px;background:rgba(192,57,43,0.05);">`;
           html += `<h3 style="margin:0 0 6px;">🛠️ Sprzęt — ostrzeżenia synchronizacji</h3>`;
-          html += `<p class="hint" style="margin:0 0 10px;">Ostatni sync sprzętu: ${escapeHtml(ranStr)} · w arkuszu: ${escapeHtml(String(t.sheetRows ?? "—"))} · dodane/zmienione: ${escapeHtml(String(t.upserted ?? "—"))} · zduplikowane ID: ${escapeHtml(String(t.duplicateId ?? 0))}.</p>`;
+          html += `<p class="hint" style="margin:0 0 10px;">Ostatni sync sprzętu: ${escapeHtml(ranStr)} · w arkuszu: ${escapeHtml(String(t.sheetRows ?? "—"))} · dodane/zmienione: ${escapeHtml(String(t.upserted ?? "—"))} · zduplikowane ID: ${escapeHtml(String(t.duplicateId ?? 0))} · powtórzone numery: ${escapeHtml(String(t.duplicateNumber ?? 0))}.</p>`;
           for (const cat of (gearSync.perCategory || [])) {
             html += `<div style="margin-bottom:10px;"><strong>${escapeHtml(cat.label || cat.key)}</strong> (${escapeHtml(String(cat.sheetRows))} w arkuszu, ${escapeHtml(String(cat.upserted))} w aplikacji)`;
             if (cat.duplicates?.length) {
@@ -183,6 +183,15 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
               for (const d of cat.duplicates) {
                 const numModel = [d.number, d.model].filter(Boolean).join(" ");
                 html += `<li style="font-size:13px;">ID <strong>${escapeHtml(d.id)}</strong>${numModel ? ` — ${escapeHtml(numModel)}` : ""}${d.rowNumber ? ` (wiersz ${escapeHtml(d.rowNumber)})` : ""}</li>`;
+              }
+              html += `</ul>`;
+            }
+            if (cat.duplicateNumbers?.length) {
+              html += `<div class="hint" style="margin:4px 0;">Powtórzone numery — różne sztuki wyglądają w aplikacji tak samo (nadaj unikalny numer w arkuszu i zsynchronizuj ponownie):</div>`;
+              html += `<ul style="margin:0;padding-left:18px;">`;
+              for (const g of cat.duplicateNumbers) {
+                const parts = (g.items || []).map((x) => `ID ${escapeHtml(x.id)}${x.model ? ` ${escapeHtml(x.model)}` : ""}${x.rowNumber ? ` (wiersz ${escapeHtml(x.rowNumber)})` : ""}`);
+                html += `<li style="font-size:13px;">nr <strong>${escapeHtml(g.number)}</strong>: ${parts.join(", ")}</li>`;
               }
               html += `</ul>`;
             }

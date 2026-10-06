@@ -9,7 +9,7 @@ import {quoteKayaksCostHours} from "../src/modules/hours/hours_quote";
 import {GearVars} from "../src/modules/setup/setup_gear_vars";
 import {daysOnWaterInclusive} from "../src/modules/calendar/calendar_utils";
 import {firstChargeableMonth, isChargeableThisMonth, toYearMonth} from "../src/service/tasks/gearPrivateStorage";
-import {classifyGearRows, parseSheetDate} from "../src/service/tasks/gearSyncAllFromSheet";
+import {classifyGearRows, findDuplicateNumbers, parseSheetDate} from "../src/service/tasks/gearSyncAllFromSheet";
 
 function vars(overrides: Partial<GearVars> = {}): GearVars {
   return {
@@ -152,5 +152,42 @@ describe("classifyGearRows — bramki syncu sprzętu (duplikat ID / pusty ID / n
     const res = classifyGearRows("kayaks", "ID", rows);
     expect(res.toUpsert).toHaveLength(2);
     expect(res.duplicates).toHaveLength(0);
+  });
+});
+
+describe("findDuplicateNumbers — różne ID, ten sam numer (ostrzeżenie, nie blokada)", () => {
+  const paddle = (id: string, numer: string, model: string, rowNumber = "") => ({
+    id, row: {"ID": id, "Numer": numer, "Model": model, "_rowNumber": rowNumber} as Record<string, string>,
+  });
+
+  it("realny scenariusz 06.10: wiosła ID 56 i 57 oba nr 71 → jedna grupa", () => {
+    const res = findDuplicateNumbers([
+      paddle("55", "70", "RAPA CARBON"),
+      paddle("56", "71", "RAPA CARBON", "58"),
+      paddle("57", "71", "RAPA CARBON", "59"),
+      paddle("58", "73", "RAPA CARBON"),
+    ]);
+    expect(res).toEqual([{number: "71", items: [
+      {id: "56", model: "RAPA CARBON", rowNumber: "58"},
+      {id: "57", model: "RAPA CARBON", rowNumber: "59"},
+    ]}]);
+  });
+
+  it("porównanie bez wielkości liter i spacji; kolumna 'Numer Kajaka' dla kajaków", () => {
+    const res = findDuplicateNumbers([
+      {id: "1", row: {"Numer Kajaka": "P10 "}},
+      {id: "2", row: {"Numer Kajaka": "p10"}},
+    ]);
+    expect(res).toHaveLength(1);
+    expect(res[0].items.map((x) => x.id)).toEqual(["1", "2"]);
+  });
+
+  it("pusty numer / placeholder i unikalne numery → brak ostrzeżeń", () => {
+    const res = findDuplicateNumbers([
+      paddle("1", "", "A"), paddle("2", "", "B"),
+      paddle("3", "N/A", "C"), paddle("4", "-", "D"),
+      paddle("5", "10", "E"), paddle("6", "11", "F"),
+    ]);
+    expect(res).toEqual([]);
   });
 });

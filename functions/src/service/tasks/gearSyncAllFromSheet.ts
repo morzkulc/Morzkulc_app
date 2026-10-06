@@ -298,10 +298,13 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
 
 type DuplicateIdEntry = {id: string; number: string; model: string; rowNumber: string};
 
+export type DuplicateNumberEntry = {number: string; items: {id: string; model: string; rowNumber: string}[]};
+
 type CatSummary = {
   key: string; label: string; processed: number; upserted: number;
   skippedNoId: number; skippedNotReal: number; scrapped: number;
   sheetRows: number; duplicateId: number; duplicates: DuplicateIdEntry[];
+  duplicateNumber: number; duplicateNumbers: DuplicateNumberEntry[];
 };
 
 // Etykieta "numeru" sztuki różni się między kategoriami (Numer Kajaka / Numer / Nazwa).
@@ -350,6 +353,26 @@ export function classifyGearRows(key: string, idHeader: string, rows: Row[]): Ge
   return {toUpsert, duplicates, skippedNoId, skippedNotReal};
 }
 
+/**
+ * Wykrywa sztuki o RÓŻNYCH ID, ale tym samym numerze widocznym dla użytkownika
+ * ("Numer Kajaka"/"Numer"). Nie gubi danych (ID są różne), ale w aplikacji dwie
+ * sztuki wyglądają identycznie — np. "wiosło 71" zarezerwowane 2× (06.10.2026:
+ * wiosła ID 56 i 57 oba z numerem 71). Dlatego tylko OSTRZEŻENIE, sync nie jest
+ * blokowany. Wejście = wiersze po classifyGearRows (każdy wiersz arkusza = aktywna
+ * sztuka). "Nazwa" (inne różne) celowo pominięta — nazwy mogą się powtarzać.
+ */
+export function findDuplicateNumbers(toUpsert: {id: string; row: Row}[]): DuplicateNumberEntry[] {
+  const groups = new Map<string, DuplicateNumberEntry>();
+  for (const {id, row} of toUpsert) {
+    const number = cleanCell(row["Numer Kajaka"]) || cleanCell(row["Numer"]);
+    if (!number) continue;
+    const key = number.toLowerCase();
+    if (!groups.has(key)) groups.set(key, {number, items: []});
+    groups.get(key)?.items.push({id, model: normNullish(row["Model"]), rowNumber: normNullish(row["_rowNumber"])});
+  }
+  return Array.from(groups.values()).filter((g) => g.items.length > 1);
+}
+
 async function syncCategory(
   firestore: FirebaseFirestore.Firestore,
   sheets: GoogleSheetsProvider,
@@ -381,6 +404,8 @@ async function syncCategory(
   // Bramki wierszy (pusty ID / niekompletny / duplikat ID) — czysta, testowalna logika.
   const {toUpsert, duplicates, skippedNoId, skippedNotReal} = classifyGearRows(cat.key, cat.idHeader, rows);
   const duplicateId = duplicates.length;
+  const duplicateNumbers = findDuplicateNumbers(toUpsert);
+  const duplicateNumber = duplicateNumbers.length;
   const sheetIds = new Set<string>(toUpsert.map((x) => x.id));
 
   let processed = 0;
@@ -439,8 +464,8 @@ async function syncCategory(
   }
   if (!dryRun) await sflush();
 
-  logger.info("gearSyncAll: category done", {key: cat.key, processed, upserted, scrapped, skippedNoId, skippedNotReal, duplicateId, dryRun});
-  return {key: cat.key, label: cat.label, processed, upserted, skippedNoId, skippedNotReal, scrapped, sheetRows: rows.length, duplicateId, duplicates};
+  logger.info("gearSyncAll: category done", {key: cat.key, processed, upserted, scrapped, skippedNoId, skippedNotReal, duplicateId, duplicateNumber, dryRun});
+  return {key: cat.key, label: cat.label, processed, upserted, skippedNoId, skippedNotReal, scrapped, sheetRows: rows.length, duplicateId, duplicates, duplicateNumber, duplicateNumbers};
 }
 
 export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
@@ -550,8 +575,9 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
         scrapped: acc.scrapped + s.scrapped,
         sheetRows: acc.sheetRows + s.sheetRows,
         duplicateId: acc.duplicateId + s.duplicateId,
+        duplicateNumber: acc.duplicateNumber + s.duplicateNumber,
       }),
-      {processed: 0, upserted: 0, skippedNoId: 0, skippedNotReal: 0, scrapped: 0, sheetRows: 0, duplicateId: 0}
+      {processed: 0, upserted: 0, skippedNoId: 0, skippedNotReal: 0, scrapped: 0, sheetRows: 0, duplicateId: 0, duplicateNumber: 0}
     );
 
     ctx.logger.info("gearSyncAll: done", {...total, dryRun});
@@ -560,7 +586,7 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
     // w Firestore (kolaps do jednego dokumentu), więc utrwalamy go tu, w momencie odczytu arkusza.
     // Tylko realny przebieg (nie dry-run) odświeża raport.
     if (!dryRun) {
-      const hasWarnings = summaries.some((s) => s.duplicateId > 0 || s.skippedNoId > 0 || s.skippedNotReal > 0);
+      const hasWarnings = summaries.some((s) => s.duplicateId > 0 || s.duplicateNumber > 0 || s.skippedNoId > 0 || s.skippedNotReal > 0);
       try {
         await firestore.collection("service_reports").doc("gearSync").set({
           ranAt: now,
@@ -570,6 +596,7 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
             sheetRows: total.sheetRows,
             upserted: total.upserted,
             duplicateId: total.duplicateId,
+            duplicateNumber: total.duplicateNumber,
             skippedNoId: total.skippedNoId,
             skippedNotReal: total.skippedNotReal,
             scrapped: total.scrapped,
@@ -581,6 +608,8 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
             upserted: s.upserted,
             duplicateId: s.duplicateId,
             duplicates: s.duplicates,
+            duplicateNumber: s.duplicateNumber,
+            duplicateNumbers: s.duplicateNumbers,
             skippedNoId: s.skippedNoId,
             skippedNotReal: s.skippedNotReal,
             scrapped: s.scrapped,

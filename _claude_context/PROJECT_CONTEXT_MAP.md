@@ -1,6 +1,6 @@
 # Project Context Map
 
-Generated at: `2026-09-23T08:41:42`
+Generated at: `2026-10-06T20:36:59`
 Project root: `C:\Users\kswitek\Documents\morzkulc_app`
 
 Purpose: this file is a compact project map for Claude Code. It shows which files exist, what functions/classes they contain, and which internal files depend on which other files.
@@ -57,23 +57,35 @@ Excluded sensitive files:
 
 ## Summary
 
-- Total scanned files: `578`
-- Python files: `41`
-- Script files JS/TS/GS/etc.: `394`
-- Config files: `19`
-- Markdown files: `97`
-- Internal dependency edges: `788`
+- Total scanned files: `598`
+- Python files: `42`
+- Script files JS/TS/GS/etc.: `406`
+- Config files: `20`
+- Markdown files: `103`
+- Internal dependency edges: `812`
 
 ## Project tree
 
 ```text
 - .claude/
+  - hooks/
+    - session_context.py
   - settings.local.json
 - DOCS/
   - Clode Design/
     - audyt-ux-skk-morzkulc.md
     - plan-naprawy-skk-morzkulc.md
   - Sessions & TO DOs/
+    - perf/
+      - 2026-09-23_po_etapie_1/
+        - SUMMARY.md
+      - 2026-09-24_telefon/
+        - SUMMARY.md
+      - baseline_2026-09-23/
+        - SUMMARY.md
+        - runs.json
+      - POROWNANIE.md
+      - snapshot.js
     - 01.09_audyt_wydajnosci.md
     - 01.09_nieobsluzone_bledy_audyt.md
     - 03.09_zmiana_kalendarza_rezerwacji_PLAN.md
@@ -119,6 +131,8 @@ Excluded sensitive files:
     - 20.08_naprawa_powiadomień.md
     - 20.08_opisy_imprez_TO_DO.md
     - 21.08_wyświetlnie_zdjęć_TO_DO.md
+    - 23.09_feedback_uzytkownika_i_wydajnosc.md
+    - 23.09_pomiary_wydajnosci_METODA.md
     - 24.07_klucze.md
     - 24.08_basen_plan.md
     - 26.06_o_klubie.md
@@ -300,6 +314,7 @@ Excluded sensitive files:
         - km_vars.js
       - setup/
         - app_vars.js
+        - doc_cache.js
         - events_vars.js
         - function_roles_service.js
         - setup_gear_vars.js
@@ -328,6 +343,7 @@ Excluded sensitive files:
         - eventsSyncCalendar.js
         - eventsSyncFromSheet.js
         - gearNotifyDamageReport.js
+        - gearNotifyHalfHalfOwner.js
         - gearNotifyReservationCancelledByAdmin.js
         - gearPrivateStorage.js
         - gearSyncAllFromSheet.js
@@ -336,6 +352,7 @@ Excluded sensitive files:
         - godzinkiImportTransitionFromSheet.js
         - godzinkiMergeHistoricalUser.js
         - godzinkiMonthlyBalanceReview.js
+        - godzinkiNotifyRejected.js
         - godzinkiSyncFromSheet.js
         - groupsDiagnose.js
         - kmMergeHistoricalUser.js
@@ -360,6 +377,7 @@ Excluded sensitive files:
         - fallbackDailyWorker.js
         - jobProcessor.js
         - onJobCreatedWorker.js
+      - boot_timer.js
       - registry.js
       - runner.js
       - service_config.js
@@ -385,6 +403,7 @@ Excluded sensitive files:
     - deleteStuckJob.js
     - enqueueEventsNotifyUpcoming.js
     - enqueueEventsSyncFromSheet.js
+    - enqueueGearSyncAllFromSheet.js
     - enqueueGodzinkiTransitionImport.js
     - enqueueGroupsDiagnose.js
     - enqueueListaPolicy.js
@@ -498,6 +517,7 @@ Excluded sensitive files:
         - km_vars.ts
       - setup/
         - app_vars.ts
+        - doc_cache.ts
         - events_vars.ts
         - function_roles_service.ts
         - setup_gear_vars.ts
@@ -526,6 +546,7 @@ Excluded sensitive files:
         - eventsSyncCalendar.ts
         - eventsSyncFromSheet.ts
         - gearNotifyDamageReport.ts
+        - gearNotifyHalfHalfOwner.ts
         - gearNotifyReservationCancelledByAdmin.ts
         - gearPrivateStorage.ts
         - gearSyncAllFromSheet.ts
@@ -533,6 +554,7 @@ Excluded sensitive files:
         - godzinkiImportTransitionFromSheet.ts
         - godzinkiMergeHistoricalUser.ts
         - godzinkiMonthlyBalanceReview.ts
+        - godzinkiNotifyRejected.ts
         - godzinkiSyncFromSheet.ts
         - groupsDiagnose.ts
         - kmMergeHistoricalUser.ts
@@ -557,6 +579,7 @@ Excluded sensitive files:
         - fallbackDailyWorker.ts
         - jobProcessor.ts
         - onJobCreatedWorker.ts
+      - boot_timer.ts
       - registry.ts
       - runner.ts
       - service_config.ts
@@ -598,6 +621,8 @@ Excluded sensitive files:
     - html_utils.js
     - module_stub.js
     - modules_registry.js
+    - perf.js
+    - perf_view.js
     - render_shell.js
     - router.js
     - sw_update.js
@@ -900,13 +925,14 @@ Excluded sensitive files:
 - `functions/lib/index.js` -> `functions/lib/api/userWeightHandler.js`
 - `functions/lib/index.js` -> `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 - `functions/lib/index.js` -> `functions/lib/service/admin/adminRunTask.js`
-- `functions/lib/index.js` -> `functions/lib/service/runner.js`
+- `functions/lib/index.js` -> `functions/lib/service/boot_timer.js`
 - `functions/lib/index.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/index.js` -> `functions/lib/service/triggers/onEventApproved.js`
 - `functions/lib/index.js` -> `functions/lib/service/triggers/onUsersActiveCreated.js`
 - `functions/lib/index.js` -> `functions/lib/service/worker/fallbackDailyWorker.js`
 - `functions/lib/index.js` -> `functions/lib/service/worker/onJobCreatedWorker.js`
 - `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/basen/basen_godziny_service.js`
+- `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/setup/doc_cache.js`
 - `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/setup/function_roles_service.js`
 - `functions/lib/modules/basen/basen_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/calendar/events_service.js` -> `functions/lib/modules/calendar/calendar_utils.js`
@@ -919,6 +945,7 @@ Excluded sensitive files:
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/hours/hours_quote.js`
+- `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/setup/doc_cache.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/setup/setup_gear_vars.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/bundle/gear_bundle_service.js` -> `functions/lib/modules/users/userStatusCheck.js`
@@ -935,8 +962,13 @@ Excluded sensitive files:
 - `functions/lib/modules/equipment/shared/gear_catalog_service.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/equipment/shared/reservation_limits.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/equipment/shared/reservation_limits.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/modules/hours/godzinki_vars.js` -> `functions/lib/modules/setup/doc_cache.js`
 - `functions/lib/modules/hours/hours_quote.js` -> `functions/lib/modules/calendar/calendar_utils.js`
 - `functions/lib/modules/km/km_log_service.js` -> `functions/lib/modules/km/km_scoring.js`
+- `functions/lib/modules/km/km_vars.js` -> `functions/lib/modules/setup/doc_cache.js`
+- `functions/lib/modules/setup/app_vars.js` -> `functions/lib/modules/setup/doc_cache.js`
+- `functions/lib/modules/setup/events_vars.js` -> `functions/lib/modules/setup/doc_cache.js`
+- `functions/lib/modules/setup/setup_gear_vars.js` -> `functions/lib/modules/setup/doc_cache.js`
 - `functions/lib/modules/shared/date_range_utils.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/modules/shared/user_display.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/admin/adminRunTask.js` -> `functions/lib/service/runner.js`
@@ -954,6 +986,7 @@ Excluded sensitive files:
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsSyncCalendar.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/eventsSyncFromSheet.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearNotifyDamageReport.js`
+- `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearNotifyHalfHalfOwner.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearPrivateStorage.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/gearSyncAllFromSheet.js`
@@ -961,6 +994,7 @@ Excluded sensitive files:
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/godzinkiMergeHistoricalUser.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js`
+- `functions/lib/service/registry.js` -> `functions/lib/service/tasks/godzinkiNotifyRejected.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/godzinkiSyncFromSheet.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/groupsDiagnose.js`
 - `functions/lib/service/registry.js` -> `functions/lib/service/tasks/kmMergeHistoricalUser.js`
@@ -1007,6 +1041,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/eventsSyncFromSheet.js` -> `functions/lib/service/service_config.js`
 - `functions/lib/service/tasks/gearNotifyDamageReport.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/gearNotifyDamageReport.js` -> `functions/lib/modules/shared/text_utils.js`
+- `functions/lib/service/tasks/gearNotifyHalfHalfOwner.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js` -> `functions/lib/modules/setup/app_vars.js`
 - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/gearPrivateStorage.js` -> `functions/lib/modules/hours/godzinki_service.js`
@@ -1030,6 +1065,7 @@ Excluded sensitive files:
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js` -> `functions/lib/modules/setup/app_vars.js`
+- `functions/lib/service/tasks/godzinkiNotifyRejected.js` -> `functions/lib/modules/shared/text_utils.js`
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/modules/hours/godzinki_service.js`
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/modules/hours/godzinki_vars.js`
 - `functions/lib/service/tasks/godzinkiSyncFromSheet.js` -> `functions/lib/modules/shared/text_utils.js`
@@ -1252,13 +1288,14 @@ Excluded sensitive files:
 - `functions/src/index.ts` -> `functions/src/api/userWeightHandler.ts`
 - `functions/src/index.ts` -> `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 - `functions/src/index.ts` -> `functions/src/service/admin/adminRunTask.ts`
-- `functions/src/index.ts` -> `functions/src/service/runner.ts`
+- `functions/src/index.ts` -> `functions/src/service/boot_timer.ts`
 - `functions/src/index.ts` -> `functions/src/service/service_config.ts`
 - `functions/src/index.ts` -> `functions/src/service/triggers/onEventApproved.ts`
 - `functions/src/index.ts` -> `functions/src/service/triggers/onUsersActiveCreated.ts`
 - `functions/src/index.ts` -> `functions/src/service/worker/fallbackDailyWorker.ts`
 - `functions/src/index.ts` -> `functions/src/service/worker/onJobCreatedWorker.ts`
 - `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/basen/basen_godziny_service.ts`
+- `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/setup/doc_cache.ts`
 - `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/setup/function_roles_service.ts`
 - `functions/src/modules/basen/basen_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/calendar/events_service.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
@@ -1271,6 +1308,7 @@ Excluded sensitive files:
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/hours/hours_quote.ts`
+- `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/setup/doc_cache.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/equipment/bundle/gear_bundle_service.ts` -> `functions/src/modules/users/userStatusCheck.ts`
@@ -1288,11 +1326,16 @@ Excluded sensitive files:
 - `functions/src/modules/equipment/shared/reservation_limits.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/equipment/shared/reservation_limits.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/hours/godzinki_service.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
+- `functions/src/modules/hours/godzinki_vars.ts` -> `functions/src/modules/setup/doc_cache.ts`
 - `functions/src/modules/hours/hours_quote.ts` -> `functions/src/modules/calendar/calendar_utils.ts`
 - `functions/src/modules/hours/hours_quote.ts` -> `functions/src/modules/setup/setup_gear_vars.ts`
 - `functions/src/modules/km/km_log_service.ts` -> `functions/src/modules/km/km_scoring.ts`
 - `functions/src/modules/km/km_log_service.ts` -> `functions/src/modules/km/km_vars.ts`
 - `functions/src/modules/km/km_scoring.ts` -> `functions/src/modules/km/km_vars.ts`
+- `functions/src/modules/km/km_vars.ts` -> `functions/src/modules/setup/doc_cache.ts`
+- `functions/src/modules/setup/app_vars.ts` -> `functions/src/modules/setup/doc_cache.ts`
+- `functions/src/modules/setup/events_vars.ts` -> `functions/src/modules/setup/doc_cache.ts`
+- `functions/src/modules/setup/setup_gear_vars.ts` -> `functions/src/modules/setup/doc_cache.ts`
 - `functions/src/modules/shared/date_range_utils.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/modules/shared/user_display.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/admin/adminRunTask.ts` -> `functions/src/service/runner.ts`
@@ -1310,6 +1353,7 @@ Excluded sensitive files:
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsSyncCalendar.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/eventsSyncFromSheet.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearNotifyDamageReport.ts`
+- `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearNotifyHalfHalfOwner.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearPrivateStorage.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/gearSyncAllFromSheet.ts`
@@ -1317,6 +1361,7 @@ Excluded sensitive files:
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/godzinkiMergeHistoricalUser.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts`
+- `functions/src/service/registry.ts` -> `functions/src/service/tasks/godzinkiNotifyRejected.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/godzinkiSyncFromSheet.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/groupsDiagnose.ts`
 - `functions/src/service/registry.ts` -> `functions/src/service/tasks/kmMergeHistoricalUser.ts`
@@ -1375,6 +1420,8 @@ Excluded sensitive files:
 - `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearNotifyDamageReport.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/gearNotifyHalfHalfOwner.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/service/tasks/gearNotifyHalfHalfOwner.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/modules/shared/text_utils.ts`
 - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts` -> `functions/src/service/types.ts`
@@ -1403,6 +1450,8 @@ Excluded sensitive files:
 - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts` -> `functions/src/modules/setup/app_vars.ts`
 - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts` -> `functions/src/service/types.ts`
+- `functions/src/service/tasks/godzinkiNotifyRejected.ts` -> `functions/src/modules/shared/text_utils.ts`
+- `functions/src/service/tasks/godzinkiNotifyRejected.ts` -> `functions/src/service/types.ts`
 - `functions/src/service/tasks/godzinkiSyncFromSheet.ts` -> `functions/src/modules/hours/godzinki_service.ts`
 - `functions/src/service/tasks/godzinkiSyncFromSheet.ts` -> `functions/src/modules/hours/godzinki_vars.ts`
 - `functions/src/service/tasks/godzinkiSyncFromSheet.ts` -> `functions/src/modules/shared/text_utils.ts`
@@ -1510,6 +1559,30 @@ Excluded sensitive files:
 - `public/modules/raporty/reports_panel.js` -> `public/modules/raporty/registry.js`
 
 ## Python files
+
+### `.claude/hooks/session_context.py`
+
+- Lines: `77`
+- Size: `2809` bytes
+- SHA1: `b8fbddde2f`
+- Module aliases: `.claude.hooks.session_context`
+- Imports:
+  - `from __future__ import annotations`
+  - `import json`
+  - `import subprocess`
+  - `import sys`
+  - `from collections import defaultdict`
+  - `from pathlib import Path`
+- Top-level symbols:
+  - `BUDGET`
+  - `JSON_PATH`
+  - `MD`
+  - `OUT_DIR`
+  - `ROOT`
+  - `SCRIPT`
+- Functions:
+  - `main()` (function lines 22-63) -> `None`
+  - `emit(lines: list[str])` (function lines 66-72) -> `None`
 
 ### `project_context.py`
 
@@ -3509,6 +3582,17 @@ Excluded sensitive files:
 - Functions:
   - `onOpen`
 
+### `DOCS/Sessions & TO DOs/perf/snapshot.js`
+
+- Lines: `79`
+- Size: `3222` bytes
+- Functions:
+  - `R`
+  - `isCss`
+  - `isJs`
+  - `pick`
+  - `sum`
+
 ### `functions/.eslintrc.js`
 
 - Lines: `65`
@@ -3516,8 +3600,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/adminApprovalHandler.js`
 
-- Lines: `230`
-- Size: `10898` bytes
+- Lines: `242`
+- Size: `11702` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -3738,8 +3822,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/gearBundleReservationCreateHandler.js`
 
-- Lines: `102`
-- Size: `5125` bytes
+- Lines: `170`
+- Size: `8180` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
@@ -3750,7 +3834,10 @@ Excluded sensitive files:
   - `import/require ../modules/equipment/bundle/gear_bundle_service`
   - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
+  - `import/require firebase-admin`
+  - `import/require firebase-functions/v2`
 - Functions:
+  - `enqueueJob`
   - `handleGearBundleReservationCreate`
   - `parseItems`
 
@@ -3936,8 +4023,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getAdminPendingHandler.js`
 
-- Lines: `410`
-- Size: `27416` bytes
+- Lines: `468`
+- Size: `31257` bytes
 - Internal dependencies:
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/modules/hours/godzinki_service.js`
@@ -3954,7 +4041,11 @@ Excluded sensitive files:
 - Functions:
   - `docsOf`
   - `errorOf`
+  - `expiredKursantsPromise`
+  - `gearSyncPromise`
   - `handleGetAdminPending`
+  - `negativeBalancesPromise`
+  - `notRejected`
   - `snapOf`
   - `tsToIso`
 
@@ -4066,8 +4157,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getBasenSessionsHandler.js`
 
-- Lines: `115`
-- Size: `6462` bytes
+- Lines: `112`
+- Size: `6348` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_godziny_service.js`
   - `functions/lib/modules/basen/basen_service.js`
@@ -4155,8 +4246,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getGodzinkiHandler.js`
 
-- Lines: `150`
-- Size: `7862` bytes
+- Lines: `177`
+- Size: `9607` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -4165,6 +4256,7 @@ Excluded sensitive files:
   - `import/require ../modules/hours/godzinki_vars`
 - Functions:
   - `handleGetGodzinki`
+  - `isVisibleToMember`
   - `serializeRecord`
 
 ### `functions/lib/api/getKayakReservationsHandler.js`
@@ -4182,8 +4274,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/getKlubInfoHandler.js`
 
-- Lines: `191`
-- Size: `11965` bytes
+- Lines: `209`
+- Size: `13650` bytes
 - Imports:
   - `import/require firebase-functions/v2`
 - Functions:
@@ -4360,8 +4452,8 @@ Excluded sensitive files:
 
 ### `functions/lib/api/registerUserHandler.js`
 
-- Lines: `772`
-- Size: `42245` bytes
+- Lines: `815`
+- Size: `45392` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_service.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4477,8 +4569,8 @@ Excluded sensitive files:
 
 ### `functions/lib/index.js`
 
-- Lines: `1754`
-- Size: `76506` bytes
+- Lines: `1840`
+- Size: `80487` bytes
 - Internal dependencies:
   - `functions/lib/api/adminApprovalHandler.js`
   - `functions/lib/api/adminEventsSyncCalendarHandler.js`
@@ -4543,7 +4635,7 @@ Excluded sensitive files:
   - `functions/lib/api/userWeightHandler.js`
   - `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
   - `functions/lib/service/admin/adminRunTask.js`
-  - `functions/lib/service/runner.js`
+  - `functions/lib/service/boot_timer.js`
   - `functions/lib/service/service_config.js`
   - `functions/lib/service/triggers/onEventApproved.js`
   - `functions/lib/service/triggers/onUsersActiveCreated.js`
@@ -4613,7 +4705,7 @@ Excluded sensitive files:
   - `import/require ./api/userWeightHandler`
   - `import/require ./modules/equipment/bundle/gear_bundle_service`
   - `import/require ./service/admin/adminRunTask`
-  - `import/require ./service/runner`
+  - `import/require ./service/boot_timer`
   - `import/require ./service/service_config`
   - `import/require ./service/triggers/onEventApproved`
   - `import/require ./service/triggers/onUsersActiveCreated`
@@ -4625,6 +4717,7 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2/https`
   - `import/require firebase-functions/v2/scheduler`
 - Functions:
+  - `attachServerTiming`
   - `buildAppsScriptSyncSummary`
   - `computeAllowedActions`
   - `defaultScreenForRoleKey`
@@ -4640,6 +4733,7 @@ Excluded sensitive files:
   - `getRequestOrigin`
   - `getSetupApp`
   - `isAllowedHost`
+  - `loadRunTaskById`
   - `n`
   - `normalizeHost`
   - `normalizeOrigin`
@@ -4647,6 +4741,7 @@ Excluded sensitive files:
   - `requireAllowedHost`
   - `requireIdToken`
   - `sendPreflight`
+  - `servingOrDiscovering`
   - `setCorsHeaders`
   - `verifyGoogleAccessToken`
 
@@ -4667,13 +4762,15 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/basen/basen_service.js`
 
-- Lines: `903`
-- Size: `49921` bytes
+- Lines: `945`
+- Size: `51973` bytes
 - Internal dependencies:
   - `functions/lib/modules/basen/basen_godziny_service.js`
+  - `functions/lib/modules/setup/doc_cache.js`
   - `functions/lib/modules/setup/function_roles_service.js`
   - `functions/lib/modules/shared/text_utils.js`
 - Imports:
+  - `import/require ../setup/doc_cache`
   - `import/require ../setup/function_roles_service`
   - `import/require ../shared/text_utils`
   - `import/require ./basen_godziny_service`
@@ -4692,6 +4789,7 @@ Excluded sensitive files:
   - `enrollInSlot`
   - `enrollmentId`
   - `fetchPoolKayaks`
+  - `fetchPoolKayaksUncached`
   - `getAttendeesBySessionSlot`
   - `getAvailableKayaksBySessionSlot`
   - `getBasenVars`
@@ -4705,7 +4803,7 @@ Excluded sensitive files:
   - `parseVarValue`
   - `resolveBasenAdminGrant`
   - `resolveKayakLabel`
-  - `resolveKayakLabels`
+  - `resolveKayakLabelsBulk`
   - `sessionSlotDatetimeMs`
   - `setEnrollmentInstructor`
   - `setEnrollmentKayak`
@@ -4752,8 +4850,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/equipment/bundle/gear_bundle_service.js`
 
-- Lines: `1146`
-- Size: `63076` bytes
+- Lines: `1227`
+- Size: `68542` bytes
 - Internal dependencies:
   - `functions/lib/modules/calendar/calendar_utils.js`
   - `functions/lib/modules/calendar/events_service.js`
@@ -4762,6 +4860,7 @@ Excluded sensitive files:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
   - `functions/lib/modules/hours/hours_quote.js`
+  - `functions/lib/modules/setup/doc_cache.js`
   - `functions/lib/modules/setup/setup_gear_vars.js`
   - `functions/lib/modules/shared/text_utils.js`
   - `functions/lib/modules/users/userStatusCheck.js`
@@ -4771,6 +4870,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_service`
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
+  - `import/require ../../setup/doc_cache`
   - `import/require ../../setup/setup_gear_vars`
   - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
@@ -4883,8 +4983,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/hours/godzinki_service.js`
 
-- Lines: `931`
-- Size: `42763` bytes
+- Lines: `917`
+- Size: `42332` bytes
 - Imports:
   - `import/require firebase-admin`
 - Functions:
@@ -4899,7 +4999,6 @@ Excluded sensitive files:
   - `deductHoursInTx`
   - `getAllRecords`
   - `getBalance`
-  - `getHistory`
   - `getNextExpiry`
   - `markApprovalRejected`
   - `processApproval`
@@ -4913,8 +5012,12 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/hours/godzinki_vars.js`
 
-- Lines: `32`
-- Size: `1637` bytes
+- Lines: `33`
+- Size: `1698` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/doc_cache.js`
+- Imports:
+  - `import/require ../setup/doc_cache`
 - Functions:
   - `getGodzinkiVars`
   - `getVar`
@@ -4982,8 +5085,12 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/km/km_vars.js`
 
-- Lines: `33`
-- Size: `1206` bytes
+- Lines: `23`
+- Size: `933` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/doc_cache.js`
+- Imports:
+  - `import/require ../setup/doc_cache`
 - Functions:
   - `getKmVars`
   - `getVar`
@@ -4991,18 +5098,34 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/setup/app_vars.js`
 
-- Lines: `26`
-- Size: `1119` bytes
+- Lines: `27`
+- Size: `1173` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/doc_cache.js`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getAppVars`
   - `getVar`
   - `toNumber`
   - `toStr`
 
+### `functions/lib/modules/setup/doc_cache.js`
+
+- Lines: `49`
+- Size: `2242` bytes
+- Functions:
+  - `clearDocCache`
+  - `getCachedDoc`
+
 ### `functions/lib/modules/setup/events_vars.js`
 
-- Lines: `18`
-- Size: `750` bytes
+- Lines: `19`
+- Size: `804` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/doc_cache.js`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getEventsVars`
   - `getVar`
@@ -5018,8 +5141,12 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/setup/setup_gear_vars.js`
 
-- Lines: `66`
-- Size: `2821` bytes
+- Lines: `67`
+- Size: `2875` bytes
+- Internal dependencies:
+  - `functions/lib/modules/setup/doc_cache.js`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getGearVars`
   - `getVar`
@@ -5068,8 +5195,8 @@ Excluded sensitive files:
 
 ### `functions/lib/modules/users/userStatusCheck.js`
 
-- Lines: `36`
-- Size: `1576` bytes
+- Lines: `30`
+- Size: `1542` bytes
 - Imports:
   - `import/require firebase-functions/v2`
 - Functions:
@@ -5089,6 +5216,14 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2/https`
 - Functions:
   - `verifyIdToken`
+
+### `functions/lib/service/boot_timer.js`
+
+- Lines: `33`
+- Size: `1614` bytes
+- Functions:
+  - `getModuleEvalMs`
+  - `markModuleEvalDone`
 
 ### `functions/lib/service/providers/googleAuth.js`
 
@@ -5158,8 +5293,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/registry.js`
 
-- Lines: `85`
-- Size: `5110` bytes
+- Lines: `89`
+- Size: `5380` bytes
 - Internal dependencies:
   - `functions/lib/service/tasks/adminApprovalWriteBack.js`
   - `functions/lib/service/tasks/adminNotifyPendingApprovals.js`
@@ -5171,6 +5306,7 @@ Excluded sensitive files:
   - `functions/lib/service/tasks/eventsSyncCalendar.js`
   - `functions/lib/service/tasks/eventsSyncFromSheet.js`
   - `functions/lib/service/tasks/gearNotifyDamageReport.js`
+  - `functions/lib/service/tasks/gearNotifyHalfHalfOwner.js`
   - `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
   - `functions/lib/service/tasks/gearPrivateStorage.js`
   - `functions/lib/service/tasks/gearSyncAllFromSheet.js`
@@ -5178,6 +5314,7 @@ Excluded sensitive files:
   - `functions/lib/service/tasks/godzinkiImportTransitionFromSheet.js`
   - `functions/lib/service/tasks/godzinkiMergeHistoricalUser.js`
   - `functions/lib/service/tasks/godzinkiMonthlyBalanceReview.js`
+  - `functions/lib/service/tasks/godzinkiNotifyRejected.js`
   - `functions/lib/service/tasks/godzinkiSyncFromSheet.js`
   - `functions/lib/service/tasks/groupsDiagnose.js`
   - `functions/lib/service/tasks/kmMergeHistoricalUser.js`
@@ -5206,6 +5343,7 @@ Excluded sensitive files:
   - `import/require ./tasks/eventsSyncCalendar`
   - `import/require ./tasks/eventsSyncFromSheet`
   - `import/require ./tasks/gearNotifyDamageReport`
+  - `import/require ./tasks/gearNotifyHalfHalfOwner`
   - `import/require ./tasks/gearNotifyReservationCancelledByAdmin`
   - `import/require ./tasks/gearPrivateStorage`
   - `import/require ./tasks/gearSyncAllFromSheet`
@@ -5213,6 +5351,7 @@ Excluded sensitive files:
   - `import/require ./tasks/godzinkiImportTransitionFromSheet`
   - `import/require ./tasks/godzinkiMergeHistoricalUser`
   - `import/require ./tasks/godzinkiMonthlyBalanceReview`
+  - `import/require ./tasks/godzinkiNotifyRejected`
   - `import/require ./tasks/godzinkiSyncFromSheet`
   - `import/require ./tasks/groupsDiagnose`
   - `import/require ./tasks/kmMergeHistoricalUser`
@@ -5414,6 +5553,20 @@ Excluded sensitive files:
 - Functions:
   - `escapeHtml`
 
+### `functions/lib/service/tasks/gearNotifyHalfHalfOwner.js`
+
+- Lines: `163`
+- Size: `8366` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require firebase-admin`
+- Functions:
+  - `displayNameOf`
+  - `findKayak`
+  - `formatDatePL`
+
 ### `functions/lib/service/tasks/gearNotifyReservationCancelledByAdmin.js`
 
 - Lines: `203`
@@ -5432,8 +5585,8 @@ Excluded sensitive files:
 
 ### `functions/lib/service/tasks/gearPrivateStorage.js`
 
-- Lines: `345`
-- Size: `16102` bytes
+- Lines: `352`
+- Size: `16560` bytes
 - Internal dependencies:
   - `functions/lib/modules/hours/godzinki_service.js`
   - `functions/lib/modules/hours/godzinki_vars.js`
@@ -5561,6 +5714,20 @@ Excluded sensitive files:
   - `creditBoardMonthlyBonus`
   - `fmtBalance`
   - `monthKeyOf`
+
+### `functions/lib/service/tasks/godzinkiNotifyRejected.js`
+
+- Lines: `118`
+- Size: `6079` bytes
+- Internal dependencies:
+  - `functions/lib/modules/shared/text_utils.js`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require firebase-admin`
+- Functions:
+  - `displayNameOf`
+  - `formatDatePL`
+  - `p`
 
 ### `functions/lib/service/tasks/godzinkiSyncFromSheet.js`
 
@@ -6079,6 +6246,13 @@ Excluded sensitive files:
 - Imports:
   - `import/require firebase-admin`
 
+### `functions/scripts/enqueueGearSyncAllFromSheet.js`
+
+- Lines: `47`
+- Size: `1794` bytes
+- Imports:
+  - `import/require firebase-admin`
+
 ### `functions/scripts/enqueueGodzinkiTransitionImport.js`
 
 - Lines: `65`
@@ -6275,8 +6449,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/adminApprovalHandler.ts`
 
-- Lines: `220`
-- Size: `8684` bytes
+- Lines: `232`
+- Size: `9399` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -6459,8 +6633,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/gearBundleReservationCreateHandler.ts`
 
-- Lines: `125`
-- Size: `4647` bytes
+- Lines: `161`
+- Size: `6112` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
@@ -6472,7 +6646,10 @@ Excluded sensitive files:
   - `import/require ../modules/shared/text_utils`
   - `import/require ../modules/users/userStatusCheck`
   - `import/require express`
+  - `import/require firebase-admin`
+  - `import/require firebase-functions/v2`
 - Functions:
+  - `enqueueJob`
   - `handleGearBundleReservationCreate`
   - `parseItems`
 
@@ -6658,8 +6835,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getAdminPendingHandler.ts`
 
-- Lines: `508`
-- Size: `21430` bytes
+- Lines: `574`
+- Size: `24543` bytes
 - Internal dependencies:
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/modules/hours/godzinki_service.ts`
@@ -6676,7 +6853,11 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2`
 - Functions:
   - `docsOf`
+  - `expiredKursantsPromise`
+  - `gearSyncPromise`
   - `handleGetAdminPending`
+  - `negativeBalancesPromise`
+  - `notRejected`
   - `tsToIso`
 
 ### `functions/src/api/getAdminUserActivityHandler.ts`
@@ -6771,8 +6952,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getBasenSessionsHandler.ts`
 
-- Lines: `127`
-- Size: `5470` bytes
+- Lines: `124`
+- Size: `5339` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_godziny_service.ts`
   - `functions/src/modules/basen/basen_service.ts`
@@ -6864,8 +7045,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getGodzinkiHandler.ts`
 
-- Lines: `172`
-- Size: `6373` bytes
+- Lines: `200`
+- Size: `7761` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -6875,6 +7056,7 @@ Excluded sensitive files:
   - `import/require express`
 - Functions:
   - `handleGetGodzinki`
+  - `isVisibleToMember`
   - `serializeRecord`
 
 ### `functions/src/api/getKayakReservationsHandler.ts`
@@ -6893,8 +7075,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/getKlubInfoHandler.ts`
 
-- Lines: `222`
-- Size: `10005` bytes
+- Lines: `237`
+- Size: `11075` bytes
 - Imports:
   - `import/require express`
   - `import/require firebase-functions/v2`
@@ -7063,8 +7245,8 @@ Excluded sensitive files:
 
 ### `functions/src/api/registerUserHandler.ts`
 
-- Lines: `971`
-- Size: `38867` bytes
+- Lines: `1017`
+- Size: `41463` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_service.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7187,8 +7369,8 @@ Excluded sensitive files:
 
 ### `functions/src/index.ts`
 
-- Lines: `1933`
-- Size: `65058` bytes
+- Lines: `2029`
+- Size: `70021` bytes
 - Internal dependencies:
   - `functions/src/api/adminApprovalHandler.ts`
   - `functions/src/api/adminEventsSyncCalendarHandler.ts`
@@ -7253,7 +7435,7 @@ Excluded sensitive files:
   - `functions/src/api/userWeightHandler.ts`
   - `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
   - `functions/src/service/admin/adminRunTask.ts`
-  - `functions/src/service/runner.ts`
+  - `functions/src/service/boot_timer.ts`
   - `functions/src/service/service_config.ts`
   - `functions/src/service/triggers/onEventApproved.ts`
   - `functions/src/service/triggers/onUsersActiveCreated.ts`
@@ -7323,7 +7505,7 @@ Excluded sensitive files:
   - `import/require ./api/userWeightHandler`
   - `import/require ./modules/equipment/bundle/gear_bundle_service`
   - `import/require ./service/admin/adminRunTask`
-  - `import/require ./service/runner`
+  - `import/require ./service/boot_timer`
   - `import/require ./service/service_config`
   - `import/require ./service/triggers/onEventApproved`
   - `import/require ./service/triggers/onUsersActiveCreated`
@@ -7336,6 +7518,7 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2/https`
   - `import/require firebase-functions/v2/scheduler`
 - Functions:
+  - `attachServerTiming`
   - `buildAppsScriptSyncSummary`
   - `computeAllowedActions`
   - `defaultScreenForRoleKey`
@@ -7351,6 +7534,7 @@ Excluded sensitive files:
   - `getRequestOrigin`
   - `getSetupApp`
   - `isAllowedHost`
+  - `loadRunTaskById`
   - `n`
   - `normalizeHost`
   - `normalizeOrigin`
@@ -7358,6 +7542,7 @@ Excluded sensitive files:
   - `requireAllowedHost`
   - `requireIdToken`
   - `sendPreflight`
+  - `servingOrDiscovering`
   - `setCorsHeaders`
   - `verifyGoogleAccessToken`
 
@@ -7378,13 +7563,15 @@ Excluded sensitive files:
 
 ### `functions/src/modules/basen/basen_service.ts`
 
-- Lines: `1150`
-- Size: `50634` bytes
+- Lines: `1196`
+- Size: `52731` bytes
 - Internal dependencies:
   - `functions/src/modules/basen/basen_godziny_service.ts`
+  - `functions/src/modules/setup/doc_cache.ts`
   - `functions/src/modules/setup/function_roles_service.ts`
   - `functions/src/modules/shared/text_utils.ts`
 - Imports:
+  - `import/require ../setup/doc_cache`
   - `import/require ../setup/function_roles_service`
   - `import/require ../shared/text_utils`
   - `import/require ./basen_godziny_service`
@@ -7402,6 +7589,7 @@ Excluded sensitive files:
   - `enrollInSlot`
   - `enrollmentId`
   - `fetchPoolKayaks`
+  - `fetchPoolKayaksUncached`
   - `getAttendeesBySessionSlot`
   - `getAvailableKayaksBySessionSlot`
   - `getBasenVars`
@@ -7415,7 +7603,7 @@ Excluded sensitive files:
   - `parseVarValue`
   - `resolveBasenAdminGrant`
   - `resolveKayakLabel`
-  - `resolveKayakLabels`
+  - `resolveKayakLabelsBulk`
   - `sessionSlotDatetimeMs`
   - `setEnrollmentInstructor`
   - `setEnrollmentKayak`
@@ -7462,8 +7650,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/equipment/bundle/gear_bundle_service.ts`
 
-- Lines: `1350`
-- Size: `56220` bytes
+- Lines: `1436`
+- Size: `61203` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/calendar/events_service.ts`
@@ -7472,6 +7660,7 @@ Excluded sensitive files:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
   - `functions/src/modules/hours/hours_quote.ts`
+  - `functions/src/modules/setup/doc_cache.ts`
   - `functions/src/modules/setup/setup_gear_vars.ts`
   - `functions/src/modules/shared/text_utils.ts`
   - `functions/src/modules/users/userStatusCheck.ts`
@@ -7481,6 +7670,7 @@ Excluded sensitive files:
   - `import/require ../../hours/godzinki_service`
   - `import/require ../../hours/godzinki_vars`
   - `import/require ../../hours/hours_quote`
+  - `import/require ../../setup/doc_cache`
   - `import/require ../../setup/setup_gear_vars`
   - `import/require ../../shared/text_utils`
   - `import/require ../../users/userStatusCheck`
@@ -7592,8 +7782,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/hours/godzinki_service.ts`
 
-- Lines: `1144`
-- Size: `42598` bytes
+- Lines: `1126`
+- Size: `42140` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_vars.ts`
 - Imports:
@@ -7611,7 +7801,6 @@ Excluded sensitive files:
   - `deductHoursInTx`
   - `getAllRecords`
   - `getBalance`
-  - `getHistory`
   - `getNextExpiry`
   - `markApprovalRejected`
   - `processApproval`
@@ -7625,8 +7814,12 @@ Excluded sensitive files:
 
 ### `functions/src/modules/hours/godzinki_vars.ts`
 
-- Lines: `52`
-- Size: `2317` bytes
+- Lines: `53`
+- Size: `2359` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/doc_cache.ts`
+- Imports:
+  - `import/require ../setup/doc_cache`
 - Functions:
   - `getGodzinkiVars`
   - `getVar`
@@ -7702,8 +7895,12 @@ Excluded sensitive files:
 
 ### `functions/src/modules/km/km_vars.ts`
 
-- Lines: `44`
-- Size: `1199` bytes
+- Lines: `45`
+- Size: `1241` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/doc_cache.ts`
+- Imports:
+  - `import/require ../setup/doc_cache`
 - Functions:
   - `getKmVars`
   - `getVar`
@@ -7711,18 +7908,34 @@ Excluded sensitive files:
 
 ### `functions/src/modules/setup/app_vars.ts`
 
-- Lines: `41`
-- Size: `1494` bytes
+- Lines: `42`
+- Size: `1529` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/doc_cache.ts`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getAppVars`
   - `getVar`
   - `toNumber`
   - `toStr`
 
+### `functions/src/modules/setup/doc_cache.ts`
+
+- Lines: `56`
+- Size: `2242` bytes
+- Functions:
+  - `clearDocCache`
+  - `getCachedDoc`
+
 ### `functions/src/modules/setup/events_vars.ts`
 
-- Lines: `28`
-- Size: `860` bytes
+- Lines: `29`
+- Size: `895` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/doc_cache.ts`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getEventsVars`
   - `getVar`
@@ -7738,8 +7951,12 @@ Excluded sensitive files:
 
 ### `functions/src/modules/setup/setup_gear_vars.ts`
 
-- Lines: `88`
-- Size: `3165` bytes
+- Lines: `89`
+- Size: `3200` bytes
+- Internal dependencies:
+  - `functions/src/modules/setup/doc_cache.ts`
+- Imports:
+  - `import/require ./doc_cache`
 - Functions:
   - `getGearVars`
   - `getVar`
@@ -7788,8 +8005,8 @@ Excluded sensitive files:
 
 ### `functions/src/modules/users/userStatusCheck.ts`
 
-- Lines: `40`
-- Size: `1214` bytes
+- Lines: `33`
+- Size: `1306` bytes
 - Imports:
   - `import/require firebase-functions/v2`
 - Functions:
@@ -7809,6 +8026,14 @@ Excluded sensitive files:
   - `import/require firebase-functions/v2/https`
 - Functions:
   - `verifyIdToken`
+
+### `functions/src/service/boot_timer.ts`
+
+- Lines: `31`
+- Size: `1386` bytes
+- Functions:
+  - `getModuleEvalMs`
+  - `markModuleEvalDone`
 
 ### `functions/src/service/providers/googleAuth.ts`
 
@@ -7877,8 +8102,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/registry.ts`
 
-- Lines: `84`
-- Size: `4130` bytes
+- Lines: `88`
+- Size: `4347` bytes
 - Internal dependencies:
   - `functions/src/service/tasks/adminApprovalWriteBack.ts`
   - `functions/src/service/tasks/adminNotifyPendingApprovals.ts`
@@ -7890,6 +8115,7 @@ Excluded sensitive files:
   - `functions/src/service/tasks/eventsSyncCalendar.ts`
   - `functions/src/service/tasks/eventsSyncFromSheet.ts`
   - `functions/src/service/tasks/gearNotifyDamageReport.ts`
+  - `functions/src/service/tasks/gearNotifyHalfHalfOwner.ts`
   - `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
   - `functions/src/service/tasks/gearPrivateStorage.ts`
   - `functions/src/service/tasks/gearSyncAllFromSheet.ts`
@@ -7897,6 +8123,7 @@ Excluded sensitive files:
   - `functions/src/service/tasks/godzinkiImportTransitionFromSheet.ts`
   - `functions/src/service/tasks/godzinkiMergeHistoricalUser.ts`
   - `functions/src/service/tasks/godzinkiMonthlyBalanceReview.ts`
+  - `functions/src/service/tasks/godzinkiNotifyRejected.ts`
   - `functions/src/service/tasks/godzinkiSyncFromSheet.ts`
   - `functions/src/service/tasks/groupsDiagnose.ts`
   - `functions/src/service/tasks/kmMergeHistoricalUser.ts`
@@ -7926,6 +8153,7 @@ Excluded sensitive files:
   - `import/require ./tasks/eventsSyncCalendar`
   - `import/require ./tasks/eventsSyncFromSheet`
   - `import/require ./tasks/gearNotifyDamageReport`
+  - `import/require ./tasks/gearNotifyHalfHalfOwner`
   - `import/require ./tasks/gearNotifyReservationCancelledByAdmin`
   - `import/require ./tasks/gearPrivateStorage`
   - `import/require ./tasks/gearSyncAllFromSheet`
@@ -7933,6 +8161,7 @@ Excluded sensitive files:
   - `import/require ./tasks/godzinkiImportTransitionFromSheet`
   - `import/require ./tasks/godzinkiMergeHistoricalUser`
   - `import/require ./tasks/godzinkiMonthlyBalanceReview`
+  - `import/require ./tasks/godzinkiNotifyRejected`
   - `import/require ./tasks/godzinkiSyncFromSheet`
   - `import/require ./tasks/groupsDiagnose`
   - `import/require ./tasks/kmMergeHistoricalUser`
@@ -8157,6 +8386,22 @@ Excluded sensitive files:
 - Functions:
   - `escapeHtml`
 
+### `functions/src/service/tasks/gearNotifyHalfHalfOwner.ts`
+
+- Lines: `159`
+- Size: `6331` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/service/types.ts`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require ../types`
+  - `import/require firebase-admin`
+- Functions:
+  - `displayNameOf`
+  - `findKayak`
+  - `formatDatePL`
+
 ### `functions/src/service/tasks/gearNotifyReservationCancelledByAdmin.ts`
 
 - Lines: `200`
@@ -8177,8 +8422,8 @@ Excluded sensitive files:
 
 ### `functions/src/service/tasks/gearPrivateStorage.ts`
 
-- Lines: `400`
-- Size: `14668` bytes
+- Lines: `409`
+- Size: `15150` bytes
 - Internal dependencies:
   - `functions/src/modules/hours/godzinki_service.ts`
   - `functions/src/modules/hours/godzinki_vars.ts`
@@ -8302,6 +8547,22 @@ Excluded sensitive files:
   - `creditBoardMonthlyBonus`
   - `fmtBalance`
   - `monthKeyOf`
+
+### `functions/src/service/tasks/godzinkiNotifyRejected.ts`
+
+- Lines: `113`
+- Size: `4128` bytes
+- Internal dependencies:
+  - `functions/src/modules/shared/text_utils.ts`
+  - `functions/src/service/types.ts`
+- Imports:
+  - `import/require ../../modules/shared/text_utils`
+  - `import/require ../types`
+  - `import/require firebase-admin`
+- Functions:
+  - `displayNameOf`
+  - `formatDatePL`
+  - `p`
 
 ### `functions/src/service/tasks/godzinkiSyncFromSheet.ts`
 
@@ -8734,8 +8995,8 @@ Excluded sensitive files:
 
 ### `functions/test/gear_bundle_core.test.ts`
 
-- Lines: `1069`
-- Size: `59523` bytes
+- Lines: `1101`
+- Size: `61157` bytes
 - Internal dependencies:
   - `functions/src/modules/calendar/calendar_utils.ts`
   - `functions/src/modules/equipment/shared/reservation_limits.ts`
@@ -8926,22 +9187,28 @@ Excluded sensitive files:
 
 ### `public/core/api_client.js`
 
-- Lines: `94`
-- Size: `3116` bytes
+- Lines: `130`
+- Size: `4175` bytes
+- Imports:
+  - `import/require /core/perf.js`
 - Functions:
   - `apiGetJson`
   - `apiPostJson`
   - `buildApiError`
+  - `parseOrThrow`
   - `resolveToken`
   - `setApiTokenGetter`
+  - `t0`
+  - `timedFetch`
 
 ### `public/core/app_shell.js`
 
-- Lines: `326`
-- Size: `11887` bytes
+- Lines: `389`
+- Size: `14993` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/modules_registry.js`
+  - `import/require /core/perf.js`
   - `import/require /core/render_shell.js`
   - `import/require /core/sw_update.js`
 - Functions:
@@ -8987,8 +9254,8 @@ Excluded sensitive files:
 
 ### `public/core/firebase_client.js`
 
-- Lines: `205`
-- Size: `7197` bytes
+- Lines: `249`
+- Size: `9379` bytes
 - Imports:
   - `import/require https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js`
 - Functions:
@@ -8998,8 +9265,10 @@ Excluded sensitive files:
   - `authLoginPopup`
   - `authLogout`
   - `authOnChange`
+  - `cachedUrl`
   - `getFirebaseConfig`
   - `kayakStorageNumber`
+  - `loadStorage`
   - `needsRedirectAuth`
   - `storageFetchHelmetFrontUrl`
   - `storageFetchHelmetUrl`
@@ -9038,34 +9307,55 @@ Excluded sensitive files:
 
 ### `public/core/modules_registry.js`
 
-- Lines: `176`
-- Size: `5802` bytes
+- Lines: `196`
+- Size: `7344` bytes
 - Imports:
   - `import/require /core/module_stub.js`
-  - `import/require /modules/admin_pending_module.js`
-  - `import/require /modules/basen_module.js`
-  - `import/require /modules/gear_module.js`
-  - `import/require /modules/godzinki_module.js`
-  - `import/require /modules/impreza_module.js`
-  - `import/require /modules/klub_module.js`
-  - `import/require /modules/km_module.js`
-  - `import/require /modules/kurs_godzinki_module.js`
-  - `import/require /modules/kurs_module.js`
-  - `import/require /modules/my_reservations_module.js`
 - Functions:
   - `buildModulesFromSetup`
+  - `createLazyModule`
   - `resolveModuleType`
+
+### `public/core/perf.js`
+
+- Lines: `206`
+- Size: `6464` bytes
+- Functions:
+  - `clearStoredRuns`
+  - `closeHome`
+  - `dump`
+  - `homeDone`
+  - `homeStart`
+  - `mark`
+  - `measure`
+  - `now`
+  - `parseServerTiming`
+  - `persist`
+  - `readStoredRuns`
+  - `recordApi`
+
+### `public/core/perf_view.js`
+
+- Lines: `178`
+- Size: `7644` bytes
+- Imports:
+  - `import/require /core/html_utils.js`
+  - `import/require /core/perf.js`
+- Functions:
+  - `MS`
+  - `renderPerfView`
 
 ### `public/core/render_shell.js`
 
-- Lines: `1794`
-- Size: `82201` bytes
+- Lines: `1878`
+- Size: `87364` bytes
 - Imports:
   - `import/require /core/access_control.js`
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
   - `import/require /core/format_utils.js`
   - `import/require /core/html_utils.js`
+  - `import/require /core/perf.js`
   - `import/require /core/router.js`
   - `import/require /core/text_format.js`
 - Functions:
@@ -9079,6 +9369,7 @@ Excluded sensitive files:
   - `buildKlubBoxHtml`
   - `dayInfo`
   - `draw`
+  - `fetchGodzinkiHome`
   - `fieldErrorToPl`
   - `fmtKmValue`
   - `formatContribDate`
@@ -9175,8 +9466,8 @@ Excluded sensitive files:
 
 ### `public/modules/admin_pending_module.js`
 
-- Lines: `516`
-- Size: `28767` bytes
+- Lines: `622`
+- Size: `33727` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/club_badges.js`
@@ -9186,8 +9477,10 @@ Excluded sensitive files:
   - `import/require /core/user_error_messages.js`
   - `import/require /modules/raporty/reports_panel.js`
 - Functions:
+  - `closeRejectModal`
   - `createAdminPendingModule`
   - `load`
+  - `openRejectModal`
   - `renderContent`
   - `setErr`
 
@@ -9257,8 +9550,8 @@ Excluded sensitive files:
 
 ### `public/modules/gear_module.js`
 
-- Lines: `3197`
-- Size: `146226` bytes
+- Lines: `3261`
+- Size: `150114` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
@@ -9293,6 +9586,7 @@ Excluded sensitive files:
   - `gearTabIcon`
   - `getActiveKierownikEvents`
   - `getSelectedClubEvent`
+  - `halfHalfIconSvg`
   - `heartSvg`
   - `helmetColorIconHtml`
   - `helmetColorSvg`
@@ -9414,8 +9708,8 @@ Excluded sensitive files:
 
 ### `public/modules/klub_module.js`
 
-- Lines: `275`
-- Size: `13003` bytes
+- Lines: `355`
+- Size: `17868` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/firebase_client.js`
@@ -9423,8 +9717,11 @@ Excluded sensitive files:
   - `import/require /core/router.js`
   - `import/require /core/user_error_messages.js`
 - Functions:
+  - `addrRow`
   - `createKlubModule`
   - `formatNrb`
+  - `mapsDirectionsUrl`
+  - `mountLinkTiles`
   - `openMap`
   - `renderActiveTab`
   - `renderHeaderInfo`
@@ -9496,8 +9793,8 @@ Excluded sensitive files:
 
 ### `public/modules/my_reservations_module.js`
 
-- Lines: `639`
-- Size: `26491` bytes
+- Lines: `657`
+- Size: `27496` bytes
 - Imports:
   - `import/require /core/api_client.js`
   - `import/require /core/date_range_calendar.js`
@@ -9650,8 +9947,8 @@ Excluded sensitive files:
 
 ### `public/sw.js`
 
-- Lines: `173`
-- Size: `5992` bytes
+- Lines: `162`
+- Size: `5874` bytes
 
 ### `scripts/bump-sw-cache.js`
 
@@ -9733,10 +10030,22 @@ Excluded sensitive files:
   - `runtimeVersion`
   - `timeZone`
 
+### `DOCS/Sessions & TO DOs/perf/baseline_2026-09-23/runs.json`
+
+- Lines: `48`
+- Size: `2794` bytes
+- Detected top-level keys / sections:
+  - `backend_cold_start`
+  - `meta`
+  - `runs`
+  - `summary`
+  - `w22_duplicate_render`
+  - `warm_handler_costs_ms`
+
 ### `firebase.json`
 
 - Lines: `563`
-- Size: `14188` bytes
+- Size: `14158` bytes
 - Detected top-level keys / sections:
   - `emulators`
   - `firestore`
@@ -10924,6 +11233,48 @@ Excluded sensitive files:
   - `## Rozwiązanie`
   - `## Weryfikacja`
 
+### `DOCS/Sessions & TO DOs/23.09_feedback_uzytkownika_i_wydajnosc.md`
+
+- Lines: `155`
+- Size: `11984` bytes
+- Headings:
+  - `# 23.09.2026 — feedback użytkownika + mierzalna wydajność`
+  - `## ZADANIE A — feedback użytkownika`
+  - `### A1. Odnośnik do dysku (regulaminy, statut) — WDROŻONE, czeka na dane`
+  - `### A2. „Pół na pół" (Dynamo) — WDROŻONE`
+  - `### A3. Odrzucanie godzinek z powodem — WDROŻONE`
+  - `### A3b. Legenda „pół na pół" — DODANA I USUNIĘTA`
+  - `### A3c. Właściciel nie płaci za własny kajak — WDROŻONE 24.09`
+  - `### A3d. Moduł Klub: kafelek „Dysk klubowy" + adres klubu — WDROŻONE 24.09`
+  - `### A4. Pola własnościowe na liście sprzętu — WDROŻONE`
+  - `## ZADANIE B — wydajność`
+  - `### Przyrządy (wdrożone jako pierwsze, przed optymalizacjami)`
+  - `### Wyniki`
+  - `### Nowe znalezisko — W22, podwójny render`
+  - `### Co zostało`
+  - `## Uwagi operacyjne z tej sesji`
+
+### `DOCS/Sessions & TO DOs/23.09_pomiary_wydajnosci_METODA.md`
+
+- Lines: `192`
+- Size: `9937` bytes
+- Headings:
+  - `# Pomiary wydajności — metoda (kontrakt)`
+  - `## 1. Trzy kanały pomiarowe`
+  - `## 2. Przyrządy`
+  - `### 2.1 Backend — `Server-Timing``
+  - `# HTTP/1.1 401 Unauthorized`
+  - `# Server-Timing: app;dur=2.1, cold;dur=32548`
+  - `### 2.2 Frontend — `public/core/perf.js``
+  - `## 3. Procedura przebiegu (lab)`
+  - `## 4. Polecenia gcloud`
+  - `# realne nazwy usług Cloud Run`
+  - `# latencja żądań (zawiera zimny start — żądanie czeka na instancję)`
+  - `# zimne starty co do sztuki (dostępne od 23.09.2026)`
+  - `## 5. Bramka lokalna dla W1 (bez produkcji, deterministyczna)`
+  - `## 6. Czego uczciwie nie udowodnimy`
+  - `## 7. Układ katalogów`
+
 ### `DOCS/Sessions & TO DOs/24.07_klucze.md`
 
 - Lines: `176`
@@ -11752,6 +12103,60 @@ Excluded sensitive files:
   - `### Priorytet 1 — Firestore Rules (bezpieczeństwo)`
   - `### Priorytet 2 — Weryfikacja routingu per rola`
 
+### `DOCS/Sessions & TO DOs/perf/2026-09-23_po_etapie_1/SUMMARY.md`
+
+- Lines: `56`
+- Size: `3334` bytes
+- Headings:
+  - `# Po Etapie 1 — 23.09.2026`
+  - `## 1. Główne KPI`
+  - `## 2. Backend — koszt zimnego startu`
+  - `## 3. Pozycje potwierdzone pojedynczo`
+  - `## 4. Liczba żądań ekranu startowego`
+  - `## 5. Czego ten pomiar nie obejmuje`
+
+### `DOCS/Sessions & TO DOs/perf/2026-09-24_telefon/SUMMARY.md`
+
+- Lines: `88`
+- Size: `4298` bytes
+- Headings:
+  - `# Pomiar z telefonu — 24.09.2026`
+  - `## 1. Wniosek najważniejszy`
+  - `## 2. Dlaczego zysk zniknął`
+  - `## 3. Co działa zgodnie z planem (potwierdzone na telefonie)`
+  - `## 4. Skala problemu dla reszty klubu`
+  - `## 5. Proponowany następny krok (poza uzgodnionymi etapami 1–4)`
+  - `## 6. Historia przebiegów z tego urządzenia`
+
+### `DOCS/Sessions & TO DOs/perf/baseline_2026-09-23/SUMMARY.md`
+
+- Lines: `93`
+- Size: `4975` bytes
+- Headings:
+  - `# Punkt odniesienia — 23.09.2026`
+  - `## 1. Główne KPI — `ms:home` (od otwarcia do kompletnego ekranu startowego)`
+  - `## 2. Rozbicie startu (mediana z przebiegów z ciepłym cache)`
+  - `## 3. Backend — zimny start (zmierzone na `/api/klub`, produkcja)`
+  - `## 4. NOWE ZNALEZISKO — W22: podwójny render ekranu startowego`
+  - `## 5. Pliki`
+  - `## 6. Czego tu nie ma`
+
+### `DOCS/Sessions & TO DOs/perf/POROWNANIE.md`
+
+- Lines: `128`
+- Size: `8055` bytes
+- Headings:
+  - `# Wydajność — porównanie etapów`
+  - `## 1. Główne KPI — `ms:home` (od otwarcia aplikacji do kompletnego ekranu startowego)`
+  - `## 2. Backend — zimny start`
+  - `## 3. Ekran startowy — co się dzieje w sieci`
+  - `## 4. Moduł Sprzęt — szukajka`
+  - `## 5. Pozycje wdrożone, których NIE potwierdzam pomiarem`
+  - `## 6. Pozycja niewdrożona`
+  - `## 7. Telefon — POMIAR WYKONANY 24.09, wynik niewygodny`
+  - `## 8. Czego ten pomiar nadal nie obejmuje`
+  - `## 9. `?view=badge` — 24.09, po pomiarze z telefonu`
+
 ### `DOCS/Sessions & TO DOs/plan_audyt_v2.md`
 
 - Lines: `270`
@@ -12292,7 +12697,7 @@ Excluded sensitive files:
 - `appscript/2_Członkowie Godzinki Imprezy/api_router` — 280 lines, 7928 bytes
 - `functions/.gitignore` — 10 lines, 153 bytes
 - `public/404.html` — 34 lines, 1808 bytes
-- `public/index.html` — 64 lines, 2804 bytes
+- `public/index.html` — 81 lines, 4168 bytes
 - `public/map.html` — 369 lines, 12601 bytes
 - `public/skrypt_kurs/chapters/ch01.html` — 6 lines, 547 bytes
 - `public/skrypt_kurs/chapters/ch02.html` — 201 lines, 11069 bytes
@@ -12304,11 +12709,11 @@ Excluded sensitive files:
 - `public/styles/basen.css` — 792 lines, 16670 bytes
 - `public/styles/dashboard.css` — 64 lines, 1229 bytes
 - `public/styles/events.css` — 284 lines, 5064 bytes
-- `public/styles/gear.css` — 1692 lines, 34013 bytes
+- `public/styles/gear.css` — 1693 lines, 34048 bytes
 - `public/styles/godzinki.css` — 187 lines, 3725 bytes
 - `public/styles/km.css` — 496 lines, 10234 bytes
 - `public/styles/kurs.css` — 351 lines, 5895 bytes
-- `public/styles/start.css` — 241 lines, 11835 bytes
+- `public/styles/start.css` — 248 lines, 12348 bytes
 - `tests/e2e/.gitignore` — 11 lines, 142 bytes
 - `tests/e2e/reports/events_e2e_run.txt` — 110 lines, 8703 bytes
 - `tests/e2e/reports/godzinki_e2e_run.txt` — 57 lines, 5149 bytes

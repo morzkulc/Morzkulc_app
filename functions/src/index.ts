@@ -878,7 +878,9 @@ function buildAppsScriptSyncSummary(taskId: string, details: any): string {
     }
     return `Sprzęt ${d.dryRun ? "(podgląd — nic nie zapisano)" : "zsynchronizowany"}.\n` +
       `Dodane/zmienione: ${n(d.upserted)} · zezłomowane (brak w arkuszu): ${n(d.scrapped)}.` +
-      (Number(d.duplicateId) > 0 ? `\nUWAGA: zduplikowane ID w arkuszu: ${n(d.duplicateId)} — sztuki pominięte (pierwsza została), popraw ID i zsynchronizuj ponownie.` : "");
+      (Number(d.duplicateId) > 0 ? `\nUWAGA: zduplikowane ID w arkuszu: ${n(d.duplicateId)} — sztuki pominięte (pierwsza została), popraw ID i zsynchronizuj ponownie.` : "") +
+      (Number(d.duplicateNumber) > 0 ? `
+UWAGA: powtórzone numery sprzętu: ${n(d.duplicateNumber)} — różne sztuki wyglądają w aplikacji identycznie; nadaj unikalne numery (szczegóły w panelu zarządu).` : "");
   case "opening.reconcile": {
     if (d.userFound === false) {
       return `Nie znaleziono użytkownika o adresie ${d.targetEmail || "(brak)"} w bazie. Sprawdź, czy osoba jest zarejestrowana w aplikacji.`;
