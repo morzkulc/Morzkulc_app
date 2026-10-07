@@ -14,7 +14,7 @@
  * Stary cache jest automatycznie czyszczony w activate.
  */
 
-const CACHE_VERSION = "mufak789";
+const CACHE_VERSION = "muy1stm9";
 const STATIC_CACHE  = `morzkulc-static-${CACHE_VERSION}`;
 
 // Pliki precachowane przy instalacji SW
@@ -46,6 +46,7 @@ const PRECACHE_URLS = [
   "/core/text_format.js",
   "/core/html_utils.js",
   "/core/format_utils.js",
+  "/core/cockpit_size.js",
   "/core/club_badges.js",
   "/core/date_range_calendar.js",
   "/styles/base.css",

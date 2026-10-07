@@ -4,6 +4,7 @@ import { storageFetchKayakCoverUrl, storageFetchKayakGalleryUrls, storageFetchLi
 import { createReservationCalendar } from "/core/date_range_calendar.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
 import { formatDatePL as formatDatePLFromIso, buildKayakTitle } from "/core/format_utils.js";
+import { formatCockpitSize } from "/core/cockpit_size.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -1115,6 +1116,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
               item?.owner,
               item?.deck,
               item?.cockpit,
+              item?.cockpit ? formatCockpitSize(item.cockpit) : "",
               item?.material
             ]
             : isPaddlesView
@@ -2045,12 +2047,15 @@ function buildKayakDetailsRows(k) {
   const isPrivate = toBool(k?.isPrivate);
   const isHalfHalf = toBool(k?.isHalfHalf);
   const privateRentable = toBool(k?.privateForRent) || toBool(k?.isPrivateRentable);
+  // Kanadyjka (Typ "kanada") nie ma kokpitu pod fartuch — wiersz pomijamy w całości,
+  // także bez "brak danych" (decyzja użytkownika 07.10.2026).
+  const isCanoe = String(k?.type || "").toLowerCase().includes("kanad");
 
   const rows = [
     ["Rozmiar", k?.size],
     ["Litrów", k?.liters],
     ["Zakres wag", k?.weightRange],
-    ["Kokpit", k?.cockpit],
+    ["Kokpit", isCanoe ? "" : formatCockpitSize(k?.cockpit)],
     ["Pół na pół?", isHalfHalf ? "tak" : ""],
     ["Składowany", k?.storage],
     ["Prywatny?", isPrivate ? "tak" : ""],
