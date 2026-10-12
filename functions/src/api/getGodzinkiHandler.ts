@@ -1,6 +1,8 @@
 import type {Request, Response} from "express";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {getAllRecords, computeBalance, computeNextExpiry, computeEarnedTotal, GodzinkiRecord} from "../modules/hours/godzinki_service";
+import {computeMemberActivity} from "../modules/hours/member_activity";
+import {resolveDateRange} from "../modules/shared/date_range_utils";
 
 type TokenCheck =
   | {error: string}
@@ -13,6 +15,7 @@ export type GetGodzinkiDeps = {
   setCorsHeaders: (req: Request, res: Response) => void;
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
+  godzinkiRoleKeys: string[];
 };
 
 /**
@@ -81,9 +84,11 @@ function serializeRecord(r: GodzinkiRecord): Record<string, any> {
  * Query params:
  *   ?view=home   — tylko balance + nextExpiry + recentEarnings (bez pełnej historii)
  *   ?view=full   — pełna historia (domyślnie)
+ *   ?view=ranking — „Najbardziej aktywni" za ostatni semestr (jak raport zarządu, bez e-maili);
+ *                   tylko role z dostępem do godzinek (godzinkiRoleKeys)
  */
 export async function handleGetGodzinki(req: Request, res: Response, deps: GetGodzinkiDeps) {
-  const {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken} = deps;
+  const {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, godzinkiRoleKeys} = deps;
 
   if (sendPreflight(req, res)) return;
   if (!requireAllowedHost(req, res)) return;
@@ -105,6 +110,30 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
       const uid = tokenCheck.decoded.uid;
       const view = String(req.query?.view || "full").trim().toLowerCase();
       const now = new Date();
+
+      if (view === "ranking") {
+        const userSnap = await db.collection("users_active").doc(uid).get();
+        const roleKey = String((userSnap.data() as any)?.role_key || "").trim();
+        if (!godzinkiRoleKeys.includes(roleKey)) {
+          res.status(403).json({error: "Forbidden"});
+          return;
+        }
+        const rr = resolveDateRange("semester", "", "", {defaultKey: "semester"});
+        if (!rr.ok) throw new Error(rr.message);
+        const rows = await computeMemberActivity(db, rr.from, rr.to);
+        res.status(200).json({
+          ok: true,
+          range: {key: rr.key, from: rr.from, to: rr.to},
+          // Bez e-maili i uid innych członków — tylko to, co widać w tabeli.
+          rows: rows.map((r) => ({
+            rank: r.rank,
+            name: r.userName || r.userNick,
+            hours: r.hours,
+            isMe: r.userUid === uid,
+          })),
+        });
+        return;
+      }
 
       if (view === "home") {
         // Dla widoku home potrzebujemy wszystkich rekordów (earn+spend+purchase) do poprawnego

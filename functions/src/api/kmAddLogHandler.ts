@@ -15,15 +15,18 @@
  *   placeId?: string           — ID z km_places (jeśli wybrano z podpowiedzi)
  *   km: number                 — kilometry, > 0, <= 9999
  *   hoursOnWater: number       — godziny na wodzie, >= 0, wymagane (0 jeśli nie mierzono)
- *   activityType?: string      — typ aktywności
  *   difficultyScale?: string   — "WW"|"U" — wymagane dla mountains/lowlands, null dla reszty
  *   difficulty?: string        — "WW3", "U2", itp. — wymagane jeśli difficultyScale podane
  *   capsizeRolls?: {kabina, rolka, dziubek} — wywrotolotek (całkowite, >= 0)
  *   sectionDescription?: string
  *   note?: string
+ *   lat?, lng?: number         — lokalizacja; WYMAGANA, chyba że miejsce w km_places ma współrzędne
+ *                                (inaczej 400 location_required)
+ *   source?: "kursant_form"    — formularz kursanta: zwolniony z wymogu lokalizacji
  */
 
 import type {Request, Response} from "express";
+import * as admin from "firebase-admin";
 import {getKmVars} from "../modules/km/km_vars";
 import {addKmLog} from "../modules/km/km_log_service";
 import {upsertKmPlace} from "../modules/km/km_places_service";
@@ -121,7 +124,6 @@ export async function handleKmAddLog(
       const kmRaw = toSafeFloat(body.km);
       const hoursOnWaterRaw = body.hoursOnWater;
       const hoursOnWater = hoursOnWaterRaw != null ? toSafeFloat(hoursOnWaterRaw) : null;
-      const activityType = normNullish(body.activityType) || undefined;
       const difficultyScale = normNullish(body.difficultyScale) || null;
       const difficulty = normNullish(body.difficulty) || null;
       const sectionDescription = normNullish(body.sectionDescription).slice(0, 500) || undefined;
@@ -214,18 +216,47 @@ export async function handleKmAddLog(
         }
       }
 
-      // 4. Pobierz konfigurację punktacji
+      // 4. Lokalizacja — WYMAGANA (od 12.10.2026): z wpisu (GPS/mapa/podpowiedź) albo ze słownika
+      // km_places (po placeId lub dokładnej nazwie). Bez niej wpis nie trafiłby na mapę.
+      // Ustalane PRZED upsertem, żeby odrzucony wpis nie dodał do słownika miejsca bez współrzędnych.
+      // Wyjątek: formularz kursanta (akwen = nazwa imprezy kursowej, bez lokalizacji).
+      const isKursantForm = normNullish(body.source) === "kursant_form";
+      let mapLat = lat;
+      let mapLng = lng;
+      if (mapLat == null || mapLng == null) {
+        mapLat = undefined;
+        mapLng = undefined;
+        const placeDoc = placeId ?
+          await deps.db.collection("km_places").doc(placeId).get() :
+          (await deps.db.collection("km_places").where("name", "==", placeName).limit(1).get()).docs[0];
+        const place = placeDoc?.exists ? (placeDoc.data() as any) : null;
+        if (typeof place?.lat === "number" && typeof place?.lng === "number") {
+          mapLat = place.lat;
+          mapLng = place.lng;
+        }
+      }
+      if ((mapLat == null || mapLng == null) && !isKursantForm) {
+        res.status(400).json({
+          ok: false,
+          code: "location_required",
+          message: "Podaj lokalizację: wybierz miejsce z podpowiedzi, użyj GPS albo zaznacz na mapie.",
+        });
+        return;
+      }
+
+      // 5. Pobierz konfigurację punktacji
       const vars = await getKmVars(deps.db);
 
-      // 5. Upsert place w słowniku
+      // 5b. Upsert place w słowniku — nowe miejsce trafia do słownika od razu ze współrzędnymi;
+      // istniejącemu bez współrzędnych upsert je uzupełnia.
       let resolvedPlaceId: string | undefined;
       try {
         resolvedPlaceId = await upsertKmPlace(deps.db, {
           placeId,
           name: placeName,
           waterType,
-          lat,
-          lng,
+          lat: mapLat,
+          lng: mapLng,
         });
       } catch {
         // Błąd słownika nie blokuje zapisu wpisu
@@ -240,12 +271,11 @@ export async function handleKmAddLog(
         placeName,
         placeNameRaw,
         placeId: resolvedPlaceId,
-        lat,
-        lng,
+        lat: mapLat,
+        lng: mapLng,
         sectionDescription,
         km: kmRaw,
         hoursOnWater: hoursOnWater as number,
-        activityType,
         difficultyScale: difficultyScale as any,
         difficulty,
         capsizeRolls,
@@ -253,6 +283,27 @@ export async function handleKmAddLog(
         eventId,
         eventName,
       }, vars);
+
+      // 7. Wpis z lokalizacją → odśwież cache mapy od razu (wcześniej tylko raz w miesiącu,
+      // więc nowe wpisy czekały na mapę do 1. dnia następnego miesiąca).
+      if (mapLat != null && mapLng != null) {
+        try {
+          const jobRef = deps.db.collection("service_jobs").doc();
+          await jobRef.set({
+            id: jobRef.id,
+            taskId: "km.rebuildMapData",
+            payload: {},
+            status: "queued",
+            attempts: 0,
+            // Bez nextRunAt fallback dzienny nie podejmie joba, gdyby trigger zawiódł.
+            nextRunAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch {
+          // Mapę i tak przebuduje scheduler miesięczny
+        }
+      }
 
       res.status(200).json({ok: true, logId});
     } catch (err: any) {

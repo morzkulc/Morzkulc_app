@@ -13,7 +13,8 @@
  *   useCount: number       — licznik użyć (popularity)
  *   createdAt, updatedAt: Timestamp
  *
- * Wyszukiwanie: array-contains na polu searchTerms, limit 10, debounce po stronie klienta.
+ * Wyszukiwanie: formularz pobiera cały słownik (listKmPlaces) i filtruje lokalnie;
+ * searchKmPlaces (array-contains na searchTerms) zostaje dla starszych klientów.
  */
 
 import * as admin from "firebase-admin";
@@ -76,6 +77,27 @@ export async function searchKmPlaces(
     // Jeśli indeks jeszcze nie istnieje lub query się nie powiodło — zwróć pusty wynik
     return [];
   }
+}
+
+/**
+ * Zwraca cały słownik (bez searchTerms) do filtrowania podpowiedzi po stronie klienta.
+ * Formularz pobiera go raz przy otwarciu — zamiast zapytania do backendu na każdy znak.
+ */
+export async function listKmPlaces(db: FirebaseFirestore.Firestore): Promise<any[]> {
+  const snap = await db.collection("km_places").get();
+  return snap.docs.map((d) => {
+    const data = d.data();
+    const result: Record<string, any> = {
+      placeId: d.id,
+      name: data.name,
+      aliases: Array.isArray(data.aliases) ? data.aliases : [],
+      waterType: data.waterType || null,
+      useCount: data.useCount || 0,
+    };
+    if (data.lat != null) result.lat = data.lat;
+    if (data.lng != null) result.lng = data.lng;
+    return result;
+  }).filter((p) => typeof p.name === "string" && p.name.trim());
 }
 
 /**

@@ -46,20 +46,49 @@ def main() -> None:
 
     by_dir: dict[str, list[dict]] = defaultdict(list)
     for f in files:
-        if f.get("kind") in ("markdown", "config") or f["path"].startswith(("DOCS/", "tests/")):
+        # functions/lib/ is compiled output mirroring functions/src/ 1:1.
+        if f.get("kind") in ("markdown", "config") or f["path"].startswith(("DOCS/", "tests/", "functions/lib/")):
             continue
         by_dir[str(Path(f["path"]).parent).replace("\\", "/")].append(f)
 
     priority = ("functions/src", "public")
     dirs = sorted(by_dir, key=lambda d: (not d.startswith(priority), d))
-    for d in dirs:
+
+    def dir_line(d: str, n_fns: int) -> str:
+        if n_fns < 0:
+            return f"- {d}/: {len(by_dir[d])} files"
         parts = []
         for f in sorted(by_dir[d], key=lambda x: x["path"]):
-            fns = [fn.get("name", fn) if isinstance(fn, dict) else fn for fn in f.get("functions", [])][:4]
+            fns = [fn.get("name", fn) if isinstance(fn, dict) else fn for fn in f.get("functions", [])][:n_fns]
             name = Path(f["path"]).name
             parts.append(f"{name}({', '.join(fns)})" if fns else name)
-        lines.append(f"- {d}/: " + "; ".join(parts))
+        return f"- {d}/: " + "; ".join(parts)
 
+    # Every directory must appear. Start at file names only (0 functions per file),
+    # then spend leftover budget on function names: priority dirs first, up to 4 each.
+    # If even names-only overflows, non-priority dirs collapse to a file count.
+    caps = {d: 0 for d in dirs}
+
+    def size() -> int:
+        return len("\n".join(lines)) + sum(len(dir_line(d, caps[d])) + 1 for d in dirs)
+
+    for d in reversed(dirs):
+        if size() <= BUDGET:
+            break
+        if not d.startswith(priority):
+            caps[d] = -1
+
+    tiers = [[d for d in dirs if d.startswith(priority)], [d for d in dirs if not d.startswith(priority)]]
+    for tier in tiers:
+        for n in range(1, 5):
+            for d in tier:
+                if caps[d] != n - 1:
+                    continue
+                caps[d] = n
+                if size() > BUDGET:
+                    caps[d] = n - 1
+
+    lines.extend(dir_line(d, caps[d]) for d in dirs)
     emit(lines)
 
 

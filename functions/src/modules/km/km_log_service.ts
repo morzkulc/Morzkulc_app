@@ -28,7 +28,6 @@ export type KmLogInput = {
   sectionDescription?: string;
   km: number;
   hoursOnWater: number; // wymagane, może być 0 (np. brak pomiaru)
-  activityType?: string;
   difficultyScale?: "WW" | "U" | null;
   difficulty?: string | null; // "WW3", "U2", null, itd.
   capsizeRolls: CapsizeRolls;
@@ -103,7 +102,6 @@ export async function addKmLog(
   if (input.lat != null) logDoc.lat = input.lat;
   if (input.lng != null) logDoc.lng = input.lng;
   if (input.sectionDescription) logDoc.sectionDescription = input.sectionDescription;
-  if (input.activityType) logDoc.activityType = input.activityType;
   if (input.difficultyScale) logDoc.difficultyScale = input.difficultyScale;
   if (input.difficulty) logDoc.difficulty = input.difficulty;
   if (input.note) logDoc.note = input.note;

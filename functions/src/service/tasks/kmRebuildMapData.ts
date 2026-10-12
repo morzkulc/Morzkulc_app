@@ -10,8 +10,12 @@
  *   - po placeId jeśli log.placeId istnieje
  *   - inaczej po zaokrąglonym lat.toFixed(3)+","+lng.toFixed(3) (≈111m)
  *
- * Payload: brak (pełny rescan wszystkich km_logs z lat/lng).
- * Wyzwalanie: manualnie z menu GAS "Odśwież mapę aktywności".
+ * Współrzędne: z wpisu (lat/lng), a gdy ich brak — z km_places/{placeId} (miejsce mogło
+ * dostać współrzędne później niż wpis został zapisany).
+ *
+ * Payload: brak (pełny rescan wszystkich km_logs).
+ * Wyzwalanie: po każdym wpisie z lokalizacją (kmAddLog), menu GAS "Odśwież mapę aktywności",
+ * scalanie miejsc oraz scheduler miesięczny kmRebuildMapMonthly.
  */
 
 import * as admin from "firebase-admin";
@@ -72,6 +76,14 @@ export const kmRebuildMapDataTask: ServiceTask<Payload> = {
 
     ctx.logger.info("km.rebuildMapData: loaded logs", {total: logsSnap.size});
 
+    // Współrzędne miejsc dla wpisów bez własnych lat/lng.
+    const placesSnap = await ctx.firestore.collection("km_places").get();
+    const placeCoords = new Map<string, {lat: number; lng: number}>();
+    placesSnap.forEach((d) => {
+      const p = d.data() as any;
+      if (typeof p.lat === "number" && typeof p.lng === "number") placeCoords.set(d.id, {lat: p.lat, lng: p.lng});
+    });
+
     const groups: Map<string, GroupEntry> = new Map();
 
     for (const doc of logsSnap.docs) {
@@ -80,8 +92,10 @@ export const kmRebuildMapDataTask: ServiceTask<Payload> = {
       // Pomiń usunięte/ukryte wpisy
       if (log.visibility === "hidden" || log.deletedAt != null) continue;
 
-      const lat = typeof log.lat === "number" ? log.lat : null;
-      const lng = typeof log.lng === "number" ? log.lng : null;
+      const fromPlace = log.placeId ? placeCoords.get(String(log.placeId)) : undefined;
+      const hasOwn = typeof log.lat === "number" && typeof log.lng === "number";
+      const lat = hasOwn ? log.lat : fromPlace?.lat ?? null;
+      const lng = hasOwn ? log.lng : fromPlace?.lng ?? null;
       if (lat == null || lng == null) continue;
 
       const placeName = String(log.placeName || "").trim() || "nieznane";

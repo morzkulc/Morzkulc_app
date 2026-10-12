@@ -1013,6 +1013,7 @@ export const getGodzinki = onRequest({invoker: "private"}, async (req, res) => {
     setCorsHeaders,
     corsHandler,
     requireIdToken,
+    godzinkiRoleKeys: svcCfg.godzinkiRoleKeys,
   });
 });
 

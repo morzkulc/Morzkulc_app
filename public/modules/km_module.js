@@ -7,11 +7,12 @@
  * Zasady:
  * - Punkty obliczane przez backend ON WRITE — frontend tylko wyświetla gotowe dane
  * - Formularz dynamiczny: skala trudności tylko dla gór (WW) i nizin (U)
- * - Autocomplete nazw akwenów z debounce 300ms, min 2 znaki
+ * - Autocomplete nazw akwenów: słownik pobierany raz, filtrowany lokalnie, min 2 znaki
  * - Wywrotolotek: tylko kabina, rolka, dziubek
  */
 
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
+import { formatPoints } from "/core/format_utils.js";
 import { isUrlOnly } from "/core/text_format.js";
 
 const KM_ADD_LOG_URL = "/api/km/log/add";
@@ -31,36 +32,31 @@ const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height=
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
 const INFO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
 
-function openMap() {
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true;
-  // ?cb=1 jednorazowo wymusza pominięcie starych, już zapisanych na urządzeniach
-  // kopii /map.html sprzed dodania nagłówka no-store (05.09.2026, firebase.json).
-  const mapUrl = "/map.html?cb=1";
-  if (isStandalone) {
-    window.location.href = mapUrl;
-  } else {
-    window.open(mapUrl, "_blank", "noopener");
-  }
-}
+const TILE_SVG = (inner) => `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const ICON_GPS = TILE_SVG(`<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>`);
+const ICON_MAP = TILE_SVG(`<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>`);
+const ICON_TROPHY = TILE_SVG(`<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>`);
 
+// Kafelki nawigacji (wspólne .modTiles z base.css). „Gdzie pływamy" usunięte 12.10.2026 —
+// mapa jest w module Klub. „Dodaj wpis" na końcu i wyróżniony (jak „Dodaj" w Godzinkach).
 const TABS = [
-  { id: "form",            label: "Dodaj wpis" },
-  { id: "rankings",        label: "Wywrotolotek" },
-  { id: "events",          label: "Imprezy" },
-  { id: "map",             label: "Gdzie pływamy" },
-  { id: "my-stats",        label: "Moje statystyki" },
-  { id: "my-logs",         label: "Moje wpisy" },
-  { id: "kursant-ranking", label: "Wywrotolotek - wyniki" },
+  { id: "rankings",        label: "Rankingi", icon: ICON_TROPHY },
+  { id: "events",          label: "Imprezy", icon: TILE_SVG(`<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`) },
+  { id: "my-stats",        label: "Moje statystyki", icon: TILE_SVG(`<line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>`) },
+  { id: "my-logs",         label: "Moje wpisy", icon: TILE_SVG(`<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>`) },
+  { id: "kursant-ranking", label: "Wywrotolotek - wyniki", icon: ICON_TROPHY },
+  { id: "form",            label: "Dodaj wpis", add: true, icon: TILE_SVG(`<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`) },
 ];
 
+// short + icon: kafelki wyboru w formularzu (6 w jednym rzędzie, także na telefonie).
+const WATER_FILL = `<path d="M2 20c2.5-1.5 5 1.5 7.5 0s5-1.5 7.5 0 3.5 1 5 0"/>`;
 const WATER_TYPES = [
-  { value: "mountains", label: "Góry" },
-  { value: "lowlands",  label: "Niziny" },
-  { value: "sea",       label: "Morze" },
-  { value: "track",     label: "Tor" },
-  { value: "pool",      label: "Basen / kajak-polo" },
-  { value: "playspot",  label: "Playspot / freestyle" },
+  { value: "mountains", label: "Góry",                 short: "Góry",     icon: TILE_SVG(`<path d="M2 17l6-10 4 6 3-4 7 8z"/>${WATER_FILL}`) },
+  { value: "lowlands",  label: "Niziny",               short: "Niziny",   icon: TILE_SVG(`<path d="M2 14c3-3 6-3 9 0s7 2 11-2"/>${WATER_FILL}`) },
+  { value: "sea",       label: "Morze",                short: "Morze",    icon: TILE_SVG(`<circle cx="16" cy="7" r="3"/><path d="M2 14c2.5-1.5 5 1.5 7.5 0s5-1.5 7.5 0 3.5 1 5 0"/>${WATER_FILL}`) },
+  { value: "track",     label: "Tor",                  short: "Tor",      icon: TILE_SVG(`<path d="M5 4h14"/><path d="M8 4v10"/><path d="M16 4v10"/>${WATER_FILL}`) },
+  { value: "pool",      label: "Basen / kajak-polo",   short: "Basen",    icon: TILE_SVG(`<path d="M8 3v12"/><path d="M15 3v12"/><path d="M8 7h7"/><path d="M8 11h7"/>${WATER_FILL}`) },
+  { value: "playspot",  label: "Playspot / freestyle", short: "Playspot", icon: TILE_SVG(`<path d="M3 16c3 0 4-8 10-8 3 0 5 2 5 4.5S16 16 14 16s-3-1.5-3-3"/>${WATER_FILL}`) },
 ];
 
 const DIFFICULTY_WW = ["WW1", "WW2", "WW3", "WW4", "WW5"];
@@ -182,13 +178,15 @@ function injectKmLocStyles() {
   const s = document.createElement("style");
   s.id = "kmLocStyles";
   s.textContent = `
-    .kmLocBtns{display:flex;gap:6px;margin-top:6px;}
-    .kmLocBtn{font:12px system-ui,sans-serif;padding:4px 10px;border-radius:5px;border:1px solid #555;background:transparent;color:#ccc;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
-    .kmLocBtn:hover{background:rgba(255,255,255,0.08);}
-    .kmLocBtn:disabled{opacity:0.5;cursor:not-allowed;}
-    .kmLocDisplay{display:flex;align-items:center;gap:8px;margin-top:6px;font:12px system-ui,sans-serif;color:#7ec8a4;}
-    .kmLocClearBtn{background:none;border:none;color:#888;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;}
-    .kmLocClearBtn:hover{color:#ccc;}
+    .kmLocBtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;}
+    .kmLocBtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 10px;border-radius:12px;border:1px solid var(--primary);background:var(--primary-2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;}
+    .kmLocBtn svg{color:var(--primary);flex:none;}
+    .kmLocBtn:hover{background:color-mix(in srgb,var(--primary) 26%,transparent);}
+    .kmLocBtn:disabled{opacity:0.6;cursor:wait;}
+    .kmLocDisplay{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--ok-2);color:var(--ok);font-size:13px;font-weight:600;}
+    .kmLocDisplay[hidden]{display:none;}
+    .kmLocClearBtn{flex:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;}
+    .kmLocClearBtn:hover{color:var(--danger);}
     .kmMapModalOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;}
     .kmMapModalBox{background:#1a1a2e;border:1px solid #333;border-radius:10px;width:100%;max-width:600px;display:flex;flex-direction:column;overflow:hidden;}
     .kmMapModalHeader{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #333;font:13px system-ui,sans-serif;color:#ccc;}
@@ -203,9 +201,74 @@ function injectKmLocStyles() {
 
 // ─── autocomplete nazwy akwenu ────────────────────────────────────────────────
 
+// Cały słownik km_places pobierany raz (GET ?all=1) i filtrowany lokalnie — wcześniej
+// każdy znak (po debounce 300 ms) szedł osobnym zapytaniem do funkcji i Firestore.
+// Unieważniany po zapisie wpisu, bo zapis może dodać nowe miejsce do słownika.
+let placesDictPromise = null;
+
+function loadPlacesDict(ctx) {
+  if (!placesDictPromise) {
+    placesDictPromise = apiGetJson({ url: KM_PLACES_URL + "?all=1", idToken: ctx.idToken })
+      .then((data) => (data?.places || []).map((p) => ({
+        ...p,
+        _keys: [p.name, ...(p.aliases || [])].map(normPlaceText).filter(Boolean),
+      })))
+      .catch((err) => { placesDictPromise = null; throw err; });
+  }
+  return placesDictPromise;
+}
+
+function invalidatePlacesDict() {
+  placesDictPromise = null;
+}
+
+// Id imprez, które mają co najmniej jeden wpis — zakładka „Imprezy” pokazuje tylko je,
+// a gdy nie ma żadnej, kafelek znika. Unieważniane po zapisie wpisu (mógł dojść do imprezy).
+let eventIdsWithLogsPromise = null;
+
+function loadEventIdsWithLogs(ctx) {
+  if (!eventIdsWithLogsPromise) {
+    eventIdsWithLogsPromise = apiGetJson({ url: KM_EVENT_STATS_URL + "?list=1", idToken: ctx.idToken })
+      .then((data) => new Set(data?.eventIds || []))
+      .catch((err) => { eventIdsWithLogsPromise = null; throw err; });
+  }
+  return eventIdsWithLogsPromise;
+}
+
+function invalidateKmCaches() {
+  invalidatePlacesDict();
+  eventIdsWithLogsPromise = null;
+}
+
+// lowercase + bez polskich znaków („ł” nie rozkłada się w NFD — osobno)
+function normPlaceText(v) {
+  return String(v || "").toLowerCase().replace(/ł/g, "l")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+}
+
+// Kolejność: nazwa zaczyna się od frazy → słowo zaczyna się od frazy → fraza w środku; potem popularność.
+function filterPlaces(dict, query, limit = 10) {
+  const q = normPlaceText(query);
+  if (q.length < 2) return [];
+  const hits = [];
+  for (const p of dict) {
+    let rank = 3;
+    for (const k of p._keys) {
+      if (k.startsWith(q)) { rank = 0; break; }
+      if (rank > 1 && (" " + k).includes(" " + q)) rank = 1;
+      else if (rank > 2 && k.includes(q)) rank = 2;
+    }
+    if (rank < 3) hits.push({ p, rank });
+  }
+  hits.sort((a, b) => a.rank - b.rank || (b.p.useCount || 0) - (a.p.useCount || 0));
+  return hits.slice(0, limit).map((h) => h.p);
+}
+
 function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLng, onLocationSet, onLocationClear) {
   let debounceTimer = null;
   let suggestionsList = null;
+  let dict = null;
+  loadPlacesDict(ctx).then((d) => { dict = d; }).catch(() => { /* fallback: zapytania do backendu */ });
   let selectedPlaceId = null;
 
   function closeSuggestions() {
@@ -225,7 +288,7 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
     places.forEach(p => {
       const li = document.createElement("li");
       li.className = "kmPlacesSuggestion";
-      li.textContent = p.name + (p.waterType ? ` (${waterTypeLabel(p.waterType)})` : "");
+      li.textContent = (p.lat != null && p.lng != null ? "📍 " : "") + p.name + (p.waterType ? ` (${waterTypeLabel(p.waterType)})` : "");
       li.addEventListener("mousedown", (e) => {
         e.preventDefault(); // Zapobiega blur przed kliknięciem
         input.value = p.name;
@@ -241,6 +304,7 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
     });
 
     input.parentNode.style.position = "relative";
+    suggestionsList.style.top = (input.offsetTop + input.offsetHeight + 2) + "px";
     input.parentNode.appendChild(suggestionsList);
   }
 
@@ -254,7 +318,11 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
     const q = input.value.trim();
     if (q.length < 2) { closeSuggestions(); return; }
 
+    if (dict) { showSuggestions(filterPlaces(dict, q)); return; }
+
+    // Słownik jeszcze się ładuje albo nie dał się pobrać — stara ścieżka przez backend.
     debounceTimer = setTimeout(async () => {
+      if (dict) { showSuggestions(filterPlaces(dict, input.value.trim())); return; }
       try {
         const data = await apiGetJson({
           url: KM_PLACES_URL + "?q=" + encodeURIComponent(q) + "&limit=10",
@@ -383,11 +451,14 @@ function renderKursantFormView(inner, ctx) {
           km: 0,
           hoursOnWater: 0,
           capsizeRolls: { kabina, rolka, dziubek },
+          // Wpis kursowy: akwen = nazwa imprezy, bez lokalizacji — backend zwalnia z wymogu.
+          source: "kursant_form",
         },
       });
 
       if (resp?.ok) {
         setOk("Zapisano! Punkty dodane do rankingu kursantów.");
+        invalidateKmCaches();
         form.reset();
         if (eventSelect.options.length > 0) eventSelect.selectedIndex = 0;
       } else {
@@ -411,20 +482,25 @@ function renderFormView(inner, ctx, moduleId) {
     <div class="kmFormSection">
       <form id="kmAddForm" class="kmForm" novalidate>
 
-        <div class="formRow">
+        <div class="formRow" data-field="date">
           <label for="kmDate">Data aktywności <span class="required">*</span></label>
           <input type="date" id="kmDate" name="date" max="${esc(today)}" value="${esc(today)}" required />
         </div>
 
-        <div class="formRow">
-          <label for="kmWaterType">
+        <div class="formRow" data-field="waterType">
+          <label id="kmWaterTypeLabel">
             Typ akwenu <span class="required">*</span>
             ${infoTip("Góry → skala WW, Niziny → skala U, pozostałe → brak skali trudności.")}
           </label>
-          <select id="kmWaterType" name="waterType" required>
-            <option value="">— wybierz —</option>
-            ${WATER_TYPES.map(wt => `<option value="${esc(wt.value)}">${esc(wt.label)}</option>`).join("")}
-          </select>
+          <div class="kmWaterTiles" id="kmWaterType" role="radiogroup" aria-labelledby="kmWaterTypeLabel">
+            ${WATER_TYPES.map(wt => `
+              <label class="kmWaterTile" title="${esc(wt.label)}">
+                <input type="radio" name="waterType" value="${esc(wt.value)}" />
+                <span class="kmWaterTileIcon" aria-hidden="true">${wt.icon}</span>
+                <span class="kmWaterTileLabel">${esc(wt.short)}</span>
+              </label>
+            `).join("")}
+          </div>
         </div>
 
         <div class="formRow" id="kmDifficultyRow" hidden>
@@ -437,7 +513,7 @@ function renderFormView(inner, ctx, moduleId) {
           </select>
         </div>
 
-        <div class="formRow" style="position:relative">
+        <div class="formRow" data-field="placeName" style="position:relative">
           <label for="kmPlaceName">
             Rzeka / akwen <span class="required">*</span>
             ${infoTip("Wpisz nazwę rzeki lub akwenu. System podpowie znane nazwy po 2 znakach.")}
@@ -447,13 +523,20 @@ function renderFormView(inner, ctx, moduleId) {
           <input type="hidden" id="kmPlaceId" name="placeId" />
           <input type="hidden" id="kmLat" />
           <input type="hidden" id="kmLng" />
+        </div>
+
+        <div class="formRow" data-field="location">
+          <label id="kmLocLabel">
+            Lokalizacja <span class="required">*</span>
+            ${infoTip("Ustawia się sama po wyborze miejsca z podpowiedzi oznaczonego 📍. Inaczej użyj GPS albo zaznacz punkt na mapie.")}
+          </label>
           <div class="kmLocBtns">
-            <button type="button" id="kmGpsBtn" class="kmLocBtn" title="Pobierz bieżącą lokalizację z GPS telefonu">📍 GPS</button>
-            <button type="button" id="kmMapBtn" class="kmLocBtn" title="Kliknij na mapie, aby wybrać lokalizację">🗺️ Wybierz na mapie</button>
+            <button type="button" id="kmGpsBtn" class="kmLocBtn" title="Pobierz bieżącą lokalizację z GPS telefonu">${ICON_GPS}<span class="kmLocBtnText">Moja lokalizacja</span></button>
+            <button type="button" id="kmMapBtn" class="kmLocBtn" title="Kliknij na mapie, aby wybrać lokalizację">${ICON_MAP}<span class="kmLocBtnText">Wybierz na mapie</span></button>
           </div>
           <div id="kmLocDisplay" class="kmLocDisplay" hidden>
             <span id="kmLocText"></span>
-            <button type="button" id="kmLocClear" class="kmLocClearBtn" title="Wyczyść lokalizację">✕</button>
+            <button type="button" id="kmLocClear" class="kmLocClearBtn" title="Usuń ustawioną lokalizację" aria-label="Usuń ustawioną lokalizację">✕</button>
           </div>
         </div>
 
@@ -463,32 +546,19 @@ function renderFormView(inner, ctx, moduleId) {
             placeholder="np. Olsztynek – Brodnica Dolna" />
         </div>
 
-        <div class="formRow">
+        <div class="formRow" data-field="km">
           <label for="kmKm">Kilometry <span class="required">*</span></label>
           <input type="number" id="kmKm" name="km" min="0" max="9999" step="0.1"
             placeholder="np. 18.5 (wpisz 0 dla playspot / treningu bez trasy)" required />
         </div>
 
-        <div class="formRow">
+        <div class="formRow" data-field="hoursOnWater">
           <label for="kmHours">
             Godziny na wodzie <span class="required">*</span>
             ${infoTip("Całkowity czas spędzony na wodzie (w godzinach). Wpisz 0 jeśli nie mierzono.")}
           </label>
           <input type="number" id="kmHours" name="hoursOnWater" min="0" max="99" step="0.5"
             placeholder="np. 4.5 (wpisz 0 jeśli nie mierzono)" required />
-        </div>
-
-        <div class="formRow">
-          <label for="kmActivityType">Typ aktywności (opcjonalnie)</label>
-          <select id="kmActivityType" name="activityType">
-            <option value="">— dowolny —</option>
-            <option value="spływ">Spływ</option>
-            <option value="trening">Trening</option>
-            <option value="obóz">Obóz / biwak</option>
-            <option value="wyjazd">Wyjazd weekendowy</option>
-            <option value="zawody">Zawody</option>
-            <option value="inne">Inne</option>
-          </select>
         </div>
 
         <div class="formRow" id="kmEventRow">
@@ -537,12 +607,12 @@ function renderFormView(inner, ctx, moduleId) {
   `;
 
   // Dynamika formularza — trudność
-  const waterTypeSelect = inner.querySelector("#kmWaterType");
+  const waterTypeGroup = inner.querySelector("#kmWaterType");
   const difficultyRow = inner.querySelector("#kmDifficultyRow");
   const difficultySelect = inner.querySelector("#kmDifficulty");
 
   function updateDifficultyField() {
-    const wt = waterTypeSelect.value;
+    const wt = inner.querySelector('input[name="waterType"]:checked')?.value || "";
     if (wt === "mountains") {
       difficultyRow.hidden = false;
       difficultySelect.innerHTML = `<option value="">— brak —</option>` +
@@ -557,7 +627,7 @@ function renderFormView(inner, ctx, moduleId) {
     }
   }
 
-  waterTypeSelect.addEventListener("change", updateDifficultyField);
+  waterTypeGroup.addEventListener("change", updateDifficultyField);
 
   // Autocomplete nazwy akwenu
   const placeInput = inner.querySelector("#kmPlaceName");
@@ -577,8 +647,11 @@ function renderFormView(inner, ctx, moduleId) {
   function setLocationDisplay(lat, lng, source) {
     latHidden.value = String(lat);
     lngHidden.value = String(lng);
-    locTxt.textContent = (source ? source + ": " : "") + parseFloat(lat).toFixed(5) + ", " + parseFloat(lng).toFixed(5);
+    // Źródło: „Akwen” (podpowiedź ze słownika), „GPS” albo „Mapa”.
+    const src = source === "Akwen" ? "ze słownika miejsc" : source === "GPS" ? "z GPS" : source === "Mapa" ? "z mapy" : "";
+    locTxt.textContent = `✓ Lokalizacja ustawiona${src ? " " + src : ""} (${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)})`;
     locDisp.hidden = false;
+    clearFieldError("location");
   }
 
   function clearLocationDisplay() {
@@ -601,18 +674,19 @@ function renderFormView(inner, ctx, moduleId) {
       alert("Twoja przeglądarka nie obsługuje geolokalizacji.");
       return;
     }
+    const gpsText = gpsBtn.querySelector(".kmLocBtnText");
     gpsBtn.disabled = true;
-    gpsBtn.textContent = "⏳ GPS…";
+    gpsText.textContent = "Szukam…";
     navigator.geolocation.getCurrentPosition(
       pos => {
         setLocationDisplay(pos.coords.latitude, pos.coords.longitude, "GPS");
         gpsBtn.disabled = false;
-        gpsBtn.textContent = "📍 GPS";
+        gpsText.textContent = "Moja lokalizacja";
       },
       err => {
         alert("Nie udało się pobrać lokalizacji: " + (err.message || "błąd GPS"));
         gpsBtn.disabled = false;
-        gpsBtn.textContent = "📍 GPS";
+        gpsText.textContent = "Moja lokalizacja";
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -624,14 +698,15 @@ function renderFormView(inner, ctx, moduleId) {
 
   mapBtn.addEventListener("click", async () => {
     if (!window.maplibregl) {
+      const mapText = mapBtn.querySelector(".kmLocBtnText");
       mapBtn.disabled = true;
-      mapBtn.textContent = "⏳ Ładowanie…";
+      mapText.textContent = "Ładowanie…";
       await Promise.all([
         loadCss("https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"),
         loadScript("https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"),
       ]).catch(() => {});
       mapBtn.disabled = false;
-      mapBtn.textContent = "🗺️ Wybierz na mapie";
+      mapText.textContent = "Wybierz na mapie";
     }
 
     pickedLat = null;
@@ -736,6 +811,44 @@ function renderFormView(inner, ctx, moduleId) {
   function setErr(msg) { errEl.textContent = msg; errEl.hidden = !msg; okEl.hidden = true; }
   function setOk(msg)  { okEl.textContent = msg; okEl.hidden = false; errEl.hidden = true; }
 
+  const FIELD_LABELS = {
+    date: "Data aktywności", waterType: "Typ akwenu", placeName: "Rzeka / akwen",
+    location: "Lokalizacja", km: "Kilometry", hoursOnWater: "Godziny na wodzie",
+  };
+
+  function showFieldErrors(errors) {
+    inner.querySelectorAll(".kmFieldErr").forEach(el => el.remove());
+    inner.querySelectorAll(".formRow.kmFieldInvalid").forEach(el => el.classList.remove("kmFieldInvalid"));
+    const keys = Object.keys(errors);
+    if (!keys.length) return;
+    for (const key of keys) {
+      const row = inner.querySelector(`.formRow[data-field="${key}"]`);
+      if (!row) continue;
+      row.classList.add("kmFieldInvalid");
+      const msg = document.createElement("div");
+      msg.className = "kmFieldErr";
+      msg.textContent = errors[key];
+      row.appendChild(msg);
+    }
+    setErr(`Nie zapisano — popraw: ${keys.map(k => FIELD_LABELS[k] || k).join(", ")}.`);
+    const first = inner.querySelector(".formRow.kmFieldInvalid");
+    first?.scrollIntoView({ behavior: "smooth", block: "center" });
+    first?.querySelector("input:not([type=hidden]), select, textarea")?.focus({ preventScroll: true });
+  }
+
+  // Wywoływane też z setLocationDisplay (przed definicją — hoisting deklaracji funkcji).
+  function clearFieldError(key) {
+    const row = key && inner.querySelector(`.formRow[data-field="${key}"]`);
+    if (!row?.classList.contains("kmFieldInvalid")) return;
+    row.classList.remove("kmFieldInvalid");
+    row.querySelector(".kmFieldErr")?.remove();
+    if (!inner.querySelector(".formRow.kmFieldInvalid")) setErr("");
+  }
+
+  // Błąd znika, gdy użytkownik zacznie poprawiać dane pole.
+  form.addEventListener("input", (e) => clearFieldError(e.target.closest(".formRow")?.dataset.field));
+  form.addEventListener("change", (e) => clearFieldError(e.target.closest(".formRow")?.dataset.field));
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     setErr("");
@@ -744,12 +857,12 @@ function renderFormView(inner, ctx, moduleId) {
     const waterType = String(form.waterType.value || "").trim();
     const placeName = String(form.placeName.value || "").trim();
     const km = parseFloat(form.km.value);
-    const hoursOnWater = parseFloat(form.hoursOnWater.value) || 0;
+    const hoursRaw = String(form.hoursOnWater.value || "").trim();
+    const hoursOnWater = parseFloat(hoursRaw);
     const difficulty = String(form.difficulty?.value || "").trim() || null;
     const difficultyScale = difficulty
       ? (difficulty.startsWith("WW") ? "WW" : "U")
       : null;
-    const activityType = String(form.activityType.value || "").trim() || undefined;
     const sectionDescription = String(form.sectionDescription.value || "").trim() || undefined;
     const note = String(form.note.value || "").trim() || undefined;
     const placeId = String(form.placeId.value || "").trim() || undefined;
@@ -766,12 +879,18 @@ function renderFormView(inner, ctx, moduleId) {
     const eventId = selectedEventOpt?.value || undefined;
     const eventName = eventId ? (selectedEventOpt?.dataset?.eventName || undefined) : undefined;
 
-    // Lekka walidacja UX
-    if (!date) { setErr("Podaj datę aktywności."); return; }
-    if (!waterType) { setErr("Wybierz typ akwenu."); return; }
-    if (!placeName) { setErr("Wpisz nazwę rzeki lub akwenu."); return; }
-    if (isNaN(km) || km < 0) { setErr("Podaj prawidłową liczbę kilometrów (0 lub więcej)."); return; }
-    if (isNaN(hoursOnWater) || hoursOnWater < 0 || hoursOnWater > 99) { setErr("Podaj prawidłową liczbę godzin na wodzie (0–99)."); return; }
+    // Walidacja wszystkich pól naraz — każde brakujące pole dostaje komunikat pod sobą.
+    const errors = {};
+    if (!date) errors.date = "Wybierz datę.";
+    else if (date > todayIso()) errors.date = "Data nie może być z przyszłości.";
+    if (!waterType) errors.waterType = "Wybierz typ akwenu.";
+    if (!placeName) errors.placeName = "Wpisz nazwę rzeki lub akwenu.";
+    if (lat == null || lng == null) errors.location = "Wybierz miejsce z podpowiedzi (📍), użyj „Moja lokalizacja” albo „Wybierz na mapie”.";
+    if (String(form.km.value || "").trim() === "") errors.km = "Wpisz liczbę kilometrów (0 dla playspotu / treningu bez trasy).";
+    else if (isNaN(km) || km < 0 || km > 9999) errors.km = "Kilometry: liczba od 0 do 9999.";
+    if (hoursRaw === "") errors.hoursOnWater = "Wpisz liczbę godzin (0, jeśli nie mierzono).";
+    else if (isNaN(hoursOnWater) || hoursOnWater < 0 || hoursOnWater > 99) errors.hoursOnWater = "Godziny: liczba od 0 do 99.";
+    if (Object.keys(errors).length) { showFieldErrors(errors); return; }
 
     btn.disabled = true;
     btn.textContent = "Zapisywanie…";
@@ -790,7 +909,6 @@ function renderFormView(inner, ctx, moduleId) {
           lng,
           km,
           hoursOnWater,
-          activityType,
           difficultyScale,
           difficulty,
           capsizeRolls: { kabina, rolka, dziubek },
@@ -803,14 +921,19 @@ function renderFormView(inner, ctx, moduleId) {
 
       if (resp?.ok) {
         setOk("Aktywność zapisana! Punkty obliczone i dodane do Twojego rankingu.");
+        invalidateKmCaches(); // wpis mógł dodać miejsce do słownika i wpis do imprezy
         form.reset();
+        // reset() nie czyści input[type=hidden] — lokalizacja/placeId przechodziłyby na kolejny wpis.
+        placeIdHidden.value = "";
+        clearLocationDisplay();
         form.date.value = todayIso();
         difficultyRow.hidden = true;
       } else {
         setErr(resp?.message || "Nie udało się zapisać aktywności.");
       }
     } catch (err) {
-      setErr("Błąd: " + (err?.message || String(err)));
+      if (err?.code === "location_required") showFieldErrors({ location: err.message });
+      else setErr("Nie zapisano: " + (err?.message || String(err)));
     } finally {
       btn.disabled = false;
       btn.textContent = "Zapisz aktywność";
@@ -838,23 +961,30 @@ async function renderRankingsView(inner, ctx) {
     }
   } catch { /* ignore */ }
 
+  // Typ rankingu jako kafelki; kolor typu (--tc) z km.css przez data-type sekcji.
+  const RANK_TYPES = [
+    { id: "km",     label: "Kilometrówka", icon: TILE_SVG(`<path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/><path d="M2 18c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/><path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/>`) },
+    { id: "points", label: "Wywrotolotek", icon: TILE_SVG(`<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>`) },
+    { id: "hours",  label: "Kajakogodziny", icon: TILE_SVG(`<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>`) },
+  ];
+
   inner.innerHTML = `
-    <div class="kmRankingsSection">
+    <div class="kmRankingsSection" data-type="${esc(preferredType)}">
       <div class="kmRankingsControls">
-        <div class="kmControlGroup">
-          <label>Typ rankingu:</label>
-          <div class="kmBtnGroup" id="kmTypeGroup">
-            <button class="kmRankBtn${preferredType === "km" ? " active" : ""}" data-km-type="km">Kilometry</button>
-            <button class="kmRankBtn${preferredType === "points" ? " active" : ""}" data-km-type="points">Wywrotolotek</button>
-            <button class="kmRankBtn${preferredType === "hours" ? " active" : ""}" data-km-type="hours">Godziny</button>
-          </div>
+        <div class="kmTypeTiles" role="tablist" aria-label="Typ rankingu">
+          ${RANK_TYPES.map(t => `
+            <button type="button" class="kmTypeTile${t.id === preferredType ? " active" : ""}" data-km-type="${t.id}">
+              <span class="kmTypeTileIcon" aria-hidden="true">${t.icon}</span>
+              <span>${esc(t.label)}</span>
+            </button>
+          `).join("")}
         </div>
         <div class="kmControlGroup">
           <label>Okres:</label>
           <div class="kmBtnGroup" id="kmPeriodGroup">
-            <button class="kmRankBtn" data-km-period="alltime">Wszech czasów</button>
             <button class="kmRankBtn active" data-km-period="year">Bieżący rok</button>
             <button class="kmRankBtn" data-km-period="specificYear">Wybrany rok</button>
+            <button class="kmRankBtn" data-km-period="alltime">Wszech czasów</button>
           </div>
         </div>
         <div class="kmControlGroup" id="kmYearGroup" style="display:none">
@@ -908,7 +1038,7 @@ async function renderRankingsView(inner, ctx) {
               <div class="kmRankRow${isMe ? " kmRankRowMe" : ""}">
                 <span class="kmRankMedal">${rankMedal(e.rank)}</span>
                 <span class="kmRankName">${esc(name)}</span>
-                <span class="kmRankValue">${fmtNum(e.value, 1)} ${esc(typeLabel)}</span>
+                <span class="kmRankValue">${activeType === "points" ? formatPoints(e.value) : fmtNum(e.value, 1)} ${esc(typeLabel)}</span>
               </div>
             `;
           }).join("")}
@@ -925,6 +1055,7 @@ async function renderRankingsView(inner, ctx) {
       inner.querySelectorAll("[data-km-type]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeType = btn.dataset.kmType;
+      inner.querySelector(".kmRankingsSection").dataset.type = activeType;
       loadRanking();
     });
   });
@@ -982,7 +1113,7 @@ async function renderMyStatsView(inner, ctx) {
           <span class="kmStatLabel">km</span>
         </div>
         <div class="kmStatCard">
-          <span class="kmStatValue">${fmtNum(stats.allTimePoints)}</span>
+          <span class="kmStatValue">${formatPoints(stats.allTimePoints)}</span>
           <span class="kmStatLabel">punktów</span>
         </div>
         <div class="kmStatCard">
@@ -1022,7 +1153,7 @@ async function renderMyStatsView(inner, ctx) {
           <span class="kmStatLabel">km</span>
         </div>
         <div class="kmStatCard">
-          <span class="kmStatValue">${fmtNum(stats.yearPoints || 0)}</span>
+          <span class="kmStatValue">${formatPoints(stats.yearPoints)}</span>
           <span class="kmStatLabel">punktów</span>
         </div>
         <div class="kmStatCard">
@@ -1040,7 +1171,7 @@ async function renderMyStatsView(inner, ctx) {
         if (!sortedYears.length) return "";
         const rows = sortedYears.map(yr => {
           const y = yearsData[yr];
-          return `<tr><td>${esc(yr)}</td><td>${fmtNum(y.km)}</td><td>${fmtNum(y.points)}</td><td>${fmtNum(y.hours)}</td><td>${y.days || 0}</td></tr>`;
+          return `<tr><td>${esc(yr)}</td><td>${fmtNum(y.km)}</td><td>${formatPoints(y.points)}</td><td>${fmtNum(y.hours)}</td><td>${y.days || 0}</td></tr>`;
         }).join("");
         return `
           <h3>Statystyki roczne</h3>
@@ -1079,39 +1210,53 @@ async function renderMyLogsView(inner, ctx) {
     return;
   }
 
+  // Tabela pogrupowana po latach (wiersz-separator z rokiem), data bez roku — czytelna na telefonie.
+  const capsizeText = (r) => [
+    (r?.kabina || 0) > 0 ? `${r.kabina}× kabina` : "",
+    (r?.rolka || 0) > 0 ? `${r.rolka}× rolka` : "",
+    (r?.dziubek || 0) > 0 ? `${r.dziubek}× dziubek` : "",
+  ].filter(Boolean).join(", ");
+
+  let lastYear = null;
+  const rows = logs.map(log => {
+    const isHistorical = log.sourceType === "historical";
+    const date = String(log.date || "").slice(0, 10);
+    const year = date.slice(0, 4);
+    const dayMonth = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date.slice(8, 10)}.${date.slice(5, 7)}` : "—";
+    const meta = [
+      !isHistorical && log.waterType ? esc(waterTypeLabel(log.waterType)) : "",
+      log.difficulty ? esc(log.difficulty) : "",
+      capsizeText(log.capsizeRolls) ? esc(capsizeText(log.capsizeRolls)) : "",
+    ].filter(Boolean).join(" · ");
+    const yearRow = year !== lastYear ? `<tr class="kmLogsYear"><td colspan="5">${esc(year || "—")}</td></tr>` : "";
+    lastYear = year;
+    return yearRow + `
+      <tr class="${isHistorical ? "kmLogHistorical" : ""}">
+        <td class="kmLogDate">${dayMonth}</td>
+        <td class="kmLogPlaceCell">
+          <span class="kmLogPlace">${esc(log.placeName || "—")}</span>
+          ${log.eventName ? `<span class="kmLogChip">${esc(log.eventName)}</span>` : ""}
+          ${isHistorical ? `<span class="kmLogChip kmLogChipMuted">historyczny</span>` : ""}
+          ${meta ? `<span class="kmLogMeta">${meta}</span>` : ""}
+          ${log.note ? `<span class="kmLogNote">${esc(log.note)}</span>` : ""}
+        </td>
+        <td class="kmNum">${log.km > 0 ? fmtNum(log.km) : "–"}</td>
+        <td class="kmNum">${log.hoursOnWater ? fmtNum(log.hoursOnWater) : "–"}</td>
+        <td class="kmNum kmLogPts">${log.pointsTotal ? formatPoints(log.pointsTotal) : "–"}</td>
+      </tr>
+    `;
+  }).join("");
+
   inner.innerHTML = `
     <div class="kmLogsSection">
-      <p class="kmLogsCount">Ostatnie ${logs.length} wpisów (od najnowszego)</p>
-      <div class="kmLogsList">
-        ${logs.map(log => {
-          const isHistorical = log.sourceType === "historical";
-          const capsizeTotal = (log.capsizeRolls?.kabina || 0) + (log.capsizeRolls?.rolka || 0) + (log.capsizeRolls?.dziubek || 0);
-          return `
-            <div class="kmLogItem${isHistorical ? " kmLogHistorical" : ""}">
-              <div class="kmLogHeader">
-                <span class="kmLogDate">${esc(formatDate(log.date))}</span>
-                ${isHistorical ? `<span class="kmLogBadge">historyczny</span>` : ""}
-                ${log.eventName ? `<span class="kmLogBadge kmLogBadgeEvent">${esc(log.eventName)}</span>` : ""}
-                <span class="kmLogPts">${fmtNum(log.pointsTotal, 2)} pkt</span>
-              </div>
-              <div class="kmLogBody">
-                <span class="kmLogPlace">${esc(log.placeName || "—")}</span>
-                ${!isHistorical ? `<span class="kmLogType">${esc(waterTypeLabel(log.waterType))}</span>` : ""}
-              </div>
-              <div class="kmLogMeta">
-                ${log.km > 0 ? `<span>${fmtNum(log.km)} km</span>` : ""}
-                ${log.hoursOnWater ? `<span>${fmtNum(log.hoursOnWater)} h</span>` : ""}
-                ${log.difficulty ? `<span>${esc(log.difficulty)}</span>` : ""}
-                ${capsizeTotal > 0 ? `<span>${[
-                  (log.capsizeRolls?.kabina || 0) > 0 ? `${log.capsizeRolls.kabina}× kabina` : "",
-                  (log.capsizeRolls?.rolka || 0) > 0 ? `${log.capsizeRolls.rolka}× rolka` : "",
-                  (log.capsizeRolls?.dziubek || 0) > 0 ? `${log.capsizeRolls.dziubek}× dziubek` : "",
-                ].filter(Boolean).join(", ")}</span>` : ""}
-              </div>
-              ${log.note ? `<div class="kmLogNote">${esc(log.note)}</div>` : ""}
-            </div>
-          `;
-        }).join("")}
+      <p class="kmRankNote">Ostatnie ${logs.length} wpisów, od najnowszego. Pkt = punkty za wywrotolotek.</p>
+      <div class="kmTableWrap">
+        <table class="kmTable kmLogsTable">
+          <thead>
+            <tr><th>Data</th><th>Akwen</th><th class="kmNum">km</th><th class="kmNum">h</th><th class="kmNum">pkt</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
     </div>
   `;
@@ -1122,18 +1267,22 @@ async function renderMyLogsView(inner, ctx) {
 async function renderEventStatsView(inner, ctx) {
   inner.innerHTML = spinnerHtml("Pobieranie imprez…");
 
-  let eventsData;
+  let eventsData, idsWithLogs;
   try {
-    eventsData = await apiGetJson({ url: EVENTS_URL + "?mode=all", idToken: ctx.idToken });
+    [eventsData, idsWithLogs] = await Promise.all([
+      apiGetJson({ url: EVENTS_URL + "?mode=all", idToken: ctx.idToken }),
+      loadEventIdsWithLogs(ctx),
+    ]);
   } catch (e) {
     inner.innerHTML = `<p class="errorMsg">Błąd: ${esc(e?.message || String(e))}</p>`;
     return;
   }
 
-  const events = eventsData?.events || [];
+  // Tylko imprezy z wpisami — bez nich statystyki byłyby puste.
+  const events = (eventsData?.events || []).filter(ev => idsWithLogs.has(ev.id));
 
   if (!events.length) {
-    inner.innerHTML = `<div class="kmStatsEmpty"><p>Brak zatwierdzonych imprez.</p></div>`;
+    inner.innerHTML = `<div class="kmStatsEmpty"><p>Brak imprez z wpisami.</p></div>`;
     return;
   }
 
@@ -1202,14 +1351,14 @@ async function renderEventStatsView(inner, ctx) {
             <td>${p.capsizeKabina}</td>
             <td>${p.capsizeRolka}</td>
             <td>${p.capsizeDziubek}</td>
-            <td><strong>${fmtNum(p.pointsTotal, 2)}</strong></td>
+            <td><strong>${formatPoints(p.pointsTotal)}</strong></td>
           </tr>`;
         }).join("");
 
         panel.innerHTML = `
-          <table class="kmEventTable">
+          <table class="kmTable kmEventTable">
             <thead>
-              <tr><th>Uczestnik</th><th>kabina</th><th>rolka</th><th>dziubek</th><th>pkt</th></tr>
+              <tr><th>Uczestnik</th><th class="kmNum">kabina</th><th class="kmNum">rolka</th><th class="kmNum">dziubek</th><th class="kmNum">pkt</th></tr>
             </thead>
             <tbody>${rows}</tbody>
             <tfoot>
@@ -1218,7 +1367,7 @@ async function renderEventStatsView(inner, ctx) {
                 <td>${totals.capsizeKabina || 0}</td>
                 <td>${totals.capsizeRolka || 0}</td>
                 <td>${totals.capsizeDziubek || 0}</td>
-                <td><strong>${fmtNum(totals.pointsTotal || 0, 2)}</strong></td>
+                <td><strong>${formatPoints(totals.pointsTotal)}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -1251,26 +1400,32 @@ async function renderKursantRankingView(inner, ctx) {
     return;
   }
 
+  // Ten sam układ co ranking członków (typ „points” → bursztynowy akcent z km.css).
+  const me = leaderboard.find(row => row.isMe);
   inner.innerHTML = `
-    <div class="kmStatsSection">
-      <table class="kmRankingTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Kursant</th>
-            <th>Punkty</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${leaderboard.map(row => `
-            <tr class="${row.isMe ? "kmRankingRowMe" : ""}">
-              <td>${row.rank}</td>
-              <td>${esc(row.name)}${row.isMe ? " ★" : ""}</td>
-              <td><strong>${row.total}</strong></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
+    <div class="kmRankingsSection" data-type="points">
+      ${me ? `
+        <div class="kmKursantSummary">
+          <div class="kmKursantSummaryItem">
+            <span class="kmKursantSummaryValue">${esc(String(me.rank))}<small> / ${esc(String(leaderboard.length))}</small></span>
+            <span class="kmKursantSummaryLabel">Twoje miejsce</span>
+          </div>
+          <div class="kmKursantSummaryItem">
+            <span class="kmKursantSummaryValue">${formatPoints(me.total)}</span>
+            <span class="kmKursantSummaryLabel">Twoje punkty</span>
+          </div>
+        </div>
+      ` : ""}
+      <p class="kmRankNote">Ranking kursantów — suma punktów za wywrotolotek (kabiny, eskimoski, dziubki).</p>
+      <div class="kmRankingList">
+        ${leaderboard.map(row => `
+          <div class="kmRankRow${row.isMe ? " kmRankRowMe" : ""}">
+            <span class="kmRankMedal">${rankMedal(row.rank)}</span>
+            <span class="kmRankName">${esc(row.name)}${row.isMe ? " (Ty)" : ""}</span>
+            <span class="kmRankValue">${formatPoints(row.total)} pkt</span>
+          </div>
+        `).join("")}
+      </div>
     </div>
   `;
 }
@@ -1280,11 +1435,11 @@ async function renderKursantRankingView(inner, ctx) {
 async function renderKmView(viewEl, routeId, ctx, moduleId) {
   const isKursant = ctx?.session?.role_key === "rola_kursant" || ctx?.kursPreviewMode === true;
   const isSympatyk = ctx?.session?.role_key === "rola_sympatyk";
-  // Sympatyk tylko przegląda: ranking, imprezy, mapa (bez dodawania wpisów i własnych statystyk).
+  // Sympatyk tylko przegląda: ranking i imprezy (bez dodawania wpisów i własnych statystyk).
   const visibleTabs = isKursant
-    ? TABS.filter(t => t.id !== "rankings" && t.id !== "events" && t.id !== "my-stats" && t.id !== "map")
+    ? TABS.filter(t => t.id !== "rankings" && t.id !== "events" && t.id !== "my-stats")
     : isSympatyk
-      ? TABS.filter(t => t.id === "rankings" || t.id === "events" || t.id === "map")
+      ? TABS.filter(t => t.id === "rankings" || t.id === "events")
       : TABS.filter(t => t.id !== "kursant-ranking");
   // activeTab musi należeć do widocznych zakładek (sympatyk wchodzi domyślnie na "form" → ranking).
   const requestedTab = TABS.find(t => t.id === routeId)?.id || "form";
@@ -1298,16 +1453,18 @@ async function renderKmView(viewEl, routeId, ctx, moduleId) {
   viewEl.innerHTML = `
     <div class="card wide kmModule">
       <div class="moduleHeader">
-        <h2>${isKursant ? "Wywrotolotek" : "Kilometrówka"}</h2>
+        ${isKursant ? "<h2>Wywrotolotek</h2>" : "<span></span>"}
         <div class="moduleNav">
           <button type="button" class="moduleNavBtn" data-mod-back title="Wróć">${NAV_BACK_SVG}</button>
           <button type="button" class="moduleNavBtn" data-mod-home title="Strona główna">${NAV_HOME_SVG}</button>
         </div>
       </div>
-      <div class="kmTabs">
+      <div class="modTiles" role="tablist" style="--tile-count:${visibleTabs.length}">
         ${visibleTabs.map(t => `
-          <button type="button" class="kmTab${t.id === activeTab ? " active" : ""}"
-            data-km-tab="${esc(t.id)}">${esc(t.label)}</button>
+          <button type="button" class="modTile${t.add ? " modTileAdd" : ""}${t.id === activeTab ? " active" : ""}" data-km-tab="${esc(t.id)}">
+            <span class="modTileIcon" aria-hidden="true">${t.icon}</span>
+            <span class="modTileLabel">${esc(t.label)}</span>
+          </button>
         `).join("")}
       </div>
       <div id="kmInner" class="kmInner">${spinnerHtml()}</div>
@@ -1315,6 +1472,17 @@ async function renderKmView(viewEl, routeId, ctx, moduleId) {
   `;
 
   const inner = viewEl.querySelector("#kmInner");
+
+  // Kafelek „Imprezy” znika, gdy żadna impreza nie ma wpisów (wejście z linku pokaże komunikat).
+  const eventsTile = viewEl.querySelector('[data-km-tab="events"]');
+  if (eventsTile) {
+    loadEventIdsWithLogs(ctx).then((ids) => {
+      if (ids.size || !eventsTile.isConnected) return;
+      eventsTile.remove();
+      const tiles = viewEl.querySelector(".modTiles");
+      tiles?.style.setProperty("--tile-count", String(tiles.children.length));
+    }).catch(() => { /* błąd listy — kafelek zostaje */ });
+  }
 
   // Nawigacja
   viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => {
@@ -1333,10 +1501,6 @@ async function renderKmView(viewEl, routeId, ctx, moduleId) {
   // Przełączanie zakładek
   viewEl.querySelectorAll("[data-km-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.kmTab === "map") {
-        openMap();
-        return;
-      }
       import("/core/router.js").then(({ setHash }) => {
         setHash(moduleId, btn.dataset.kmTab);
       });

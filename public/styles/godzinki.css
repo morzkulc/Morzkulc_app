@@ -184,3 +184,26 @@
   opacity: 0.3;
   cursor: default;
 }
+
+/* Ranking „Najbardziej aktywni" — wiersz zalogowanego członka */
+.godzinkiRankingTable tbody tr.godzinkiRankingMe td {
+  font-weight: 700;
+}
+
+.godzinkiRankingMeTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* Nawigacja modułu: nagłówek bez tytułu (rolę tytułu pełnią kafelki niżej) */
+.godzinkiHeader {
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}

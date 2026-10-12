@@ -1,18 +1,17 @@
 /**
  * kmPlacesHandler.ts
  *
- * GET /kmPlaces?q=rad
- *
- * Zwraca podpowiedzi nazw akwenów pasujących do query.
- * Używa kolekcji km_places z array-contains na polu searchTerms.
+ * GET /kmPlaces?all=1   — cały słownik (formularz filtruje podpowiedzi lokalnie)
+ * GET /kmPlaces?q=rad    — podpowiedzi z backendu (array-contains na searchTerms; starsi klienci)
  *
  * Query params:
+ *   all?   — "1": zwróć cały słownik, q/limit ignorowane
  *   q      — zapytanie (min 2 znaki)
  *   limit? — max wyników (domyślnie 10, max 20)
  */
 
 import type {Request, Response} from "express";
-import {searchKmPlaces} from "../modules/km/km_places_service";
+import {listKmPlaces, searchKmPlaces} from "../modules/km/km_places_service";
 
 type TokenCheck =
   | {error: string}
@@ -46,6 +45,12 @@ export async function handleKmPlaces(
       const tokenCheck = await deps.requireIdToken(req);
       if ("error" in tokenCheck) {
         res.status(401).json({error: tokenCheck.error});
+        return;
+      }
+
+      if (String(req.query.all || "") === "1") {
+        const places = await listKmPlaces(deps.db);
+        res.status(200).json({ok: true, places, count: places.length});
         return;
       }
 

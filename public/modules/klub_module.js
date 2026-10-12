@@ -27,9 +27,8 @@ const KLUB_TABS = [
   },
 ];
 
-// Kafelek "Gdzie pływamy" — duplikat tego z modułu Ranking/km_module.js (tam
-// jako zakładka otwierająca /map.html) — feedback użytkownika 05.09.2026:
-// ten sam skrót ma być dostępny też z sekcji Klub, bez przechodzenia przez ranking.
+// Kafelek "Gdzie pływamy" — jedyne wejście do mapy poza stroną główną (zakładka
+// w module Ranking usunięta 12.10.2026 na prośbę użytkownika).
 const MAP_TILE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>`;
 
 // Kafelki prowadzące do katalogów Dysku Google z materiałami o klubie. Kolejność
@@ -58,7 +57,7 @@ const LINK_TILES = [
 ];
 
 // Ten sam wzorzec otwierania mapy co w render_shell.js (kafelek "mapa" na
-// stronie głównej) i km_module.js::openMap().
+// stronie głównej).
 function openMap() {
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone === true;

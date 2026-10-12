@@ -7,6 +7,10 @@ const PURCHASE_URL = "/api/godzinki/purchase";
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
 
+const TILE_MY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`;
+const TILE_RANKING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9"/><rect x="9.5" y="6" width="5" height="15"/><rect x="16" y="15" width="5" height="6"/></svg>`;
+const TILE_ADD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+
 const PAGE_SIZE = 30;
 
 // Tłumaczenie kodów walidacji z backendu (POST /api/godzinki/submit) na czytelny tekst PL.
@@ -238,7 +242,7 @@ function wirePurchaseForm(inner, ctx, balance) {
   });
 }
 
-async function renderHistoryView(viewEl, ctx, moduleId) {
+async function renderHistoryView(viewEl, ctx) {
   const inner = viewEl.querySelector("#godzinkiInner");
   if (!inner) return;
   inner.innerHTML = spinnerHtml("Pobieranie historii…");
@@ -285,7 +289,6 @@ async function renderHistoryView(viewEl, ctx, moduleId) {
     <div class="godzinkiHistorySection">
       <div class="godzinkiHistoryHead">
         <h3>Historia (${allRecords.length})</h3>
-        <button type="button" class="primary" data-godzinki-submit>Zgłoś godzinki</button>
       </div>
       <div id="godzinkiHistoryTable">${renderRecordTable(pageRecords)}</div>
       ${totalPages > 1 ? `<div id="godzinkiPager" class="godzinkiPager"></div>` : ""}
@@ -294,11 +297,55 @@ async function renderHistoryView(viewEl, ctx, moduleId) {
 
   if (balance < 0) wirePurchaseForm(inner, ctx, balance);
 
-  inner.querySelector("[data-godzinki-submit]")?.addEventListener("click", () => {
-    import("/core/router.js").then(({ setHash }) => setHash(moduleId, "submit"));
-  });
 
   if (totalPages > 1) renderPage();
+}
+
+// „Najbardziej aktywni" — ranking za ostatni semestr, ten sam co w raporcie zarządu
+// (bez e-maili). Bilans otwarcia (01.04.2026) do semestru nie wchodzi.
+async function renderRankingView(viewEl, ctx) {
+  const inner = viewEl.querySelector("#godzinkiInner");
+  if (!inner) return;
+  inner.innerHTML = spinnerHtml("Pobieranie rankingu…");
+
+  let data;
+  try {
+    data = await apiGetJson({ url: GODZINKI_URL + "?view=ranking", idToken: ctx.idToken });
+  } catch (e) {
+    inner.innerHTML = `<div class="card center"><p class="errorMsg">Błąd pobierania rankingu: ${esc(e?.message || String(e))}</p></div>`;
+    return;
+  }
+
+  const rows = Array.isArray(data?.rows) ? data.rows : [];
+  const head = `
+    <p class="godzinkiInfo">Ostatni semestr – suma godzinek</p>
+  `;
+
+  if (!rows.length) {
+    inner.innerHTML = head + `<p class="godzinkiEmpty">Brak wypracowanych godzinek w ostatnim semestrze.</p>`;
+    return;
+  }
+
+  inner.innerHTML = head + `
+    <table class="godzinkiTable godzinkiRankingTable">
+      <thead>
+        <tr>
+          <th>Lp.</th>
+          <th>Osoba</th>
+          <th class="godzinkiAmountHeader">Godziny</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r) => `
+          <tr class="${r.isMe ? "godzinkiRankingMe" : ""}">
+            <td>${esc(String(r.rank))}</td>
+            <td>${esc(r.name || "—")}${r.isMe ? ` <span class="godzinkiRankingMeTag">Ty</span>` : ""}</td>
+            <td class="godzinkiAmountCell"><strong>${esc(String(r.hours))} h</strong></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
 }
 
 function renderSubmitView(viewEl, ctx) {
@@ -412,21 +459,43 @@ async function renderGodzinkiView(viewEl, routeId, ctx, moduleId) {
   }
 
   const isSubmit = routeId === "submit";
+  const isRanking = routeId === "ranking";
 
   viewEl.innerHTML = `
     <div class="card wide godzinkiModule">
-      <div class="moduleHeader">
-        <h2>Godzinki</h2>
+      <div class="moduleHeader godzinkiHeader">
         <div class="moduleNav">
           <button type="button" class="moduleNavBtn" data-mod-back title="Wróć">${NAV_BACK_SVG}</button>
           <button type="button" class="moduleNavBtn" data-mod-home title="Strona główna">${NAV_HOME_SVG}</button>
         </div>
+      </div>
+      <div class="modTiles" role="tablist">
+        <button type="button" class="modTile ${!isRanking && !isSubmit ? "active" : ""}" data-godzinki-tab="history">
+          <span class="modTileIcon" aria-hidden="true">${TILE_MY_SVG}</span>
+          <span class="modTileLabel">Moje godzinki</span>
+        </button>
+        <button type="button" class="modTile ${isRanking ? "active" : ""}" data-godzinki-tab="ranking">
+          <span class="modTileIcon" aria-hidden="true">${TILE_RANKING_SVG}</span>
+          <span class="modTileLabel">Najbardziej aktywni</span>
+        </button>
+        <button type="button" class="modTile modTileAdd ${isSubmit ? "active" : ""}" data-godzinki-tab="submit">
+          <span class="modTileIcon" aria-hidden="true">${TILE_ADD_SVG}</span>
+          <span class="modTileLabel">Dodaj</span>
+        </button>
       </div>
       <div id="godzinkiInner">
         ${spinnerHtml()}
       </div>
     </div>
   `;
+
+  viewEl.querySelectorAll("[data-godzinki-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-godzinki-tab");
+      if (target === routeId) return;
+      import("/core/router.js").then(({ setHash }) => setHash(moduleId, target));
+    });
+  });
 
   viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => {
     import("/core/router.js").then(({ setHash }) => setHash("home", "home"));
@@ -444,8 +513,10 @@ async function renderGodzinkiView(viewEl, routeId, ctx, moduleId) {
 
   if (isSubmit) {
     renderSubmitView(viewEl, ctx);
+  } else if (isRanking) {
+    await renderRankingView(viewEl, ctx);
   } else {
-    await renderHistoryView(viewEl, ctx, moduleId);
+    await renderHistoryView(viewEl, ctx);
   }
 }
 

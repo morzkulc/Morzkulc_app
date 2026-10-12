@@ -2,6 +2,8 @@
  * kmEventStatsHandler.ts
  *
  * GET /api/km/event-stats?eventId=XXX
+ * GET /api/km/event-stats?list=1   — {eventIds}: imprezy, które mają co najmniej jeden wpis
+ *                                    (zakładka „Imprezy” pokazuje tylko je; brak → kafelek ukryty)
  *
  * Zwraca agregowane statystyki wywrotolotek per uczestnik dla danej imprezy.
  * Dane z km_logs gdzie eventId == eventId.
@@ -43,6 +45,25 @@ export async function handleKmEventStats(
       const tokenCheck = await deps.requireIdToken(req);
       if ("error" in tokenCheck) {
         res.status(401).json({error: tokenCheck.error});
+        return;
+      }
+
+      if (String(req.query.list || "") === "1") {
+        // != null pomija dokumenty bez pola — czytamy tylko wpisy przypięte do imprezy.
+        const snap = await deps.db.collection("km_logs")
+          .where("eventId", "!=", null)
+          .select("eventId", "uid")
+          .get();
+        const ids = new Set<string>();
+        for (const doc of snap.docs) {
+          const log = doc.data() as any;
+          const uid = normNullish(log.uid);
+          // Te same wpisy, które liczą się w statystykach imprezy niżej.
+          if (!uid || uid === "historical_unmatched") continue;
+          const id = normNullish(log.eventId);
+          if (id) ids.add(id);
+        }
+        res.status(200).json({ok: true, eventIds: Array.from(ids)});
         return;
       }
 

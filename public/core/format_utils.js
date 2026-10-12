@@ -39,3 +39,10 @@ export function countReservationDays(startDate, endDate) {
 export function pluralizeDays(n) {
   return n === 1 ? "1 dzień" : `${n} dni`;
 }
+
+// Punkty wywrotolotek: zawsze 2 miejsca po przecinku, bez zaokrąglania do 1 miejsca
+// (dziubek = 0,25 pkt — „0,3” byłoby błędne). Backend przechowuje wartości z dokładnością 0,01.
+export function formatPoints(n) {
+  const v = Number(n) || 0;
+  return v.toFixed(2).replace(".", ",");
+}

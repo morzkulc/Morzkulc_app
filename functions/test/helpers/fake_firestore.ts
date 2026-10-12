@@ -214,6 +214,11 @@ export class FakeQuery {
     return new FakeQuery(this.db, this.collectionPath, this.filters, this.orders, n);
   }
 
+  // Projekcja pól nie zmienia wyniku testów — zwracamy pełne dokumenty.
+  select(..._fields: string[]): FakeQuery {
+    return this;
+  }
+
   async get(): Promise<{docs: FakeDocumentSnapshot[]; empty: boolean; size: number; forEach: (fn: (d: FakeDocumentSnapshot) => void) => void}> {
     const store = this.db.store(this.collectionPath);
     let rows = Array.from(store.entries()).map(([id, data]) => ({id, data}));

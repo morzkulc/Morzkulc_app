@@ -513,6 +513,73 @@ textarea {
 .modTab { padding: 8px 18px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .modTab.active, .modTab:hover { background: var(--primary); color: #fff; border-color: transparent; }
 
+/* Kafelki nawigacji modułu (Godzinki, Ranking) — zamiast zakładek-przycisków.
+   3 w rzędzie także na telefonie; więcej kafelków zawija się do kolejnego rzędu. */
+.modTiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Na szerszym ekranie wszystkie kafelki w jednym rzędzie (--tile-count ustawia moduł). */
+@media (min-width: 720px) {
+  .modTiles { grid-template-columns: repeat(var(--tile-count, 3), minmax(0, 1fr)); }
+}
+
+.modTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 76px;
+  padding: 10px 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.modTile:hover,
+.modTile.active {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+
+.modTileIcon {
+  display: flex;
+}
+
+/* Kafelek dodawania wyróżniony nawet gdy nieaktywny — żeby nie ginął obok przełączników widoku */
+.modTileAdd {
+  border: 2px dashed var(--primary);
+  color: var(--primary);
+}
+
+.modTileAdd .modTileIcon {
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+}
+
+.modTileAdd.active .modTileIcon,
+.modTileAdd:hover .modTileIcon {
+  background: #fff;
+  color: var(--primary);
+}
+
 /* --- Raport (panel Raporty w panelu Zarząd) --- */
 .reportControls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 8px 0; }
 .reportLabel { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }

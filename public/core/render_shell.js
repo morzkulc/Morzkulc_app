@@ -6,7 +6,7 @@ import { mark, homeStart, homeDone } from "/core/perf.js";
 import { formatFreeText, isUrlOnly } from "/core/text_format.js";
 import { renderClubBadgeHtml } from "/core/club_badges.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
-import { formatDatePL, buildKayakTitle, formatShortDate, countReservationDays, pluralizeDays } from "/core/format_utils.js";
+import { formatDatePL, buildKayakTitle, formatShortDate, countReservationDays, pluralizeDays, formatPoints } from "/core/format_utils.js";
 
 export function spinnerHtml(text = "Morzkulc myśli") {
   return `<div class="thinking">${escapeHtml(text)}<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>`;
@@ -450,7 +450,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
       apiGetJson({ url: "/api/km/kursant-stats", idToken: ctx.idToken })
         .then((data) => {
           const capsizesEl = viewEl.querySelector("#homeKursantCapsizesCell");
-          if (capsizesEl) capsizesEl.innerHTML = `wywrotolotek: <strong class="startStatVal">${Number(data?.myCapsizes) || 0}</strong> punkty`;
+          if (capsizesEl) capsizesEl.innerHTML = `wywrotolotek: <strong class="startStatVal">${formatPoints(data?.myCapsizes)}</strong> pkt`;
           const rankEl = viewEl.querySelector("#homeKursantRankCell");
           if (rankEl) rankEl.innerHTML = `<strong class="startStatVal">${data?.myRank ?? "—"}</strong> miejsce`;
         }).catch(() => { /* cicha porażka */ }).finally(() => homeDone("kursantStats"));
@@ -469,7 +469,7 @@ async function renderHomeDashboard({ viewEl, ctx }) {
         const kmCell = viewEl.querySelector("#homeKmCell");
         if (kmCell) kmCell.textContent = `${fmtKmValue(stats.yearKm ?? 0)} km`;
         const capsizesCell = viewEl.querySelector("#homeCapsizesCell");
-        if (capsizesCell) capsizesCell.textContent = `${fmtKmValue(stats.yearPoints ?? 0)} pkt`;
+        if (capsizesCell) capsizesCell.textContent = `${formatPoints(stats.yearPoints)} pkt`;
         const waterHoursCell = viewEl.querySelector("#homeWaterHoursCell");
         if (waterHoursCell) waterHoursCell.textContent = `${fmtKmValue(stats.yearHours ?? 0)} h`;
       }).catch(() => { /* cicha porażka — komórki zostają z placeholder "…" */ }).finally(() => homeDone("kmStats"));
