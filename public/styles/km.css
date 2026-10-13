@@ -18,7 +18,7 @@
   gap: 4px;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--text2);
+  color: var(--text);
   margin-bottom: 4px;
 }
 
@@ -29,11 +29,11 @@
 .kmForm textarea {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface1);
-  color: var(--text1);
-  font-size: 0.9rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 16px; /* < 16px = iOS powiększa stronę przy fokusie */
   box-sizing: border-box;
 }
 
@@ -41,8 +41,8 @@
 .kmForm select:focus,
 .kmForm textarea:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 59,130,246), 0.15);
+  border-color: var(--primary);
+  box-shadow: var(--ring);
 }
 
 .kmCapsizeFieldset {
@@ -126,38 +126,221 @@
 
 /* ─── Tooltip / Popover ───────────────────────────────────────────────────── */
 
+/* Większe pole dotyku (32 px) przy małej ikonie — na telefonie łatwo trafić */
 .kmInfoBtn {
   background: none;
   border: none;
-  padding: 0 2px;
+  padding: 0;
+  margin: -9px -6px;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
   cursor: pointer;
-  color: var(--text3);
+  color: var(--text-muted);
   line-height: 1;
   display: inline-flex;
   align-items: center;
-  opacity: 0.7;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
 }
 
-.kmInfoBtn:hover {
-  opacity: 1;
-  color: var(--accent);
-}
+.kmInfoBtn:hover { color: var(--primary); transform: none; }
 
+/* W <body>, pozycja liczona w JS (openKmPopover) */
 .kmPopover {
   position: absolute;
-  z-index: 200;
-  background: var(--surface3, #2a2a2a);
-  color: var(--text1);
+  z-index: 9500;
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.82rem;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
-  max-width: 240px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  margin-top: 4px;
+  max-width: min(280px, calc(100vw - 16px));
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
+
+/* Ostrzeżenie (np. wywrotolotek: wpisano coś innego niż liczbę całkowitą) */
+.kmPopoverWarn {
+  border-color: var(--danger);
+  border-left-width: 4px;
+  font-weight: 600;
+}
+
+/* ─── Wynik: kilometrówka / kajakogodziny / wywrotolotek jako jedna sekcja ──── */
+
+.kmResults,
+.kmOptional {
+  margin: 18px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.kmResultsTitle,
+.kmOptionalTitle {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.kmOptional { padding-bottom: 2px; }
+.kmOptional .formRow { padding: 10px 14px 0; margin-bottom: 4px; }
+.kmOptional .formRow:last-child { padding-bottom: 12px; }
+
+/* Jeden wiersz: etykieta z ikoną po lewej, pole z jednostką po prawej */
+/* grid: etykieta (może się zawinąć) | pole — zawsze w jednym wierszu; błąd pod spodem */
+.kmResultRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 12px 12px 14px;
+}
+
+.kmResultRow + .kmResultRow { border-top: 1px solid var(--border); }
+.kmResultLabel > span:not(.kmResultIcon) { white-space: nowrap; }
+.kmResultRow[hidden] { display: none; }
+
+.kmForm .kmResultLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.kmResultIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 16%, transparent);
+  flex: none;
+}
+
+.kmUnitInput {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kmForm .kmUnitInput input {
+  width: 104px;
+  text-align: right;
+  font-size: 18px;
+  font-weight: 650;
+  padding: 8px 10px;
+}
+
+.kmUnit {
+  width: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kmResultRow .kmFieldErr { grid-column: 1 / -1; margin-top: 0; }
+.kmForm .kmResultRow.kmFieldInvalid .kmResultLabel { color: var(--danger); }
+.kmForm .kmResultRow.kmFieldInvalid input { border-color: var(--danger); background: var(--danger-2); }
+
+/* Wywrotolotek: 3 liczniki − / + (pod etykietą, pełna szerokość) */
+.kmResultRowCapsize .kmResultLabel { grid-column: 1 / -1; }
+
+.kmCapsizeSteppers {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kmStepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kmStepperLabel { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+
+.kmStepperCtl {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--input-bg);
+}
+
+.kmForm .kmStepperCtl input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 650;
+  padding: 6px 0;
+  -moz-appearance: textfield;
+}
+
+.kmStepperCtl input::-webkit-outer-spin-button,
+.kmStepperCtl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.kmForm .kmStepperCtl input:focus { box-shadow: none; }
+
+.kmStepBtn {
+  flex: none;
+  width: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--tc) 14%, transparent);
+  color: var(--tc);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kmStepBtn:hover { transform: none; background: color-mix(in srgb, var(--tc) 26%, transparent); }
+
+/* ─── Przyciski Dodaj / Anuluj: duże, na całą szerokość, rozsunięte do krawędzi ─── */
+
+.kmFormButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kmForm .kmBigBtn {
+  min-height: 54px;
+  border-radius: 14px;
+  border-width: 2px;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.kmForm .kmBigBtn.approveBtn { border-color: var(--ok); }
+.kmForm .kmBigBtn.approveBtn:hover { background: color-mix(in srgb, var(--ok) 24%, transparent); }
+.kmForm .kmBigBtn:disabled { opacity: 0.6; cursor: wait; }
 
 /* ─── Błędy pól formularza (walidacja przy zapisie) ─────────────────────────── */
 
@@ -181,11 +364,11 @@
   background: var(--danger-2);
 }
 
-/* ─── Typ akwenu: 6 kafelków w jednym rzędzie (także 360 px) ─────────────────── */
+/* ─── Typ akwenu: 5 kafelków w jednym rzędzie (także 360 px) ─────────────────── */
 
 .kmWaterTiles {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -221,6 +404,11 @@
 .kmWaterTileIcon svg { width: 26px; height: 26px; }
 .kmWaterTileLabel { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
+/* Trudność (WW) / uciążliwość (U): te same kafelki, ikona = wskaźnik poziomu */
+.kmForm label.kmLevelTile { gap: 2px; }
+.kmLevelTile .kmWaterTileLabel { font-size: 13px; color: var(--text); }
+.kmLevelHint { font-size: 10.5px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+
 .kmForm label.kmWaterTile:hover {
   border-color: color-mix(in srgb, var(--primary) 55%, transparent);
   color: var(--text);
@@ -236,10 +424,26 @@
   box-shadow: var(--ring);
 }
 
+/* 4 kafelki modułu na telefonie: 2×2 (3 kafelki — nadal w jednym rzędzie) */
+@media (max-width: 719px) {
+  .kmModule .modTiles:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 480px) {
+  /* Przyciski od krawędzi do krawędzi ekranu (zjadają padding karty), szeroka przerwa w środku */
+  /* Pełna szerokość ekranu niezależnie od paddingów #appRoot/karty (karta wyśrodkowana) */
+  .kmFormButtons { margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); gap: 20px; }
+  .kmForm .kmBigBtn.approveBtn { border-radius: 0 14px 14px 0; border-left: none; }
+  .kmForm .kmBigBtn.rejectBtn { border-radius: 14px 0 0 14px; border-right: none; }
+  .kmForm .kmUnitInput input { width: 70px; }
+  .kmForm .kmResultLabel { font-size: 14px; gap: 6px; }
+  .kmResultRow { padding-left: 12px; padding-right: 10px; }
+  .kmResultIcon { width: 30px; height: 30px; }
   .kmWaterTiles { gap: 4px; }
   .kmForm label.kmWaterTile { min-height: 58px; font-size: 10px; border-radius: 10px; }
   .kmWaterTileIcon svg { width: 22px; height: 22px; }
+  .kmLevelTile .kmWaterTileLabel { font-size: 12px; }
+  .kmLevelHint { font-size: 9px; }
 
   /* GPS / mapa: ikona nad tekstem, żeby etykieta mieściła się w jednej linii */
   .kmForm .kmLocBtn { flex-direction: column; gap: 4px; font-size: 13px; }
@@ -250,17 +454,17 @@
 /* Kolor typu rankingu (--tc): stonowane odcienie, użyte tylko na ikonie, obramowaniu
    i lekkim tle aktywnego kafelka + na wartości i „Ty” w tabeli — bez pełnych wypełnień. */
 .kmModule { --tc: var(--primary); }
-.kmRankingsSection[data-type="km"],     .kmTypeTile[data-km-type="km"]     { --tc: #7aa7d9; }
-.kmRankingsSection[data-type="points"], .kmTypeTile[data-km-type="points"] { --tc: #d9a25f; }
-.kmRankingsSection[data-type="hours"],  .kmTypeTile[data-km-type="hours"]  { --tc: #6fbf98; }
+.kmModule [data-type="km"],     .kmTypeTile[data-km-type="km"]     { --tc: #7aa7d9; }
+.kmModule [data-type="points"], .kmTypeTile[data-km-type="points"] { --tc: #d9a25f; }
+.kmModule [data-type="hours"],  .kmTypeTile[data-km-type="hours"]  { --tc: #6fbf98; }
 
-:root[data-theme="light"] .kmRankingsSection[data-type="km"],     :root[data-theme="light"] .kmTypeTile[data-km-type="km"]     { --tc: #2f69a8; }
-:root[data-theme="light"] .kmRankingsSection[data-type="points"], :root[data-theme="light"] .kmTypeTile[data-km-type="points"] { --tc: #a8641a; }
-:root[data-theme="light"] .kmRankingsSection[data-type="hours"],  :root[data-theme="light"] .kmTypeTile[data-km-type="hours"]  { --tc: #2c805a; }
+:root[data-theme="light"] .kmModule [data-type="km"],     :root[data-theme="light"] .kmTypeTile[data-km-type="km"]     { --tc: #2f69a8; }
+:root[data-theme="light"] .kmModule [data-type="points"], :root[data-theme="light"] .kmTypeTile[data-km-type="points"] { --tc: #a8641a; }
+:root[data-theme="light"] .kmModule [data-type="hours"],  :root[data-theme="light"] .kmTypeTile[data-km-type="hours"]  { --tc: #2c805a; }
 @media (prefers-color-scheme: light) {
-  :root[data-theme="auto"] .kmRankingsSection[data-type="km"],     :root[data-theme="auto"] .kmTypeTile[data-km-type="km"]     { --tc: #2f69a8; }
-  :root[data-theme="auto"] .kmRankingsSection[data-type="points"], :root[data-theme="auto"] .kmTypeTile[data-km-type="points"] { --tc: #a8641a; }
-  :root[data-theme="auto"] .kmRankingsSection[data-type="hours"],  :root[data-theme="auto"] .kmTypeTile[data-km-type="hours"]  { --tc: #2c805a; }
+  :root[data-theme="auto"] .kmModule [data-type="km"],     :root[data-theme="auto"] .kmTypeTile[data-km-type="km"]     { --tc: #2f69a8; }
+  :root[data-theme="auto"] .kmModule [data-type="points"], :root[data-theme="auto"] .kmTypeTile[data-km-type="points"] { --tc: #a8641a; }
+  :root[data-theme="auto"] .kmModule [data-type="hours"],  :root[data-theme="auto"] .kmTypeTile[data-km-type="hours"]  { --tc: #2c805a; }
 }
 
 .kmRankingsControls {
@@ -310,46 +514,54 @@
   color: var(--text);
 }
 
-/* Okres: segmenty — bieżący rok pierwszy i domyślny */
-.kmControlGroup {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.kmControlGroup label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.kmBtnGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.kmRankBtn {
-  background: var(--surface-2);
+/* Okres: jeden pasek segmentów; lata jako przewijane chipy */
+.kmSegment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.83rem;
-  cursor: pointer;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.kmSegBtn {
+  padding: 8px 4px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
   color: var(--text-muted);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-size: 13px;
+  font-weight: 650;
+}
+.kmSegBtn:hover { transform: none; color: var(--text); }
+.kmSegBtn.active {
+  background: color-mix(in srgb, var(--tc) 22%, var(--surface));
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--tc);
 }
 
-.kmRankBtn:hover {
-  color: var(--text);
+.kmYearChips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
 }
+.kmYearChips::-webkit-scrollbar { display: none; }
+.kmYearChips[hidden] { display: none; }
 
-.kmRankBtn.active {
-  background: color-mix(in srgb, var(--tc) 16%, var(--surface-2));
-  border-color: var(--tc);
-  color: var(--text);
+.kmYearChip {
+  flex: none;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-muted);
+  background: var(--surface-2);
 }
+.kmYearChip:hover { transform: none; color: var(--text); }
+.kmYearChip.active { color: var(--text); border-color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, var(--surface-2)); }
 
 .kmRankNote {
   font-size: 0.8rem;
@@ -411,18 +623,8 @@
     gap: 8px;
   }
 
-  .kmStatsGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .kmRankingsControls {
     gap: 10px;
-  }
-
-  .kmControlGroup {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
   }
 
   /* „Kilometrówka”/„Kajakogodziny” muszą się zmieścić w 1/3 szerokości telefonu */
@@ -431,17 +633,7 @@
     font-size: 11.5px;
   }
 
-  /* Okres: 3 segmenty w jednym rzędzie, równej szerokości */
-  #kmPeriodGroup {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  #kmPeriodGroup .kmRankBtn {
-    padding: 7px 4px;
-    font-size: 0.78rem;
-  }
+  .kmSegBtn { font-size: 12px; }
 }
 
 /* ─── Tabele: Moje wpisy + statystyki imprezy ─────────────────────────────── */
@@ -480,8 +672,7 @@
 
 .kmTable tbody tr:last-child td { border-bottom: none; }
 
-.kmTable .kmNum,
-.kmEventTable td:not(:first-child) {
+.kmTable .kmNum {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -545,15 +736,6 @@
 
 .kmLogHistorical td { opacity: 0.75; }
 
-/* Statystyki imprezy — tabela w panelu karty */
-.kmEventStatsPanel { margin-top: 10px; overflow-x: auto; }
-.kmEventTable { border: 1px solid var(--border); border-radius: 12px; border-collapse: separate; border-spacing: 0; }
-.kmEventTotals td {
-  font-weight: 700;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
 @media (max-width: 480px) {
   .kmTable th, .kmTable td { padding-left: 7px; padding-right: 7px; }
 }
@@ -594,4 +776,454 @@
 .kmKursantSummaryLabel {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+/* ─── Moje statystyki: rok na tle klubu ───────────────────────────────────── */
+
+.kmSectionTitle { margin: 0 0 4px; font-size: 16px; font-weight: 750; }
+.kmStatsHeader { margin-bottom: 12px; }
+.kmStatsHeader .kmRankNote { margin: 0; }
+
+.kmClubGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kmClubCard {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--tc);
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 12%, var(--surface-2)), var(--surface-2) 70%);
+  min-width: 0;
+}
+
+.kmClubHead { display: flex; align-items: center; gap: 8px; }
+.kmClubHead .kmResultIcon { width: 30px; height: 30px; border-radius: 9px; }
+.kmClubTitle { font-size: 13.5px; font-weight: 700; flex: 1; min-width: 0; }
+
+.kmClubRank {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--tc);
+  white-space: nowrap;
+}
+.kmClubRank small { font-weight: 600; color: var(--text-muted); }
+.kmClubRankNone { color: var(--text-muted); font-weight: 600; }
+
+.kmClubValue {
+  margin: 8px 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.kmClubValue small { font-size: 14px; font-weight: 650; color: var(--text-muted); }
+
+.kmClubBar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tc) 14%, transparent);
+}
+
+.kmClubBarFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 60%, transparent), var(--tc));
+}
+
+.kmClubBarAvg {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+.kmClubLegend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.kmDot { display: inline-block; width: 3px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.kmDotAvg { background: var(--text); }
+
+.kmClubBetter {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 14%, transparent);
+}
+
+/* Dni na wodzie / wpisy: Ty vs średnia klubu */
+.kmMiniGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.kmMiniCmp {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+
+.kmMiniCmpLabel { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+
+.kmMiniRow {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+.kmMiniRow b { font-variant-numeric: tabular-nums; min-width: 26px; text-align: right; }
+
+.kmMiniTrack { position: relative; height: 8px; border-radius: 999px; background: var(--primary-2); overflow: hidden; }
+.kmMiniFill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
+.kmMiniMe { background: var(--primary); }
+.kmMiniAvg { background: color-mix(in srgb, var(--text-muted) 70%, transparent); }
+
+/* Wykres miesięcy */
+.kmChartCard {
+  margin-top: 10px;
+  padding: 12px 14px 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.kmChartHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.kmChartTitle { font-size: 13.5px; font-weight: 700; }
+
+.kmChartTabs { display: flex; gap: 4px; }
+.kmChartTab {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+}
+.kmChartTab:hover { transform: none; }
+.kmChartTab.active { color: var(--tc); border-color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
+
+.kmChart { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto; }
+.kmChartTrack { fill: color-mix(in srgb, var(--tc) 8%, transparent); }
+.kmChartFuture { opacity: 0.35; }
+.kmChartBar { fill: var(--tc); }
+.kmChartVal { font-size: 10px; font-weight: 700; fill: var(--text); text-anchor: middle; }
+.kmChartMonth { font-size: 10px; fill: var(--text-muted); text-anchor: middle; }
+.kmChartNow { fill: var(--text); font-weight: 800; }
+
+.kmAllTime { margin: 10px 2px 0; font-size: 13px; color: var(--text-muted); }
+.kmAllTime b { color: var(--text); }
+
+.kmStatsLogs { margin-top: 22px; }
+.kmStatsLogs .kmSectionTitle { margin-bottom: 8px; }
+
+@media (max-width: 640px) {
+  .kmClubGrid { grid-template-columns: 1fr; }
+}
+
+/* ─── Imprezy: karty z datą, podsumowaniem i rozwijanymi wynikami ──────────── */
+
+.kmEvCards { display: grid; gap: 10px; }
+
+.kmEvCard {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.kmEvCard.open { border-color: color-mix(in srgb, var(--primary) 55%, transparent); }
+
+.kmEvHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  font-weight: inherit;
+}
+.kmEvHead:hover { transform: none; background: color-mix(in srgb, var(--primary) 6%, transparent); }
+
+.kmEvDate {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  min-height: 62px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 78%, #000), color-mix(in srgb, var(--primary) 48%, #000));
+  color: #fff;
+  line-height: 1.05;
+}
+.kmEvDateWide { width: 72px; }
+.kmEvDay { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.kmEvDateWide .kmEvDay { font-size: 16px; }
+.kmEvMon { font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.95; }
+.kmEvYear { font-size: 10px; font-weight: 600; opacity: 0.75; margin-top: 1px; }
+
+.kmEvInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.kmEvTitle { font-size: 15.5px; font-weight: 750; color: var(--text); line-height: 1.25; }
+.kmEvLoc { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.kmEvChips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.kmEvChip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+}
+.kmEvChip[data-type] { color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
+
+.kmEvChevron {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform 0.2s;
+}
+.kmEvCard.open .kmEvChevron { transform: rotate(225deg) translate(-2px, -1px); }
+
+.kmEvBody { padding: 4px 12px 14px; border-top: 1px solid var(--border); }
+.kmEvBody[hidden] { display: none; }
+
+.kmEvTotals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+.kmEvTotals > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tc, var(--primary)) 12%, transparent);
+}
+.kmEvTotals b { font-size: 17px; font-weight: 800; color: var(--tc, var(--text)); font-variant-numeric: tabular-nums; }
+.kmEvTotals span { font-size: 11px; color: var(--text-muted); }
+
+/* Podium 2 – 1 – 3 */
+.kmPodium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 6px;
+  margin: 14px 0 6px;
+}
+.kmPodiumPlace { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.kmPodiumMedal { font-size: 24px; line-height: 1; }
+.kmPodiumName { max-width: 100%; font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kmPodiumPts { font-size: 12px; font-weight: 700; color: var(--tc); }
+.kmPodiumStep {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 38%, transparent), color-mix(in srgb, var(--tc) 10%, transparent));
+}
+.kmPodium1 .kmPodiumStep { height: 46px; }
+.kmPodium2 .kmPodiumStep { height: 32px; }
+.kmPodium3 .kmPodiumStep { height: 22px; }
+.kmPodiumMe .kmPodiumName { color: var(--primary); }
+
+.kmEvList { display: grid; margin-top: 8px; }
+.kmEvRow {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 4px;
+  border-top: 1px solid var(--border);
+}
+.kmEvRow:first-child { border-top: none; }
+.kmEvRowMe { background: var(--primary-2); border-radius: 10px; }
+.kmEvPos { font-size: 13px; font-weight: 700; color: var(--text-muted); text-align: right; }
+.kmEvWho { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kmEvName { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kmEvMeta { font-size: 12px; color: var(--text-muted); }
+.kmEvMeta:empty { display: none; }
+.kmRolls { display: flex; flex-wrap: wrap; gap: 4px; }
+.kmRoll {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #d9a25f;
+  background: color-mix(in srgb, #d9a25f 14%, transparent);
+}
+.kmEvPts { font-size: 16px; font-weight: 800; color: #d9a25f; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kmEvPts small { margin-left: 3px; font-size: 11px; font-weight: 650; color: var(--text-muted); }
+.kmEvPtsZero { color: var(--text-muted); font-weight: 600; }
+
+:root[data-theme="light"] .kmRoll,
+:root[data-theme="light"] .kmEvPts:not(.kmEvPtsZero) { color: #a8641a; }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] .kmRoll,
+  :root[data-theme="auto"] .kmEvPts:not(.kmEvPtsZero) { color: #a8641a; }
+}
+
+/* ─── Ranking: nagłówek, moje miejsce, lista z paskiem względem lidera ──────── */
+
+.kmRankHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 6px;
+}
+.kmRankHeadTitle { font-size: 16px; font-weight: 750; }
+.kmRankHeadSub { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+
+.kmRankMeBox {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--tc);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tc) 14%, var(--surface-2));
+  line-height: 1.15;
+}
+.kmRankMeBox span { font-size: 11px; color: var(--text-muted); }
+.kmRankMeBox b { font-size: 20px; font-weight: 800; color: var(--tc); }
+.kmRankMeBox .kmRankMeVal { font-size: 11.5px; font-weight: 650; color: var(--text); }
+.kmRankMeNone { border-color: var(--border); background: var(--surface-2); max-width: 46%; text-align: center; }
+
+.kmRankPodium { margin-top: 10px; }
+
+.kmLbList { display: grid; gap: 6px; margin-top: 10px; }
+
+.kmLbRow {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(84px, auto);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.kmLbRowMe {
+  border-color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 12%, var(--surface-2));
+}
+
+.kmLbPos { font-size: 14px; font-weight: 750; color: var(--text-muted); text-align: center; font-variant-numeric: tabular-nums; }
+.kmLbMain { display: grid; gap: 5px; min-width: 0; }
+.kmLbName { display: flex; align-items: center; min-width: 0; font-size: 14px; font-weight: 650; }
+.kmLbNameTxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kmLbName em, .kmLbName .kmArchTag { flex: none; }
+.kmLbName em {
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 18%, transparent);
+}
+.kmLbBar { display: block; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 12%, transparent); overflow: hidden; }
+.kmLbBar > span { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--tc) 75%, transparent); }
+.kmLbVal { text-align: right; font-size: 15px; font-weight: 800; color: var(--tc); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kmLbVal small { margin-left: 3px; font-size: 11px; font-weight: 650; color: var(--text-muted); }
+
+.kmRankEmpty {
+  padding: 22px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Osoba z archiwum bez konta w aplikacji */
+.kmArchTag {
+  display: inline-block;
+  align-self: center;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--text-muted);
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+.kmPodiumPlace .kmArchTag { margin: 2px 0 0; }
+
+/* Komunikat po zapisie wpisu */
+.kmSaved {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--ok);
+  border-left-width: 5px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  color: var(--ok);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ok) 22%, transparent);
+  animation: kmSavedIn 0.35s ease-out;
+}
+.kmSaved[hidden] { display: none; }
+
+.kmSavedIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: var(--surface);
+}
+.kmSavedIcon svg { width: 22px; height: 22px; stroke-width: 2.5; }
+.kmSavedText { min-width: 0; overflow-wrap: anywhere; }
+
+@keyframes kmSavedIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 480px) {
+  .kmSaved { padding: 12px 14px; font-size: 15px; gap: 10px; }
 }

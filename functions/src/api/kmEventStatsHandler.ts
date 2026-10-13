@@ -2,7 +2,8 @@
  * kmEventStatsHandler.ts
  *
  * GET /api/km/event-stats?eventId=XXX
- * GET /api/km/event-stats?list=1   — {eventIds}: imprezy, które mają co najmniej jeden wpis
+ * GET /api/km/event-stats?list=1   — {eventIds, summaries}: imprezy z co najmniej jednym wpisem
+ *                                     + podsumowanie każdej (uczestnicy, wpisy, km, godziny, punkty)
  *                                    (zakładka „Imprezy” pokazuje tylko je; brak → kafelek ukryty)
  *
  * Zwraca agregowane statystyki wywrotolotek per uczestnik dla danej imprezy.
@@ -52,18 +53,29 @@ export async function handleKmEventStats(
         // != null pomija dokumenty bez pola — czytamy tylko wpisy przypięte do imprezy.
         const snap = await deps.db.collection("km_logs")
           .where("eventId", "!=", null)
-          .select("eventId", "uid")
+          .select("eventId", "uid", "km", "hoursOnWater", "pointsTotal")
           .get();
-        const ids = new Set<string>();
+        const acc: Record<string, {uids: Set<string>; logs: number; km: number; hours: number; points: number}> = {};
         for (const doc of snap.docs) {
           const log = doc.data() as any;
           const uid = normNullish(log.uid);
           // Te same wpisy, które liczą się w statystykach imprezy niżej.
           if (!uid || uid === "historical_unmatched") continue;
           const id = normNullish(log.eventId);
-          if (id) ids.add(id);
+          if (!id) continue;
+          const a = acc[id] || (acc[id] = {uids: new Set(), logs: 0, km: 0, hours: 0, points: 0});
+          a.uids.add(uid);
+          a.logs += 1;
+          a.km += Number(log.km) || 0;
+          a.hours += Number(log.hoursOnWater) || 0;
+          a.points += Number(log.pointsTotal) || 0;
         }
-        res.status(200).json({ok: true, eventIds: Array.from(ids)});
+        const r2 = (n: number) => Math.round(n * 100) / 100;
+        const summaries: Record<string, {participants: number; logs: number; km: number; hours: number; points: number}> = {};
+        for (const [id, a] of Object.entries(acc)) {
+          summaries[id] = {participants: a.uids.size, logs: a.logs, km: r2(a.km), hours: r2(a.hours), points: r2(a.points)};
+        }
+        res.status(200).json({ok: true, eventIds: Object.keys(summaries), summaries});
         return;
       }
 
@@ -90,6 +102,8 @@ export async function handleKmEventStats(
         capsizeRolka: number;
         capsizeDziubek: number;
         pointsTotal: number;
+        km: number;
+        hours: number;
         logs: number;
       }> = {};
 
@@ -110,6 +124,8 @@ export async function handleKmEventStats(
             capsizeRolka: 0,
             capsizeDziubek: 0,
             pointsTotal: 0,
+            km: 0,
+            hours: 0,
             logs: 0,
           };
         }
@@ -120,6 +136,8 @@ export async function handleKmEventStats(
         entry.capsizeRolka += Math.max(0, parseInt(rolls.rolka || "0", 10));
         entry.capsizeDziubek += Math.max(0, parseInt(rolls.dziubek || "0", 10));
         entry.pointsTotal += Number(log.pointsTotal || 0);
+        entry.km += Number(log.km) || 0;
+        entry.hours += Number(log.hoursOnWater) || 0;
         entry.logs += 1;
       }
 
@@ -128,8 +146,10 @@ export async function handleKmEventStats(
           ...p,
           capsizeTotal: p.capsizeKabina + p.capsizeRolka + p.capsizeDziubek,
           pointsTotal: Math.round(p.pointsTotal * 100) / 100,
+          km: Math.round(p.km * 100) / 100,
+          hours: Math.round(p.hours * 100) / 100,
         }))
-        .sort((a, b) => b.pointsTotal - a.pointsTotal);
+        .sort((a, b) => b.pointsTotal - a.pointsTotal || b.km - a.km);
 
       const totals = participants.reduce(
         (acc, p) => ({
@@ -138,9 +158,11 @@ export async function handleKmEventStats(
           capsizeDziubek: acc.capsizeDziubek + p.capsizeDziubek,
           capsizeTotal: acc.capsizeTotal + p.capsizeTotal,
           pointsTotal: Math.round((acc.pointsTotal + p.pointsTotal) * 100) / 100,
+          km: Math.round((acc.km + p.km) * 100) / 100,
+          hours: Math.round((acc.hours + p.hours) * 100) / 100,
           logs: acc.logs + p.logs,
         }),
-        {capsizeKabina: 0, capsizeRolka: 0, capsizeDziubek: 0, capsizeTotal: 0, pointsTotal: 0, logs: 0}
+        {capsizeKabina: 0, capsizeRolka: 0, capsizeDziubek: 0, capsizeTotal: 0, pointsTotal: 0, km: 0, hours: 0, logs: 0}
       );
 
       res.status(200).json({

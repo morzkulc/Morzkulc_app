@@ -9,14 +9,14 @@
  *
  * Body:
  *   date: string               — "YYYY-MM-DD", wymagane, nie z przyszłości
- *   waterType: string          — enum: mountains|lowlands|sea|track|pool|playspot
+ *   waterType: string          — enum: mountains|lowlands|sea|track|pool (track = tor / playspot; stare "playspot" → track)
  *   placeName: string          — nazwa akwenu (canonical lub raw), wymagane
  *   placeNameRaw?: string      — raw input, jeśli różny od placeName
  *   placeId?: string           — ID z km_places (jeśli wybrano z podpowiedzi)
  *   km: number                 — kilometry, > 0, <= 9999
  *   hoursOnWater: number       — godziny na wodzie, >= 0, wymagane (0 jeśli nie mierzono)
  *   difficultyScale?: string   — "WW"|"U" — wymagane dla mountains/lowlands, null dla reszty
- *   difficulty?: string        — "WW3", "U2", itp. — wymagane jeśli difficultyScale podane
+ *   difficulty?: string        — "WW3", "U2", itp. — wymagane dla mountains/lowlands (poza source=kursant_form)
  *   capsizeRolls?: {kabina, rolka, dziubek} — wywrotolotek (całkowite, >= 0)
  *   sectionDescription?: string
  *   note?: string
@@ -47,10 +47,12 @@ export type KmAddLogDeps = {
 };
 
 const VALID_WATER_TYPES = new Set([
-  "mountains", "lowlands", "sea", "track", "pool", "playspot",
+  "mountains", "lowlands", "sea", "track", "pool",
 ]);
 
 const WATER_TYPES_WITH_DIFFICULTY = new Set(["mountains", "lowlands"]);
+// Tor / playspot i basen — kilometry nie mają sensu; zapisywane zawsze jako 0 (także ze starych klientów).
+const NO_KM_WATER_TYPES = new Set(["track", "pool"]);
 
 const VALID_DIFFICULTY_WW = new Set(["WW1", "WW2", "WW3", "WW4", "WW5"]);
 const VALID_DIFFICULTY_U = new Set(["U1", "U2", "U3"]);
@@ -117,7 +119,9 @@ export async function handleKmAddLog(
       // 3. Walidacja body
       const body = (req.body || {}) as any;
       const date = normNullish(body.date);
-      const waterType = normNullish(body.waterType);
+      // Od 13.10.2026 tor i playspot to jeden typ „track” — starsze klienty mogą jeszcze wysłać „playspot”.
+      const waterTypeRaw = normNullish(body.waterType);
+      const waterType = waterTypeRaw === "playspot" ? "track" : waterTypeRaw;
       const placeName = normNullish(body.placeName).slice(0, 200);
       const placeNameRaw = normNullish(body.placeNameRaw || body.placeName).slice(0, 200);
       const placeId = normNullish(body.placeId) || undefined;
@@ -163,7 +167,7 @@ export async function handleKmAddLog(
         return;
       }
 
-      // Walidacja km — wartość 0 jest dozwolona (np. playspot, trening bez przebytej trasy)
+      // Walidacja km — wartość 0 jest dozwolona (np. trening bez przebytej trasy)
       if (kmRaw < 0 || kmRaw > 9999) {
         res.status(400).json({ok: false, code: "validation_failed", message: "Kilometry nie mogą być ujemne ani większe niż 9999."});
         return;
@@ -187,6 +191,11 @@ export async function handleKmAddLog(
 
       // Walidacja trudności — logika warunkowa
       if (WATER_TYPES_WITH_DIFFICULTY.has(waterType)) {
+        // Wymagana (od 12.10.2026) — poza formularzem kursanta (wpis kursowy bez skali).
+        if (!difficulty && normNullish(body.source) !== "kursant_form") {
+          res.status(400).json({ok: false, code: "difficulty_required", message: waterType === "mountains" ? "Wybierz trudność (WW1–WW5)." : "Wybierz uciążliwość (U1–U3)."});
+          return;
+        }
         // mountains: tylko WW, lowlands: tylko U
         if (waterType === "mountains") {
           if (difficultyScale && difficultyScale !== "WW") {
@@ -209,7 +218,7 @@ export async function handleKmAddLog(
           }
         }
       } else {
-        // Dla sea/track/pool/playspot — skala trudności nie może być podana
+        // Dla sea/track/pool — skala trudności nie może być podana
         if (difficulty) {
           res.status(400).json({ok: false, code: "validation_failed", message: "Skala trudności nie dotyczy wybranego typu akwenu."});
           return;
@@ -274,7 +283,7 @@ export async function handleKmAddLog(
         lat: mapLat,
         lng: mapLng,
         sectionDescription,
-        km: kmRaw,
+        km: NO_KM_WATER_TYPES.has(waterType) ? 0 : kmRaw,
         hoursOnWater: hoursOnWater as number,
         difficultyScale: difficultyScale as any,
         difficulty,

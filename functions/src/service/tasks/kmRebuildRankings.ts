@@ -20,6 +20,7 @@
 
 import {ServiceTask} from "../types";
 import {kmRebuildUserStatsTask} from "./kmRebuildUserStats";
+import {kmRebuildArchiveStatsTask} from "./kmRebuildArchiveStats";
 
 type Payload = {
   dry?: boolean;
@@ -71,6 +72,15 @@ export const kmRebuildRankingsTask: ServiceTask<Payload> = {
         errors++;
         ctx.logger.error("km.rebuildRankings: error for uid", {uid, message: e?.message});
       }
+    }
+
+    // Osoby z archiwum bez konta (historical_unmatched) — osobna kolekcja km_archive_stats.
+    try {
+      const archive = await kmRebuildArchiveStatsTask.run({dry: dryRun}, ctx);
+      if (!archive.ok) errors++;
+    } catch (e: any) {
+      errors++;
+      ctx.logger.error("km.rebuildRankings: archive stats error", {message: e?.message});
     }
 
     const message = `processed=${processed}, errors=${errors}, total=${uids.size}`;

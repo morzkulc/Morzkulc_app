@@ -5,10 +5,14 @@
  *
  * Zwraca agregaty zalogowanego użytkownika z kolekcji km_user_stats.
  * Dane gotowe — odczyt O(1), brak przeliczania po stronie serwera.
+ *
+ * ?club=1 — dodatkowo `club`: bieżący rok na tle klubu + moje miesiące (km_club_stats.ts).
+ * Czyta wszystkie km_user_stats (pola uid, years) — tylko dla zakładki „Moje statystyki”.
  */
 
 import type {Request, Response} from "express";
 import {getUserKmStats} from "../modules/km/km_log_service";
+import {getKmClubStats} from "../modules/km/km_club_stats";
 
 type TokenCheck =
   | {error: string}
@@ -46,9 +50,13 @@ export async function handleKmMyStats(
       }
       const uid = tokenCheck.decoded.uid;
 
-      const stats = await getUserKmStats(deps.db, uid);
+      const withClub = String(req.query?.club || "") === "1";
+      const [stats, club] = await Promise.all([
+        getUserKmStats(deps.db, uid),
+        withClub ? getKmClubStats(deps.db, uid, new Date().getFullYear()) : Promise.resolve(undefined),
+      ]);
 
-      res.status(200).json({ok: true, stats});
+      res.status(200).json({ok: true, stats, ...(club ? {club} : {})});
     } catch (err: any) {
       res.status(500).json({error: "Server error", message: err?.message || String(err)});
     }

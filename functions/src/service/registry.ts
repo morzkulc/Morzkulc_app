@@ -17,6 +17,7 @@ import { kmRebuildUserStatsTask } from "./tasks/kmRebuildUserStats";
 import { kmRebuildRankingsTask } from "./tasks/kmRebuildRankings";
 import { kmMergeHistoricalUserTask } from "./tasks/kmMergeHistoricalUser";
 import { kmRebuildMapDataTask } from "./tasks/kmRebuildMapData";
+import { kmRebuildArchiveStatsTask } from "./tasks/kmRebuildArchiveStats";
 import { kursSyncFromSheetTask } from "./tasks/kursSyncFromSheet";
 import { listaEnforcePostingPolicyTask } from "./tasks/listaEnforcePostingPolicy";
 import { usersSyncFunctionRolesFromSetupTask } from "./tasks/usersSyncFunctionRolesFromSetup";
@@ -57,6 +58,7 @@ const tasks: ServiceTask[] = [
   kmRebuildRankingsTask,
   kmMergeHistoricalUserTask,
   kmRebuildMapDataTask,
+  kmRebuildArchiveStatsTask,
   kursSyncFromSheetTask,
   listaEnforcePostingPolicyTask,
   usersSyncFunctionRolesFromSetupTask,

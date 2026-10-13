@@ -13,6 +13,10 @@
  *
  * Ranking "year" — dotyczy bieżącego roku (yearKm, yearPoints, yearHours).
  * Ranking "alltime" — wszystkie czasy (allTimeKm, allTimePoints, allTimeHours).
+ * Ranking "specificYear" — years[rok] z km_user_stats.
+ *
+ * „Wszech czasów” i „Wybrany rok” obejmują też osoby z archiwum bez konta
+ * (km_archive_stats, entry.archive = true, budowane przez km.rebuildArchiveStats).
  *
  * Firestore wymaga indeksów złożonych na polach (allTimeKm DESC), (yearKm DESC), itp.
  */
@@ -34,6 +38,34 @@ export type KmRankingsDeps = {
 
 const VALID_TYPES = new Set(["km", "points", "hours"]);
 const VALID_PERIODS = new Set(["year", "alltime", "specificYear"]);
+
+function toEntry(data: any, value: number) {
+  return {
+    uid: data.uid,
+    displayName: data.displayName || "",
+    nickname: data.nickname || "",
+    value,
+    archive: data.archive === true,
+    allTimeKm: data.allTimeKm || 0,
+    allTimePoints: data.allTimePoints || 0,
+    allTimeHours: data.allTimeHours || 0,
+    yearKm: data.yearKm || 0,
+    yearPoints: data.yearPoints || 0,
+    yearHours: data.yearHours || 0,
+    yearKey: data.yearKey || "",
+    allTimeLogs: data.allTimeLogs || 0,
+  };
+}
+
+type Entry = ReturnType<typeof toEntry>;
+
+function rankEntries(entries: Entry[], limit: number) {
+  return entries
+    .filter((e) => e.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit)
+    .map((e, i) => ({rank: i + 1, ...e}));
+}
 
 function resolveOrderField(type: string, period: string): string {
   if (period === "year") {
@@ -83,31 +115,17 @@ export async function handleKmRankings(
       // Ranking dla konkretnego roku — in-memory sort (klub < 200 członków, brak indeksu)
       if (isSpecificYear) {
         const metricKey = type === "km" ? "km" : type === "points" ? "points" : "hours";
-        const allSnap = await deps.db.collection("km_user_stats").get();
-        const entries = allSnap.docs
-          .map((d) => {
+        const [allSnap, archiveSnap] = await Promise.all([
+          deps.db.collection("km_user_stats").get(),
+          deps.db.collection("km_archive_stats").get(),
+        ]);
+        const entries = rankEntries(
+          [...allSnap.docs, ...archiveSnap.docs].map((d) => {
             const data = d.data() as any;
-            const value = (data.years?.[yearRaw]?.[metricKey] as number) ?? 0;
-            return {data, value};
-          })
-          .filter(({value}) => value > 0)
-          .sort((a, b) => b.value - a.value)
-          .slice(0, limit)
-          .map(({data, value}, i) => ({
-            rank: i + 1,
-            uid: data.uid,
-            displayName: data.displayName || "",
-            nickname: data.nickname || "",
-            value,
-            allTimeKm: data.allTimeKm || 0,
-            allTimePoints: data.allTimePoints || 0,
-            allTimeHours: data.allTimeHours || 0,
-            yearKm: data.yearKm || 0,
-            yearPoints: data.yearPoints || 0,
-            yearHours: data.yearHours || 0,
-            yearKey: data.yearKey || "",
-            allTimeLogs: data.allTimeLogs || 0,
-          }));
+            return toEntry(data, Number(data.years?.[yearRaw]?.[metricKey]) || 0);
+          }),
+          limit
+        );
         res.status(200).json({
           ok: true,
           type,
@@ -122,30 +140,24 @@ export async function handleKmRankings(
 
       const orderField = resolveOrderField(type, period);
 
-      const snap = await deps.db.collection("km_user_stats")
+      const topQuery = (collection: string) => deps.db.collection(collection)
         .orderBy(orderField, "desc")
         .where(orderField, ">", 0)
         .limit(limit)
         .get();
+      // Archiwum nie ma danych z bieżącego roku — doklejane tylko do „Wszech czasów”.
+      const [snap, archiveSnap] = await Promise.all([
+        topQuery("km_user_stats"),
+        period === "alltime" ? topQuery("km_archive_stats") : Promise.resolve(null),
+      ]);
 
-      const entries = snap.docs.map((d, i) => {
-        const data = d.data() as any;
-        return {
-          rank: i + 1,
-          uid: data.uid,
-          displayName: data.displayName || "",
-          nickname: data.nickname || "",
-          value: data[orderField] || 0,
-          allTimeKm: data.allTimeKm || 0,
-          allTimePoints: data.allTimePoints || 0,
-          allTimeHours: data.allTimeHours || 0,
-          yearKm: data.yearKm || 0,
-          yearPoints: data.yearPoints || 0,
-          yearHours: data.yearHours || 0,
-          yearKey: data.yearKey || "",
-          allTimeLogs: data.allTimeLogs || 0,
-        };
-      });
+      const entries = rankEntries(
+        [...snap.docs, ...(archiveSnap?.docs || [])].map((d) => {
+          const data = d.data() as any;
+          return toEntry(data, Number(data[orderField]) || 0);
+        }),
+        limit
+      );
 
       res.status(200).json({
         ok: true,

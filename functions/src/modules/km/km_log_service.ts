@@ -13,7 +13,7 @@ import * as admin from "firebase-admin";
 import {computePoints, CapsizeRolls, getYearFromDate, getSeasonKeyFromDate} from "./km_scoring";
 import {KmVars} from "./km_vars";
 
-export type WaterType = "mountains" | "lowlands" | "sea" | "track" | "pool" | "playspot";
+export type WaterType = "mountains" | "lowlands" | "sea" | "track" | "pool"; // track = tor / playspot
 
 export type KmLogInput = {
   uid: string;

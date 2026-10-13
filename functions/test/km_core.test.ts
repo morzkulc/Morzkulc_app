@@ -17,6 +17,9 @@ import {kmRebuildMapDataTask} from "../src/service/tasks/kmRebuildMapData";
 import {handleKmAddLog} from "../src/api/kmAddLogHandler";
 import {handleKmPlaces} from "../src/api/kmPlacesHandler";
 import {handleKmEventStats} from "../src/api/kmEventStatsHandler";
+import {computeClubComparison, computeMonths, getKmClubStats} from "../src/modules/km/km_club_stats";
+import {computeArchiveStats, kmRebuildArchiveStatsTask} from "../src/service/tasks/kmRebuildArchiveStats";
+import {handleKmRankings} from "../src/api/kmRankingsHandler";
 
 const VARS: KmVars = {ptsKabina: 1, ptsEskimoska: 0.5, ptsDziubek: 0.25, scoringVersion: "v1"};
 
@@ -186,6 +189,42 @@ const baseLog = {date: "2026-09-01", waterType: "sea", km: 5, hoursOnWater: 1, c
 const placesCount = async (db: FakeFirestore) => (await db.collection("km_places").get()).size;
 const logs = async (db: FakeFirestore) => (await db.collection("km_logs").get()).docs.map((d) => d.data() as any);
 
+describe("kmAddLog — trudność/uciążliwość wymagana", () => {
+  it("góry bez trudności → 400 difficulty_required, nic nie zapisane", async () => {
+    const db = addLogDb();
+    const r = await runAddLog(db, {...baseLog, waterType: "mountains", placeName: "Radunia"});
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("difficulty_required");
+    expect(await logs(db)).toEqual([]);
+  });
+
+  it("niziny bez uciążliwości → 400 difficulty_required", async () => {
+    const db = addLogDb();
+    const r = await runAddLog(db, {...baseLog, waterType: "lowlands", placeName: "Radunia"});
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("difficulty_required");
+  });
+
+  it("niziny z U2 → zapisane", async () => {
+    const db = addLogDb();
+    const r = await runAddLog(db, {...baseLog, waterType: "lowlands", placeName: "Radunia", difficultyScale: "U", difficulty: "U2"});
+    expect(r.status).toBe(200);
+    expect((await logs(db))[0].difficulty).toBe("U2");
+  });
+});
+
+describe("kmAddLog — tor / basen bez kilometrów", () => {
+  it("tor (także stary 'playspot') i basen → km zapisane jako 0, morze zachowuje km", async () => {
+    const db = addLogDb();
+    for (const waterType of ["track", "playspot", "pool", "sea"]) {
+      const r = await runAddLog(db, {...baseLog, waterType, km: 7.5, placeName: "Radunia"});
+      expect(r.status).toBe(200);
+    }
+    const byType = (await logs(db)).map((l) => [l.waterType, l.km]).sort();
+    expect(byType).toEqual([["pool", 0], ["sea", 7.5], ["track", 0], ["track", 0]]);
+  });
+});
+
 describe("kmAddLog — lokalizacja wymagana", () => {
   it("nowa nazwa bez lokalizacji → 400 location_required, nic nie zapisane (także w słowniku)", async () => {
     const db = addLogDb();
@@ -272,8 +311,9 @@ describe("kmPlaces ?all=1", () => {
 describe("kmEventStats ?list=1", () => {
   it("zwraca tylko imprezy z wpisami przypisanymi do użytkownika; wpisy bez eventId i historical_unmatched pomijane", async () => {
     const db = new FakeFirestore();
-    await db.collection("km_logs").doc("l1").set({uid: "u1", eventId: "ev1"});
-    await db.collection("km_logs").doc("l2").set({uid: "u2", eventId: "ev1"});
+    await db.collection("km_logs").doc("l1").set({uid: "u1", eventId: "ev1", km: 10.5, hoursOnWater: 2, pointsTotal: 0.25});
+    await db.collection("km_logs").doc("l2").set({uid: "u2", eventId: "ev1", km: 4, pointsTotal: 1});
+    await db.collection("km_logs").doc("l2b").set({uid: "u2", eventId: "ev1", km: 1});
     await db.collection("km_logs").doc("l3").set({uid: "historical_unmatched", eventId: "ev2"});
     await db.collection("km_logs").doc("l4").set({uid: "u1"});
     await db.collection("km_logs").doc("l5").set({uid: "u3", eventId: "ev3"});
@@ -304,5 +344,128 @@ describe("kmEventStats ?list=1", () => {
 
     expect(out.status).toBe(200);
     expect(out.body.eventIds.sort()).toEqual(["ev1", "ev3"]);
+    expect(out.body.summaries.ev1).toEqual({participants: 2, logs: 3, km: 15.5, hours: 2, points: 1.25});
+  });
+});
+
+describe("km_club_stats — moje statystyki na tle klubu", () => {
+  const docs = [
+    {uid: "a", years: {"2026": {km: 100, hours: 10, points: 2, days: 5, logs: 5}}},
+    {uid: "me", years: {"2026": {km: 40, hours: 10, points: 0, days: 3, logs: 3}}},
+    {uid: "b", years: {"2026": {km: 20, hours: 4, points: 1.25, days: 2, logs: 2}}},
+    {uid: "c", years: {"2025": {km: 500}}},
+  ];
+
+  it("miejsce, liczba aktywnych, średnia/mediana/max liczone tylko z aktywnych w danym roku", () => {
+    const m = computeClubComparison(docs, "me", "2026");
+    expect(m.km).toEqual({me: 40, rank: 2, active: 3, avg: 53.33, median: 40, max: 100});
+    expect(m.hours.rank).toBe(1); // ex aequo z „a” — miejsce dzielone
+    expect(m.points).toEqual({me: 0, rank: null, active: 2, avg: 1.63, median: 1.63, max: 2});
+  });
+
+  it("brak aktywności w roku → zera, rank null", () => {
+    const m = computeClubComparison(docs, "c", "2026");
+    expect(m.km.me).toBe(0);
+    expect(m.km.rank).toBeNull();
+  });
+
+  it("miesiące sumowane z dat wpisów, punkty z dokładnością 0,01", () => {
+    const months = computeMonths([
+      {date: "2026-05-02", km: 10, hoursOnWater: 2, pointsTotal: 0.25},
+      {date: "2026-05-20", km: 5.5, hoursOnWater: 1, pointsTotal: 0.25},
+      {date: "2026-09-01", km: 3},
+      {date: "zła"},
+    ]);
+    expect(months[4]).toEqual({km: 15.5, hours: 3, points: 0.5, logs: 2});
+    expect(months[8].logs).toBe(1);
+    expect(months.reduce((s, m) => s + m.logs, 0)).toBe(3);
+  });
+
+  it("getKmClubStats czyta km_user_stats i wpisy użytkownika tylko z danego roku", async () => {
+    const db = new FakeFirestore({
+      km_user_stats: docs.map((d) => ({_docId: d.uid, ...d})),
+      km_logs: [
+        {_docId: "l1", uid: "me", year: 2026, date: "2026-03-01", km: 7},
+        {_docId: "l2", uid: "me", year: 2025, date: "2025-03-01", km: 9},
+        {_docId: "l3", uid: "a", year: 2026, date: "2026-03-01", km: 11},
+      ],
+    });
+    const r = await getKmClubStats(db as any, "me", 2026);
+    expect(r.metrics.km.rank).toBe(2);
+    expect(r.months[2]).toEqual({km: 7, hours: 0, points: 0, logs: 1});
+  });
+});
+
+describe("archiwum bez konta — km_archive_stats + ranking", () => {
+  const hist = (name: string, year: number, km: number, nickname = name) =>
+    ({uid: "historical_unmatched", userSnapshot: {displayName: name, nickname}, year, date: `${year}-01-01`, km});
+
+  it("computeArchiveStats: agregacja per nazwa i rok, „c” pominięte, wpisy z kontem pominięte", () => {
+    const out = computeArchiveStats([
+      hist("Kamila K", 2012, 9), hist("Kamila K", 2012, 1.5), hist("Kamila K", 2013, 4),
+      hist("c", 2014, 6.01), hist("Łukasz K", 2015, 17),
+      {uid: "u1", userSnapshot: {displayName: "Jan"}, year: 2012, km: 50},
+    ]);
+    expect(Object.keys(out).sort()).toEqual(["archive_kamila-k", "archive_lukasz-k"]);
+    expect(out["archive_kamila-k"]).toMatchObject({
+      archive: true, displayName: "Kamila K", allTimeKm: 14.5, allTimeLogs: 3,
+      years: {"2012": {km: 10.5, logs: 2, days: 2, hours: 0, points: 0}, "2013": {km: 4, logs: 1, days: 1, hours: 0, points: 0}},
+    });
+  });
+
+  async function runRankings(db: FakeFirestore, query: any) {
+    const out: any = {};
+    const res: any = {status(s: number) {
+      out.status = s; return res;
+    }, json(b: any) {
+      out.body = b; return res;
+    }};
+    let inner: Promise<void> = Promise.resolve();
+    await handleKmRankings({method: "GET", query} as any, res, {
+      db: db as any, sendPreflight: () => false, requireAllowedHost: () => true, setCorsHeaders: () => undefined,
+      corsHandler: (_q: any, _r: any, next: () => Promise<void>) => {
+        inner = next();
+      },
+      requireIdToken: async () => ({decoded: {uid: "u1"}}),
+    } as any);
+    await inner;
+    return out;
+  }
+
+  it("task zapisuje km_archive_stats i usuwa nieaktualne; ranking łączy z km_user_stats", async () => {
+    const db = new FakeFirestore({
+      km_logs: [
+        {_docId: "h1", ...hist("Mario", 2012, 100)},
+        {_docId: "h2", ...hist("Mario", 2013, 20)},
+        {_docId: "h3", ...hist("Waldek", 2012, 30)},
+      ],
+      km_archive_stats: [{_docId: "archive_stary", uid: "archive_stary", archive: true, allTimeKm: 999}],
+      km_user_stats: [
+        {_docId: "u1", uid: "u1", nickname: "Jan", allTimeKm: 110, yearKm: 5, years: {"2012": {km: 50}, "2026": {km: 5}}},
+        {_docId: "u2", uid: "u2", nickname: "Ola", allTimeKm: 10, yearKm: 0, years: {"2012": {km: 10}}},
+      ],
+    });
+    const ctx: any = {firestore: db, logger: {info: () => undefined, warn: () => undefined, error: () => undefined}};
+    const r = await kmRebuildArchiveStatsTask.run({}, ctx);
+    expect(r.details).toMatchObject({people: 2, logs: 3, deleted: 1});
+    expect((await db.collection("km_archive_stats").get()).docs.map((d) => d.id).sort()).toEqual(["archive_mario", "archive_waldek"]);
+
+    const all = await runRankings(db, {type: "km", period: "alltime"});
+    expect(all.body.entries.map((e: any) => [e.rank, e.nickname, e.value, e.archive]))
+      .toEqual([[1, "Mario", 120, true], [2, "Jan", 110, false], [3, "Waldek", 30, true], [4, "Ola", 10, false]]);
+
+    const y2012 = await runRankings(db, {type: "km", period: "specificYear", year: "2012"});
+    expect(y2012.body.entries.map((e: any) => [e.nickname, e.value])).toEqual([["Mario", 100], ["Jan", 50], ["Waldek", 30], ["Ola", 10]]);
+
+    const limited = await runRankings(db, {type: "km", period: "alltime", limit: "2"});
+    expect(limited.body.entries.map((e: any) => e.nickname)).toEqual(["Mario", "Jan"]);
+
+    // Bieżący rok — bez archiwum
+    const year = await runRankings(db, {type: "km", period: "year"});
+    expect(year.body.entries.map((e: any) => e.nickname)).toEqual(["Jan"]);
+
+    // Godziny — archiwum ma 0, więc nikt z archiwum
+    const hours = await runRankings(db, {type: "hours", period: "alltime"});
+    expect(hours.body.entries).toEqual([]);
   });
 });
