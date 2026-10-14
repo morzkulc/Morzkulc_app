@@ -23,12 +23,17 @@
  *   lat?, lng?: number         — lokalizacja; WYMAGANA, chyba że miejsce w km_places ma współrzędne
  *                                (inaczej 400 location_required)
  *   source?: "kursant_form"    — formularz kursanta: zwolniony z wymogu lokalizacji
+ *
+ * Ta sama funkcja obsługuje też edycję i usuwanie WŁASNYCH wpisów (bez archiwum):
+ *   POST /api/km/log/update — body jak wyżej + logId; walidacja identyczna jak przy dodawaniu
+ *   POST /api/km/log/delete — body {logId}
+ * Agregaty km_user_stats zmieniane o różnicę (km_log_service.updateKmLog / deleteKmLog).
  */
 
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
 import {getKmVars} from "../modules/km/km_vars";
-import {addKmLog} from "../modules/km/km_log_service";
+import {addKmLog, updateKmLog, deleteKmLog, KmLogChangeResult} from "../modules/km/km_log_service";
 import {upsertKmPlace} from "../modules/km/km_places_service";
 import {normNullish} from "../modules/shared/text_utils";
 
@@ -71,6 +76,51 @@ function toSafeFloat(v: any): number {
   return Number.isNaN(n) ? 0 : Math.max(0, n);
 }
 
+type LogAction = "add" | "update" | "delete";
+
+function resolveAction(req: Request): LogAction {
+  const path = String(req.path || "");
+  if (/\/delete\/?$/.test(path)) return "delete";
+  if (/\/update\/?$/.test(path)) return "update";
+  return "add";
+}
+
+const CHANGE_ERRORS: Record<string, {status: number; message: string}> = {
+  not_found: {status: 404, message: "Nie znaleziono wpisu (mógł zostać już usunięty)."},
+  forbidden: {status: 403, message: "Możesz zmieniać tylko własne wpisy."},
+  historical: {status: 403, message: "Wpisów z archiwum nie można zmieniać w aplikacji."},
+};
+
+function sendChangeError(res: Response, result: KmLogChangeResult): boolean {
+  if (result.ok) return false;
+  const e = CHANGE_ERRORS[result.code];
+  res.status(e.status).json({ok: false, code: result.code, message: e.message});
+  return true;
+}
+
+// Wpis z lokalizacją → odśwież cache mapy od razu (wcześniej tylko raz w miesiącu,
+// więc nowe wpisy czekały na mapę do 1. dnia następnego miesiąca).
+async function enqueueMapRebuild(db: FirebaseFirestore.Firestore): Promise<void> {
+  try {
+    const jobRef = db.collection("service_jobs").doc();
+    await jobRef.set({
+      id: jobRef.id,
+      taskId: "km.rebuildMapData",
+      payload: {},
+      status: "queued",
+      attempts: 0,
+      // Bez nextRunAt fallback dzienny nie podejmie joba, gdyby trigger zawiódł.
+      nextRunAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch {
+    // Mapę i tak przebuduje scheduler miesięczny
+  }
+}
+
+const hasLocation = (log: any) => typeof log?.lat === "number" && typeof log?.lng === "number";
+
 export async function handleKmAddLog(
   req: Request,
   res: Response,
@@ -103,8 +153,25 @@ export async function handleKmAddLog(
       }
       const userData = userSnap.data() as any;
       const roleKey = normNullish(userData?.role_key);
-      if (!deps.memberRoleKeys.includes(roleKey)) {
-        res.status(403).json({ok: false, code: "forbidden", error: "Dodawanie wpisów do kilometrówki wymaga roli Kandydat lub Członek."});
+      // Kursant zapisuje wpisy przez formularz kursanta (wywrotolotek). Dopisany tylko tutaj —
+      // memberRoleKeys decyduje też o imprezach, kierownikach i zgłoszeniach sprzętu.
+      if (!deps.memberRoleKeys.includes(roleKey) && roleKey !== "rola_kursant") {
+        res.status(403).json({ok: false, code: "forbidden", error: "Dodawanie wpisów do kilometrówki wymaga roli Kursant, Kandydat lub Członek."});
+        return;
+      }
+
+      const action = resolveAction(req);
+      const logIdParam = normNullish((req.body as any)?.logId).slice(0, 128);
+      if (action !== "add" && !logIdParam) {
+        res.status(400).json({ok: false, code: "validation_failed", message: "Brak identyfikatora wpisu."});
+        return;
+      }
+
+      if (action === "delete") {
+        const result = await deleteKmLog(deps.db, uid, logIdParam);
+        if (sendChangeError(res, result)) return;
+        if (result.ok && hasLocation(result.before)) await enqueueMapRebuild(deps.db);
+        res.status(200).json({ok: true, logId: logIdParam});
         return;
       }
       const profile = userData?.profile || {};
@@ -271,8 +338,8 @@ export async function handleKmAddLog(
         // Błąd słownika nie blokuje zapisu wpisu
       }
 
-      // 6. Zapisz wpis
-      const logId = await addKmLog(deps.db, {
+      // 6. Zapisz wpis (nowy albo edycja istniejącego)
+      const logInput = {
         uid,
         userSnapshot,
         date,
@@ -291,28 +358,20 @@ export async function handleKmAddLog(
         note,
         eventId,
         eventName,
-      }, vars);
+      };
 
-      // 7. Wpis z lokalizacją → odśwież cache mapy od razu (wcześniej tylko raz w miesiącu,
-      // więc nowe wpisy czekały na mapę do 1. dnia następnego miesiąca).
-      if (mapLat != null && mapLng != null) {
-        try {
-          const jobRef = deps.db.collection("service_jobs").doc();
-          await jobRef.set({
-            id: jobRef.id,
-            taskId: "km.rebuildMapData",
-            payload: {},
-            status: "queued",
-            attempts: 0,
-            // Bez nextRunAt fallback dzienny nie podejmie joba, gdyby trigger zawiódł.
-            nextRunAt: admin.firestore.FieldValue.serverTimestamp(),
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        } catch {
-          // Mapę i tak przebuduje scheduler miesięczny
-        }
+      let logId = logIdParam;
+      let hadLocation = false;
+      if (action === "update") {
+        const result = await updateKmLog(deps.db, logIdParam, logInput, vars);
+        if (sendChangeError(res, result)) return;
+        hadLocation = result.ok && hasLocation(result.before);
+      } else {
+        logId = await addKmLog(deps.db, logInput, vars);
       }
+
+      // 7. Mapa: nowa lokalizacja albo zmiana/usunięcie poprzedniej.
+      if ((mapLat != null && mapLng != null) || hadLocation) await enqueueMapRebuild(deps.db);
 
       res.status(200).json({ok: true, logId});
     } catch (err: any) {

@@ -147,7 +147,7 @@ describe("km.rebuildMapData — źródło współrzędnych", () => {
 
 // ─── POST /api/km/log/add: lokalizacja wymagana (od 12.10.2026) ──────────────────
 
-async function runAddLog(db: FakeFirestore, body: Record<string, any>) {
+async function runAddLog(db: FakeFirestore, body: Record<string, any>, path = "/api/km/log/add", uid = "u1") {
   const out: {status: number; body: any} = {status: 0, body: null};
   const res: any = {
     status(s: number) {
@@ -160,7 +160,7 @@ async function runAddLog(db: FakeFirestore, body: Record<string, any>) {
     },
   };
   let inner: Promise<void> = Promise.resolve();
-  await handleKmAddLog({method: "POST", body} as any, res, {
+  await handleKmAddLog({method: "POST", body, path} as any, res, {
     db: db as any,
     sendPreflight: () => false,
     requireAllowedHost: () => true,
@@ -168,7 +168,7 @@ async function runAddLog(db: FakeFirestore, body: Record<string, any>) {
     corsHandler: (_req: any, _res: any, next: () => Promise<void>) => {
       inner = next();
     },
-    requireIdToken: async () => ({decoded: {uid: "u1", email: "u1@x.pl"}}),
+    requireIdToken: async () => ({decoded: {uid, email: `${uid}@x.pl`}}),
     memberRoleKeys: ["rola_czlonek"],
   } as any);
   await inner;
@@ -222,6 +222,100 @@ describe("kmAddLog — tor / basen bez kilometrów", () => {
     }
     const byType = (await logs(db)).map((l) => [l.waterType, l.km]).sort();
     expect(byType).toEqual([["pool", 0], ["sea", 7.5], ["track", 0], ["track", 0]]);
+  });
+});
+
+describe("kmAddLog — role z prawem zapisu", () => {
+  it("kursant zapisuje wpis z formularza kursanta; sympatyk dostaje 403", async () => {
+    const db = addLogDb();
+    await db.collection("users_active").doc("k1").set({role_key: "rola_kursant", email: "k1@x.pl"});
+    await db.collection("users_active").doc("s1").set({role_key: "rola_sympatyk", email: "s1@x.pl"});
+    const kursantBody = {date: "2026-09-01", waterType: "lowlands", placeName: "Kurs – Radunia", eventId: "ev1", eventName: "Kurs", km: 0, hoursOnWater: 0, capsizeRolls: {kabina: 1, rolka: 0, dziubek: 0}, source: "kursant_form"};
+    const ok = await runAddLog(db, kursantBody, "/api/km/log/add", "k1");
+    expect(ok.status).toBe(200);
+    expect((await logs(db)).map((l) => [l.uid, l.pointsTotal])).toEqual([["k1", 1]]);
+    const denied = await runAddLog(db, kursantBody, "/api/km/log/add", "s1");
+    expect(denied.status).toBe(403);
+    expect(denied.body.code).toBe("forbidden");
+  });
+});
+
+describe("kmAddLog — edycja i usuwanie własnych wpisów", () => {
+  const editDb = () => {
+    const db = addLogDb();
+    (db as any).collection("users_active").doc("u2").set({role_key: "rola_czlonek", email: "u2@x.pl"});
+    return db;
+  };
+  const stats = async (db: FakeFirestore, uid = "u1") => (await db.collection("km_user_stats").doc(uid).get()).data() as any;
+  const add = async (db: FakeFirestore, extra: Record<string, any> = {}) => {
+    const r = await runAddLog(db, {...baseLog, placeId: "pWithLL", placeName: "Radunia", ...extra});
+    expect(r.status).toBe(200);
+    return r.body.logId as string;
+  };
+
+  it("edycja: wpis zastąpiony, punkty przeliczone, statystyki = różnica (także zmiana roku)", async () => {
+    const db = editDb();
+    const keep = await add(db, {date: "2026-09-02", km: 10, hoursOnWater: 2});
+    const id = await add(db, {date: "2026-09-01", km: 5, hoursOnWater: 1, capsizeRolls: {kabina: 1, rolka: 0, dziubek: 0}});
+    expect(keep).not.toBe(id);
+    const before = await stats(db);
+    expect(before.allTimeKm).toBe(15);
+    expect(before.allTimePoints).toBe(1);
+
+    const r = await runAddLog(db, {...baseLog, logId: id, placeId: "pWithLL", placeName: "Radunia", date: "2025-06-01", km: 7.5, hoursOnWater: 3, capsizeRolls: {kabina: 0, rolka: 2, dziubek: 0}}, "/api/km/log/update");
+    expect(r.status).toBe(200);
+    expect(r.body.logId).toBe(id);
+    const log = (await db.collection("km_logs").doc(id).get()).data() as any;
+    expect(log).toMatchObject({km: 7.5, hoursOnWater: 3, year: 2025, pointsTotal: 1, sourceType: "runtime"});
+    expect((await logs(db)).length).toBe(2);
+
+    const after = await stats(db);
+    expect(after).toMatchObject({allTimeKm: 17.5, allTimeHours: 5, allTimePoints: 1, allTimeLogs: 2, allTimeCapsizeKabina: 0, allTimeCapsizeRolka: 2});
+    expect(after.years["2026"]).toEqual({km: 10, hours: 2, days: 1, points: 0, logs: 1});
+    expect(after.years["2025"]).toEqual({km: 7.5, hours: 3, days: 1, points: 1, logs: 1});
+  });
+
+  it("usuwanie: wpis znika, statystyki pomniejszone, pusty rok usunięty z years", async () => {
+    const db = editDb();
+    await add(db, {date: "2026-09-02", km: 10});
+    const id = await add(db, {date: "2025-05-01", km: 4, capsizeRolls: {kabina: 0, rolka: 0, dziubek: 1}});
+    const r = await runAddLog(db, {logId: id}, "/api/km/log/delete");
+    expect(r.status).toBe(200);
+    expect((await db.collection("km_logs").doc(id).get()).exists).toBe(false);
+    const st = await stats(db);
+    expect(st).toMatchObject({allTimeKm: 10, allTimeLogs: 1, allTimePoints: 0, allTimeCapsizeDziubek: 0});
+    expect(Object.keys(st.years)).toEqual(["2026"]);
+  });
+
+  it("cudzy wpis → 403 forbidden; wpis z archiwum → 403 historical; brak → 404; bez logId → 400", async () => {
+    const db = editDb();
+    const id = await add(db);
+    await db.collection("km_logs").doc("hist_r1").set({uid: "u1", sourceType: "historical", km: 9, year: 2012, date: "2012-01-01"});
+
+    const foreign = await runAddLog(db, {logId: id}, "/api/km/log/delete", "u2");
+    expect(foreign.status).toBe(403);
+    expect(foreign.body.code).toBe("forbidden");
+    const foreignEdit = await runAddLog(db, {...baseLog, logId: id, placeId: "pWithLL", placeName: "Radunia"}, "/api/km/log/update", "u2");
+    expect(foreignEdit.body.code).toBe("forbidden");
+
+    expect((await runAddLog(db, {logId: "hist_r1"}, "/api/km/log/delete")).body.code).toBe("historical");
+    expect((await runAddLog(db, {logId: "nope"}, "/api/km/log/delete")).status).toBe(404);
+    expect((await runAddLog(db, {}, "/api/km/log/delete")).status).toBe(400);
+    expect((await runAddLog(db, {...baseLog, placeId: "pWithLL", placeName: "Radunia"}, "/api/km/log/update")).status).toBe(400);
+    // nic nie zostało zmienione
+    expect((await db.collection("km_logs").doc(id).get()).exists).toBe(true);
+    expect((await stats(db)).allTimeLogs).toBe(1);
+  });
+
+  it("edycja przechodzi tę samą walidację co dodawanie (tor → km = 0, góry bez trudności → 400)", async () => {
+    const db = editDb();
+    const id = await add(db, {km: 12});
+    const bad = await runAddLog(db, {...baseLog, logId: id, waterType: "mountains", placeId: "pWithLL", placeName: "Radunia"}, "/api/km/log/update");
+    expect(bad.body.code).toBe("difficulty_required");
+    const ok = await runAddLog(db, {...baseLog, logId: id, waterType: "track", km: 12, placeId: "pWithLL", placeName: "Radunia"}, "/api/km/log/update");
+    expect(ok.status).toBe(200);
+    expect(((await db.collection("km_logs").doc(id).get()).data() as any).km).toBe(0);
+    expect((await stats(db)).allTimeKm).toBe(0);
   });
 });
 

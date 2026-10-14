@@ -17,6 +17,8 @@ import { formatPoints } from "/core/format_utils.js";
 import { isUrlOnly } from "/core/text_format.js";
 
 const KM_ADD_LOG_URL = "/api/km/log/add";
+const KM_UPDATE_LOG_URL = "/api/km/log/update";
+const KM_DELETE_LOG_URL = "/api/km/log/delete";
 const KM_MY_LOGS_URL = "/api/km/logs";
 const KM_MY_STATS_URL = "/api/km/stats";
 const KM_RANKINGS_URL = "/api/km/rankings";
@@ -139,6 +141,12 @@ function rankMedal(rank) {
   if (rank === 2) return "🥈";
   if (rank === 3) return "🥉";
   return `${rank}.`;
+}
+
+// „2026-10-12” → „12.10.2026”
+function fmtDatePl(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : "—";
 }
 
 function infoTip(text) {
@@ -338,6 +346,11 @@ function loadEventIdsWithLogs(ctx) {
   }
   return eventIdsWithLogsPromise;
 }
+
+// Edycja wpisu: lista „Moje wpisy” odkłada tu wpis i przełącza na zakładkę formularza,
+// który przy renderze go odbiera (jednorazowo). kmFlash = komunikat do pokazania po powrocie.
+let kmEditLog = null;
+let kmFlash = null;
 
 function invalidateKmCaches() {
   invalidatePlacesDict();
@@ -583,9 +596,17 @@ function renderKursantFormView(inner, ctx) {
 
 function renderFormView(inner, ctx, moduleId) {
   const today = todayIso();
+  const editing = kmEditLog;
+  kmEditLog = null;
+  const submitLabel = editing ? "Zapisz zmiany" : "Dodaj";
 
   inner.innerHTML = `
     <div class="kmFormSection">
+      ${editing ? `
+        <div class="kmEditBanner" role="status">
+          <span class="kmEditBannerIcon" aria-hidden="true">✏️</span>
+          <span>Edytujesz wpis z <b>${esc(fmtDatePl(editing.date))}</b> · ${esc(editing.placeName || "—")}</span>
+        </div>` : ""}
       <form id="kmAddForm" class="kmForm" novalidate>
 
         <div class="formRow" data-field="date">
@@ -716,7 +737,7 @@ function renderFormView(inner, ctx, moduleId) {
         <div id="kmFormSuccess" class="successMsg" hidden></div>
 
         <div class="kmFormButtons">
-          <button type="submit" id="kmSubmitBtn" class="kmBigBtn approveBtn">Dodaj</button>
+          <button type="submit" id="kmSubmitBtn" class="kmBigBtn approveBtn">${submitLabel}</button>
           <button type="button" id="kmCancelBtn" class="kmBigBtn rejectBtn">Anuluj</button>
         </div>
       </form>
@@ -941,6 +962,8 @@ function renderFormView(inner, ctx, moduleId) {
     .then(data => {
       const events = data?.events || [];
       events.forEach(ev => {
+        // Edycja: impreza wpisu mogła już zostać dodana do listy (starsza niż 30 dni).
+        if ([...eventSelect.options].some(o => o.value === ev.id)) return;
         const opt = document.createElement("option");
         opt.value = ev.id;
         opt.dataset.eventName = ev.name;
@@ -981,8 +1004,12 @@ function renderFormView(inner, ctx, moduleId) {
     okEl.hidden = true;
   }
 
-  // Anuluj = porzuć wpisywane dane (formularz wraca do stanu początkowego).
+  const goToMyStats = () => import("/core/router.js").then(({ setHash }) => setHash(moduleId, "my-stats"));
+
+  // Anuluj = porzuć wpisywane dane (formularz wraca do stanu początkowego);
+  // przy edycji — powrót do listy wpisów bez zapisu.
   inner.querySelector("#kmCancelBtn").addEventListener("click", () => {
+    if (editing) { goToMyStats(); return; }
     resetForm();
     inner.querySelector(".kmFormSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -1074,9 +1101,10 @@ function renderFormView(inner, ctx, moduleId) {
 
     try {
       const resp = await apiPostJson({
-        url: KM_ADD_LOG_URL,
+        url: editing ? KM_UPDATE_LOG_URL : KM_ADD_LOG_URL,
         idToken: ctx.idToken,
         body: {
+          ...(editing ? { logId: editing.logId } : {}),
           date,
           waterType,
           placeName,
@@ -1098,6 +1126,11 @@ function renderFormView(inner, ctx, moduleId) {
 
       if (resp?.ok) {
         invalidateKmCaches(); // wpis mógł dodać miejsce do słownika i wpis do imprezy
+        if (editing) {
+          kmFlash = "Zmiany zapisane! Statystyki i ranking przeliczone.";
+          goToMyStats();
+          return;
+        }
         resetForm();
         setOk("Aktywność zapisana! Punkty obliczone i dodane do Twojego rankingu.");
       } else {
@@ -1109,9 +1142,45 @@ function renderFormView(inner, ctx, moduleId) {
       else setErr("Nie zapisano: " + (err?.message || String(err)));
     } finally {
       btn.disabled = false;
-      btn.textContent = "Dodaj";
+      btn.textContent = submitLabel;
     }
   });
+
+  if (editing) prefillForm(editing);
+
+  // Wypełnia formularz danymi edytowanego wpisu (te same pola, co przy dodawaniu).
+  function prefillForm(log) {
+    form.date.value = String(log.date || "").slice(0, 10);
+    const wt = inner.querySelector(`input[name="waterType"][value="${CSS.escape(log.waterType || "")}"]`);
+    if (wt) {
+      wt.checked = true;
+      updateDifficultyField();
+      updatePoolMode();
+      const lvl = log.difficulty && inner.querySelector(`input[name="difficulty"][value="${CSS.escape(log.difficulty)}"]`);
+      if (lvl) lvl.checked = true;
+    }
+    form.placeName.value = log.placeName || "";
+    placeIdHidden.value = log.placeId || "";
+    if (typeof log.lat === "number" && typeof log.lng === "number") setLocationDisplay(log.lat, log.lng, "");
+    const dec = (v) => (Number(v) > 0 ? String(v).replace(".", ",") : "0");
+    form.km.value = dec(log.km);
+    form.hoursOnWater.value = dec(log.hoursOnWater);
+    form.kabina.value = String(log.capsizeRolls?.kabina || 0);
+    form.rolka.value = String(log.capsizeRolls?.rolka || 0);
+    form.dziubek.value = String(log.capsizeRolls?.dziubek || 0);
+    if (log.eventId) {
+      if (![...eventSelect.options].some(o => o.value === log.eventId)) {
+        const opt = document.createElement("option");
+        opt.value = log.eventId;
+        opt.dataset.eventName = log.eventName || "";
+        opt.textContent = log.eventName || "Impreza";
+        eventSelect.appendChild(opt);
+      }
+      eventSelect.value = log.eventId;
+    }
+    form.sectionDescription.value = log.sectionDescription || "";
+    form.note.value = log.note || "";
+  }
 }
 
 // ─── WIDOK: rankingi ──────────────────────────────────────────────────────────
@@ -1343,7 +1412,7 @@ function monthsChartHtml(months, type, year) {
   return `<svg class="kmChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`${t.label} w kolejnych miesiącach ${year}`)}">${bars}</svg>`;
 }
 
-async function renderMyStatsView(inner, ctx) {
+async function renderMyStatsView(inner, ctx, moduleId) {
   inner.innerHTML = `
     <div id="kmStatsTop">${spinnerHtml("Pobieranie statystyk…")}</div>
     <div class="kmStatsLogs">
@@ -1352,7 +1421,10 @@ async function renderMyStatsView(inner, ctx) {
     </div>
   `;
   const topEl = inner.querySelector("#kmStatsTop");
-  const logsPromise = renderMyLogsView(inner.querySelector("#kmStatsLogs"), ctx);
+  const logsPromise = renderMyLogsView(inner.querySelector("#kmStatsLogs"), ctx, {
+    moduleId,
+    onChanged: () => renderMyStatsView(inner, ctx, moduleId),
+  });
 
   let data;
   try {
@@ -1435,7 +1507,10 @@ async function renderMyStatsView(inner, ctx) {
 
 // ─── WIDOK: moje wpisy ─────────────────────────────────────────────────────────
 
-async function renderMyLogsView(inner, ctx) {
+// opts.moduleId — gdy podany (widok członka), przy wpisach z aplikacji są przyciski Edytuj / Usuń.
+// opts.onChanged — odświeżenie widoku nadrzędnego (statystyki) po usunięciu wpisu.
+async function renderMyLogsView(inner, ctx, opts = {}) {
+  const editable = Boolean(opts.moduleId);
   inner.innerHTML = spinnerHtml("Pobieranie wpisów…");
 
   let data;
@@ -1478,8 +1553,10 @@ async function renderMyLogsView(inner, ctx) {
     ].filter(Boolean).join(" · ");
     const yearRow = year !== lastYear ? `<tr class="kmLogsYear"><td colspan="5">${esc(year || "—")}</td></tr>` : "";
     lastYear = year;
+    // Edytuj / Usuń w osobnym wierszu na całą szerokość — przyciski przy przeciwnych krawędziach.
+    const withActions = editable && !isHistorical && log.logId;
     return yearRow + `
-      <tr class="${isHistorical ? "kmLogHistorical" : ""}">
+      <tr class="${isHistorical ? "kmLogHistorical" : ""}${withActions ? " kmLogHasActions" : ""}">
         <td class="kmLogDate">${dayMonth}</td>
         <td class="kmLogPlaceCell">
           <span class="kmLogPlace">${esc(log.placeName || "—")}</span>
@@ -1492,6 +1569,15 @@ async function renderMyLogsView(inner, ctx) {
         <td class="kmNum">${log.hoursOnWater ? fmtNum(log.hoursOnWater) : "–"}</td>
         <td class="kmNum kmLogPts">${log.pointsTotal ? formatPoints(log.pointsTotal) : "–"}</td>
       </tr>
+      ${withActions ? `
+        <tr class="kmLogActionsRow">
+          <td colspan="5">
+            <span class="kmLogActions">
+              <button type="button" class="kmLogBtn primary" data-km-edit="${esc(log.logId)}">Edytuj</button>
+              <button type="button" class="kmLogBtn ghostDanger" data-km-del="${esc(log.logId)}">Usuń</button>
+            </span>
+          </td>
+        </tr>` : ""}
     `;
   }).join("");
 
@@ -1508,6 +1594,52 @@ async function renderMyLogsView(inner, ctx) {
       </div>
     </div>
   `;
+
+  if (kmFlash) {
+    const flash = document.createElement("div");
+    inner.prepend(flash);
+    showKmSaved(flash, kmFlash);
+    kmFlash = null;
+  }
+
+  if (!editable) return;
+  const byId = new Map(logs.map(l => [l.logId, l]));
+
+  inner.querySelectorAll("[data-km-edit]").forEach(b => b.addEventListener("click", () => {
+    kmEditLog = byId.get(b.dataset.kmEdit) || null;
+    if (!kmEditLog) return;
+    import("/core/router.js").then(({ setHash }) => setHash(opts.moduleId, "form"));
+  }));
+
+  // Usuwanie dwuetapowe: pierwsze kliknięcie uzbraja przycisk („Na pewno?”), drugie usuwa.
+  // Bez okna confirm() — na telefonie łatwo je przeklikać, a w aplikacji nie ma innych.
+  inner.querySelectorAll("[data-km-del]").forEach(b => b.addEventListener("click", async () => {
+    if (!b.classList.contains("kmArmed")) {
+      inner.querySelectorAll(".kmArmed").forEach(x => { x.classList.remove("kmArmed"); x.textContent = "Usuń"; });
+      b.classList.add("kmArmed");
+      b.textContent = "Na pewno?";
+      clearTimeout(b.kmDisarm);
+      b.kmDisarm = setTimeout(() => { b.classList.remove("kmArmed"); b.textContent = "Usuń"; }, 4000);
+      return;
+    }
+    clearTimeout(b.kmDisarm);
+    b.disabled = true;
+    b.textContent = "Usuwanie…";
+    try {
+      await apiPostJson({ url: KM_DELETE_LOG_URL, idToken: ctx.idToken, body: { logId: b.dataset.kmDel } });
+      invalidateKmCaches();
+      kmFlash = "Wpis usunięty. Statystyki i ranking przeliczone.";
+      if (opts.onChanged) opts.onChanged();
+      else renderMyLogsView(inner, ctx, opts);
+    } catch (err) {
+      b.disabled = false;
+      b.classList.remove("kmArmed");
+      b.textContent = "Usuń";
+      const cell = b.closest("td");
+      cell.querySelector(".kmLogErr")?.remove();
+      cell.insertAdjacentHTML("beforeend", `<span class="kmLogErr errorMsg">${esc(err?.message || "Nie udało się usunąć wpisu.")}</span>`);
+    }
+  }));
 }
 
 // ─── WIDOK: imprezy ────────────────────────────────────────────────────────────
@@ -1817,7 +1949,7 @@ async function renderKmView(viewEl, routeId, ctx, moduleId) {
   } else if (activeTab === "events") {
     await renderEventStatsView(inner, ctx);
   } else if (activeTab === "my-stats") {
-    await renderMyStatsView(inner, ctx);
+    await renderMyStatsView(inner, ctx, moduleId);
   } else if (activeTab === "my-logs") {
     await renderMyLogsView(inner, ctx);
   } else if (activeTab === "kursant-ranking") {

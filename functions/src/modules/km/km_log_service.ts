@@ -57,20 +57,19 @@ export type KmLog = KmLogInput & {
  * Dodaje nowy wpis aktywności do km_logs i aktualizuje km_user_stats.
  * Zwraca ID nowo zapisanego dokumentu.
  */
-export async function addKmLog(
-  db: FirebaseFirestore.Firestore,
+function buildLogDoc(
+  logId: string,
   input: KmLogInput,
-  vars: KmVars
-): Promise<string> {
+  vars: KmVars,
+  createdAt: FirebaseFirestore.Timestamp
+): {logDoc: Record<string, any>; inc: StatsIncrement} {
   const year = getYearFromDate(input.date);
   const seasonKey = getSeasonKeyFromDate(input.date);
   const scoring = computePoints(input.capsizeRolls, vars);
-
-  const logRef = db.collection("km_logs").doc();
   const now = admin.firestore.Timestamp.now();
 
   const logDoc: Record<string, any> = {
-    logId: logRef.id,
+    logId,
     sourceType: "runtime",
     schemaVersion: 1,
     isPartial: false,
@@ -93,7 +92,7 @@ export async function addKmLog(
     scoringVersion: scoring.scoringVersion,
     visibility: "visible",
     hoursOnWater: input.hoursOnWater,
-    createdAt: now,
+    createdAt,
     updatedAt: now,
   };
 
@@ -108,24 +107,115 @@ export async function addKmLog(
   if (input.eventId) logDoc.eventId = input.eventId;
   if (input.eventName) logDoc.eventName = input.eventName;
 
+  return {logDoc, inc: logToIncrement(logDoc)};
+}
+
+/** Wkład wpisu w agregaty (te same pola co przy zapisie). */
+function logToIncrement(log: any): StatsIncrement {
+  const rolls = log.capsizeRolls || {};
+  return {
+    km: Number(log.km) || 0,
+    hoursOnWater: Number(log.hoursOnWater) || 0,
+    pointsTotal: Number(log.pointsTotal) || 0,
+    date: String(log.date || ""),
+    year: Number(log.year) || getYearFromDate(String(log.date || "")),
+    seasonKey: String(log.seasonKey || log.year || ""),
+    capsizeRolls: {
+      kabina: Math.max(0, parseInt(rolls.kabina || "0", 10)),
+      rolka: Math.max(0, parseInt(rolls.rolka || "0", 10)),
+      dziubek: Math.max(0, parseInt(rolls.dziubek || "0", 10)),
+    },
+    scoringVersion: String(log.scoringVersion || ""),
+  };
+}
+
+export async function addKmLog(
+  db: FirebaseFirestore.Firestore,
+  input: KmLogInput,
+  vars: KmVars
+): Promise<string> {
+  const logRef = db.collection("km_logs").doc();
+  const {logDoc, inc} = buildLogDoc(logRef.id, input, vars, admin.firestore.Timestamp.now());
   const statsRef = db.collection("km_user_stats").doc(input.uid);
 
   await db.runTransaction(async (tx) => {
     const statsSnap = await tx.get(statsRef); // READ przed zapisami
     tx.set(logRef, logDoc);
-    updateUserStatsWriteInTransaction(tx, statsRef, statsSnap, input.uid, input.userSnapshot, {
-      km: input.km,
-      hoursOnWater: input.hoursOnWater ?? 0,
-      pointsTotal: scoring.pointsTotal,
-      date: input.date,
-      year,
-      seasonKey,
-      capsizeRolls: logDoc.capsizeRolls,
-      scoringVersion: scoring.scoringVersion,
-    });
+    const existing = statsSnap.exists ? (statsSnap.data() as any) : null;
+    tx.set(statsRef, computeStatsUpdate(existing, input.uid, input.userSnapshot, inc, 1), {merge: false});
   });
 
   return logRef.id;
+}
+
+export type KmLogChangeResult =
+  | {ok: true; before: any}
+  | {ok: false; code: "not_found" | "forbidden" | "historical"};
+
+/**
+ * Wczytuje wpis w transakcji i sprawdza, czy użytkownik może go zmienić:
+ * tylko własny wpis i nie z archiwum (archiwum nadpisuje import z arkusza).
+ */
+async function readOwnLog(
+  tx: FirebaseFirestore.Transaction,
+  logRef: FirebaseFirestore.DocumentReference,
+  uid: string
+): Promise<{ok: true; log: any} | {ok: false; code: "not_found" | "forbidden" | "historical"}> {
+  const snap = await tx.get(logRef);
+  if (!snap.exists) return {ok: false, code: "not_found"};
+  const log = snap.data() as any;
+  if (log.uid !== uid) return {ok: false, code: "forbidden"};
+  if (log.sourceType === "historical") return {ok: false, code: "historical"};
+  return {ok: true, log};
+}
+
+/**
+ * Edycja własnego wpisu: dokument zastępowany nowym (createdAt zachowane, punkty
+ * przeliczone), agregaty = stare − wkład starego wpisu + wkład nowego (jedna transakcja).
+ */
+export async function updateKmLog(
+  db: FirebaseFirestore.Firestore,
+  logId: string,
+  input: KmLogInput,
+  vars: KmVars
+): Promise<KmLogChangeResult> {
+  const logRef = db.collection("km_logs").doc(logId);
+  const statsRef = db.collection("km_user_stats").doc(input.uid);
+  return db.runTransaction(async (tx) => {
+    const own = await readOwnLog(tx, logRef, input.uid);
+    if (!own.ok) return own;
+    const statsSnap = await tx.get(statsRef);
+    const {logDoc, inc} = buildLogDoc(logId, input, vars, own.log.createdAt || admin.firestore.Timestamp.now());
+    const existing = statsSnap.exists ? (statsSnap.data() as any) : null;
+    const without = computeStatsUpdate(existing, input.uid, input.userSnapshot, logToIncrement(own.log), -1);
+    tx.set(logRef, logDoc);
+    tx.set(statsRef, computeStatsUpdate(without, input.uid, input.userSnapshot, inc, 1), {merge: false});
+    return {ok: true as const, before: own.log};
+  });
+}
+
+/** Usunięcie własnego wpisu: dokument kasowany, agregaty pomniejszone o jego wkład. */
+export async function deleteKmLog(
+  db: FirebaseFirestore.Firestore,
+  uid: string,
+  logId: string
+): Promise<KmLogChangeResult> {
+  const logRef = db.collection("km_logs").doc(logId);
+  const statsRef = db.collection("km_user_stats").doc(uid);
+  return db.runTransaction(async (tx) => {
+    const own = await readOwnLog(tx, logRef, uid);
+    if (!own.ok) return own;
+    const statsSnap = await tx.get(statsRef);
+    const existing = statsSnap.exists ? (statsSnap.data() as any) : null;
+    const snapshot = {
+      displayName: existing?.displayName || own.log.userSnapshot?.displayName || "",
+      nickname: existing?.nickname || own.log.userSnapshot?.nickname || "",
+      email: own.log.userSnapshot?.email || "",
+    };
+    tx.delete(logRef);
+    tx.set(statsRef, computeStatsUpdate(existing, uid, snapshot, logToIncrement(own.log), -1), {merge: false});
+    return {ok: true as const, before: own.log};
+  });
 }
 
 type StatsIncrement = {
@@ -140,18 +230,28 @@ type StatsIncrement = {
 };
 
 /**
- * Zapisuje km_user_stats/{uid} w ramach istniejącej transakcji.
- * Snapshot musi być odczytany wcześniej (przed jakimikolwiek zapisami w tej transakcji).
+ * Nowy stan km_user_stats/{uid} po dodaniu (sign = 1) albo odjęciu (sign = −1) wkładu wpisu.
+ * Wartości zaokrąglane do 0,01 i nie schodzą poniżej 0; rok bez wpisów znika z mapy years.
  */
-function updateUserStatsWriteInTransaction(
-  tx: FirebaseFirestore.Transaction,
-  statsRef: FirebaseFirestore.DocumentReference,
-  statsSnap: FirebaseFirestore.DocumentSnapshot,
+export function computeStatsUpdate(
+  existing: any,
   uid: string,
   userSnapshot: {displayName: string; nickname: string; email: string},
-  inc: StatsIncrement
-): void {
-  const existing = statsSnap.exists ? (statsSnap.data() as any) : null;
+  incRaw: StatsIncrement,
+  sign: 1 | -1
+): Record<string, any> {
+  const inc: StatsIncrement = {
+    ...incRaw,
+    km: sign * incRaw.km,
+    hoursOnWater: sign * incRaw.hoursOnWater,
+    pointsTotal: sign * incRaw.pointsTotal,
+    capsizeRolls: {
+      kabina: sign * incRaw.capsizeRolls.kabina,
+      rolka: sign * incRaw.capsizeRolls.rolka,
+      dziubek: sign * incRaw.capsizeRolls.dziubek,
+    },
+  };
+  const n = (v: number) => Math.max(0, Math.round(v * 100) / 100);
 
   const currentYearKey = String(new Date().getFullYear());
   const incYear = String(inc.year);
@@ -198,32 +298,32 @@ function updateUserStatsWriteInTransaction(
     uid,
     displayName: userSnapshot.displayName,
     nickname: userSnapshot.nickname,
-    allTimeKm: (base.allTimeKm || 0) + inc.km,
-    allTimeHours: (base.allTimeHours || 0) + inc.hoursOnWater,
-    allTimeDays: (base.allTimeDays || 0) + 1,
-    allTimePoints: (base.allTimePoints || 0) + inc.pointsTotal,
-    allTimeLogs: (base.allTimeLogs || 0) + 1,
-    allTimeCapsizeKabina: (base.allTimeCapsizeKabina || 0) + inc.capsizeRolls.kabina,
-    allTimeCapsizeRolka: (base.allTimeCapsizeRolka || 0) + inc.capsizeRolls.rolka,
-    allTimeCapsizeDziubek: (base.allTimeCapsizeDziubek || 0) + inc.capsizeRolls.dziubek,
-    scoringVersion: inc.scoringVersion,
+    allTimeKm: n((base.allTimeKm || 0) + inc.km),
+    allTimeHours: n((base.allTimeHours || 0) + inc.hoursOnWater),
+    allTimeDays: n((base.allTimeDays || 0) + sign),
+    allTimePoints: n((base.allTimePoints || 0) + inc.pointsTotal),
+    allTimeLogs: n((base.allTimeLogs || 0) + sign),
+    allTimeCapsizeKabina: n((base.allTimeCapsizeKabina || 0) + inc.capsizeRolls.kabina),
+    allTimeCapsizeRolka: n((base.allTimeCapsizeRolka || 0) + inc.capsizeRolls.rolka),
+    allTimeCapsizeDziubek: n((base.allTimeCapsizeDziubek || 0) + inc.capsizeRolls.dziubek),
+    scoringVersion: inc.scoringVersion || base.scoringVersion || "",
     updatedAt: admin.firestore.Timestamp.now(),
   };
 
   // Aktualizuj agregaty roku/sezonu tylko jeśli wpis dotyczy bieżącego roku
   if (isCurrentYear) {
     update.yearKey = activeYear;
-    update.yearKm = (isSameYear ? (base.yearKm || 0) : 0) + inc.km;
-    update.yearHours = (isSameYear ? (base.yearHours || 0) : 0) + inc.hoursOnWater;
-    update.yearDays = (isSameYear ? (base.yearDays || 0) : 0) + 1;
-    update.yearPoints = (isSameYear ? (base.yearPoints || 0) : 0) + inc.pointsTotal;
-    update.yearLogs = (isSameYear ? (base.yearLogs || 0) : 0) + 1;
+    update.yearKm = n((isSameYear ? (base.yearKm || 0) : 0) + inc.km);
+    update.yearHours = n((isSameYear ? (base.yearHours || 0) : 0) + inc.hoursOnWater);
+    update.yearDays = n((isSameYear ? (base.yearDays || 0) : 0) + sign);
+    update.yearPoints = n((isSameYear ? (base.yearPoints || 0) : 0) + inc.pointsTotal);
+    update.yearLogs = n((isSameYear ? (base.yearLogs || 0) : 0) + sign);
     update.seasonKey = activeSeason;
-    update.seasonKm = (isSameSeason ? (base.seasonKm || 0) : 0) + inc.km;
-    update.seasonHours = (isSameSeason ? (base.seasonHours || 0) : 0) + inc.hoursOnWater;
-    update.seasonDays = (isSameSeason ? (base.seasonDays || 0) : 0) + 1;
-    update.seasonPoints = (isSameSeason ? (base.seasonPoints || 0) : 0) + inc.pointsTotal;
-    update.seasonLogs = (isSameSeason ? (base.seasonLogs || 0) : 0) + 1;
+    update.seasonKm = n((isSameSeason ? (base.seasonKm || 0) : 0) + inc.km);
+    update.seasonHours = n((isSameSeason ? (base.seasonHours || 0) : 0) + inc.hoursOnWater);
+    update.seasonDays = n((isSameSeason ? (base.seasonDays || 0) : 0) + sign);
+    update.seasonPoints = n((isSameSeason ? (base.seasonPoints || 0) : 0) + inc.pointsTotal);
+    update.seasonLogs = n((isSameSeason ? (base.seasonLogs || 0) : 0) + sign);
   } else {
     // Wpis historyczny (inny rok) — nie nadpisuj bieżącego roku
     update.yearKey = base.yearKey || activeYear;
@@ -244,18 +344,17 @@ function updateUserStatsWriteInTransaction(
   const existingYears: Record<string, any> = (existing?.years as any) || {};
   const incYearStr = String(inc.year);
   const yearEntry = existingYears[incYearStr] || {km: 0, hours: 0, days: 0, points: 0, logs: 0};
-  update.years = {
-    ...existingYears,
-    [incYearStr]: {
-      km: Math.round(((yearEntry.km || 0) + inc.km) * 100) / 100,
-      hours: Math.round(((yearEntry.hours || 0) + inc.hoursOnWater) * 100) / 100,
-      days: (yearEntry.days || 0) + 1,
-      points: Math.round(((yearEntry.points || 0) + inc.pointsTotal) * 100) / 100,
-      logs: (yearEntry.logs || 0) + 1,
-    },
+  const newYear = {
+    km: n((yearEntry.km || 0) + inc.km),
+    hours: n((yearEntry.hours || 0) + inc.hoursOnWater),
+    days: n((yearEntry.days || 0) + sign),
+    points: n((yearEntry.points || 0) + inc.pointsTotal),
+    logs: n((yearEntry.logs || 0) + sign),
   };
+  update.years = {...existingYears, [incYearStr]: newYear};
+  if (newYear.logs <= 0) delete update.years[incYearStr];
 
-  tx.set(statsRef, update, {merge: false});
+  return update;
 }
 
 /**

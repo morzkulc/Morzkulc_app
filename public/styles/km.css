@@ -1227,3 +1227,43 @@
 @media (max-width: 480px) {
   .kmSaved { padding: 12px 14px; font-size: 15px; gap: 10px; }
 }
+
+/* Moje wpisy: Edytuj (niebieski .primary) / Usuń (czerwony .ghostDanger) przy każdym wpisie */
+/* Wiersz akcji pod wpisem: Edytuj przy lewej, Usuń przy prawej krawędzi (jak najdalej od siebie). */
+.kmTable tr.kmLogHasActions td { border-bottom: none; padding-bottom: 4px; }
+.kmTable tr.kmLogActionsRow td { padding-top: 0; }
+.kmLogActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kmLogBtn {
+  min-width: 96px;
+  min-height: 38px; /* wygodny cel dotyku na telefonie */
+  padding: 6px 14px;
+  white-space: nowrap;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.kmLogBtn.kmArmed {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.kmLogErr { display: block; margin-top: 6px; font-size: 12.5px; }
+
+/* Formularz w trybie edycji */
+.kmEditBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--primary);
+  border-left-width: 5px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  font-size: 15px;
+  line-height: 1.35;
+}
+.kmEditBannerIcon { flex: none; font-size: 20px; }

@@ -467,6 +467,20 @@
         }
       },
       {
+        "source": "/api/km/log/update",
+        "function": {
+          "functionId": "kmAddLog",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/km/log/delete",
+        "function": {
+          "functionId": "kmAddLog",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/km/logs",
         "function": {
           "functionId": "kmMyLogs",
