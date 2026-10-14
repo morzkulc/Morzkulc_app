@@ -68,6 +68,7 @@ import {handleKmAdminMergePlaces} from "./api/kmAdminMergePlacesHandler";
 import {handleGetKursInfo} from "./api/getKursInfoHandler";
 import {handleGetKursantStats} from "./api/getKursantStatsHandler";
 import {handleGetKlubInfo} from "./api/getKlubInfoHandler";
+import {handleGetPublicSite} from "./api/getPublicSiteHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
 import {handleEventInterestToggle} from "./api/eventInterestToggleHandler";
@@ -1755,6 +1756,14 @@ export const getKlubInfo = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     adminRoleKeys,
   });
+});
+
+/**
+ * GET /api/public/site (PUBLICZNY, bez logowania)
+ * Dane dla statycznej wizytówki klubu (www.morzkulc.pg.gda.pl): imprezy, zarząd, socjale.
+ */
+export const publicSiteInfo = onRequest({invoker: "private"}, async (req, res) => {
+  return handleGetPublicSite(req, res, {db, requireAllowedHost, setCorsHeaders});
 });
 
 export const userWeight = onRequest({invoker: "private"}, async (req, res) => {

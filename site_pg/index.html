@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKK Morzkulc — klub kajakowy</title>
+<link rel="icon" href="img/icon.png">
+<meta name="description" content="Studencki Klub Kajakowy Morzkulc z Gdańska — kurs kajakarstwa morskiego i górskiego, spływy, wyjazdy. Aktualności i zapisy na www.morzkulc.pl.">
+<style>
+  :root {
+    --bg: #f5f8fb; --card: #ffffff; --text: #14212e; --muted: #5a6b7c;
+    --line: #dbe4ec; --accent: #0b6fa4; --accent-ink: #ffffff; --soft: #e7f1f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e151c; --card: #16212b; --text: #e6edf3; --muted: #9db0c1;
+      --line: #263543; --accent: #4fb3e8; --accent-ink: #06202e; --soft: #1b2b38;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  a { color: var(--accent); }
+  img { display: block; max-width: 100%; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  .hero { position: relative; min-height: min(72vh, 560px); display: flex; align-items: flex-end; color: #fff;
+    background: #0b3d5c url("img/hero.jpg") center / cover no-repeat; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,20,32,.15) 0%, rgba(4,20,32,.75) 100%); }
+  .hero .wrap { position: relative; width: 100%; text-shadow: 0 1px 12px rgba(0,0,0,.55); padding-top: 48px; padding-bottom: 48px; }
+  .logo { width: clamp(150px, 24vw, 220px); height: auto; margin-bottom: 20px; background: #fff; border-radius: 16px; padding: 10px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  .footLogo { width: 72px; height: auto; background: #fff; border-radius: 10px; padding: 5px 7px; border: 1px solid var(--line); }
+  footer .wrap { display: flex; align-items: center; gap: 14px; }
+  .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.1; }
+  .hero p { margin: 0 0 24px; font-size: clamp(1.05rem, 2.6vw, 1.3rem); max-width: 36em; opacity: .95; }
+
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+    font-weight: 600; text-decoration: none; }
+  .btn:hover { filter: brightness(1.08); }
+  .logoLink { display: inline-block; border-radius: 16px; }
+  .logoLink:hover .logo { transform: translateY(-2px); }
+  .logo { transition: transform .15s; }
+  .heroSocial { display: flex; gap: 12px; }
+  .heroSocial a { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%;
+    background: #fff; color: #0b3d5c; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+  .heroSocial a:hover { transform: translateY(-2px); }
+  .heroSocial svg { width: 24px; height: 24px; fill: currentColor; }
+
+  section { padding: 56px 0 8px; }
+  h2 { margin: 0 0 20px; font-size: 1.7rem; line-height: 1.2; }
+  .lead { color: var(--muted); margin: -8px 0 24px; max-width: 42em; }
+
+  .grid2 { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .card .ph { aspect-ratio: 16 / 10; background: var(--soft) center / cover no-repeat; }
+  .card .body { padding: 18px 20px 22px; }
+  .card h3 { margin: 0 0 8px; font-size: 1.25rem; }
+  .card p { margin: 0; color: var(--muted); }
+
+  .cta { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  .events { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+  .events li { display: grid; grid-template-columns: 8.5em 1fr; gap: 4px 16px; padding: 14px 20px; border-top: 1px solid var(--line); }
+  .events li:first-child { border-top: 0; }
+  .events .d { font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .events .n { font-weight: 600; }
+  .events .l { grid-column: 2; color: var(--muted); font-size: .95rem; }
+  .muted { color: var(--muted); }
+
+  .gallery { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); grid-auto-rows: clamp(140px, 22vw, 230px); grid-auto-flow: dense; }
+  .gallery div { border-radius: 12px; background: var(--soft) center / cover no-repeat; }
+  .gallery .tall { grid-row: span 2; }
+  .gallery .wide { grid-column: span 2; }
+
+  .people { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .person { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .person .f { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .person .nm { font-weight: 600; margin: 2px 0 4px; }
+  .person a { word-break: break-all; }
+
+  .social { display: flex; gap: 12px; flex-wrap: wrap; }
+  .social a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); text-decoration: none; font-weight: 600; }
+  .social svg { width: 20px; height: 20px; fill: currentColor; }
+
+  footer { margin-top: 56px; padding: 28px 0 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
+
+  @media (max-width: 560px) {
+    section { padding-top: 40px; }
+    .events li { grid-template-columns: 1fr; }
+    .events .l { grid-column: 1; }
+    .gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <a class="logoLink" href="https://www.morzkulc.pl" title="www.morzkulc.pl"><img class="logo" src="img/logo.jpg" alt="SKK Morzkulc — przejdź na www.morzkulc.pl" width="281" height="180"></a>
+    <h1>SKK Morzkulc</h1>
+    <p>Studencki Klub Kajakowy z Gdańska. Pływamy po morzu, rzekach nizinnych i górskich — i uczymy tego innych.</p>
+    <div class="heroSocial" id="heroSocial"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="kurs">
+    <h2>Kurs kajakarstwa</h2>
+    <p class="lead">Co roku wiosną prowadzimy kurs dla początkujących i tych, którzy chcą pływać lepiej. Wykłady, zajęcia na basenie i weekendowe wyjazdy z doświadczoną kadrą klubu.</p>
+    <div class="grid2">
+      <article class="card">
+        <div class="ph" style="background-image:url('img/morze.jpg')"></div>
+        <div class="body">
+          <h3>Kajakarstwo morskie</h3>
+          <p>Pływanie po Zatoce i Bałtyku: technika wiosłowania, nawigacja, bezpieczeństwo na otwartej wodzie, ratownictwo i wyjście z kajaka na głębokiej wodzie.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="ph" style="background-image:url('img/gory.jpg')"></div>
+        <div class="body">
+          <h3>Kajakarstwo górskie</h3>
+          <p>Rzeki górskie i tor: czytanie wody, wjazdy i wyjazdy z nurtu, eskimoska, asekuracja. Od spokojnych odcinków po trudniejszą białą wodę.</p>
+        </div>
+      </article>
+    </div>
+    <div class="cta">
+      <a class="btn" id="kursLink" href="https://www.morzkulc.pl">Szczegóły i zapisy</a>
+      <span class="muted">Informacje o najbliższej edycji publikujemy na www.morzkulc.pl i w mediach społecznościowych.</span>
+    </div>
+  </section>
+
+  <section id="imprezy">
+    <h2>Najbliższe wyjazdy i imprezy</h2>
+    <ul class="events" id="events">
+      <li><span class="muted">Wczytywanie kalendarza…</span></li>
+    </ul>
+    <p class="muted" style="margin-top:12px">Pełny kalendarz: <a href="https://calendar.google.com/calendar/embed?src=c_b7a89b63cba2049cf65b547fe1d8ef546f9d4ae1695925214b609a97f72c0908%40group.calendar.google.com&amp;ctz=Europe%2FWarsaw" rel="noopener">kalendarz klubowy Google</a>.</p>
+  </section>
+
+  <section id="galeria" aria-label="Zdjęcia">
+    <div class="gallery">
+      <div class="tall" style="background-image:url('img/foto1.jpg')"></div>
+      <div style="background-image:url('img/foto6.jpg')"></div>
+      <div style="background-image:url('img/foto7.jpg')"></div>
+      <div class="wide" style="background-image:url('img/foto8.jpg')"></div>
+      <div style="background-image:url('img/foto9.jpg')"></div>
+      <div style="background-image:url('img/foto3.jpg')"></div>
+      <div style="background-image:url('img/foto4.jpg')"></div>
+      <div style="background-image:url('img/foto2.jpg')"></div>
+      <div style="background-image:url('img/foto5.jpg')"></div>
+      <div style="background-image:url('img/foto10.jpg')"></div>
+    </div>
+  </section>
+
+  <section id="kontakt">
+    <h2>Kontakt</h2>
+    <div class="people" id="zarzad">
+      <div class="person">
+        <div class="f">Zarząd klubu</div>
+        <a href="mailto:prezes@morzkulc.pl">prezes@morzkulc.pl</a>
+      </div>
+    </div>
+    <p id="adres" class="muted" style="margin-top:16px"></p>
+  </section>
+
+  <section id="social">
+    <h2>Bądź na bieżąco</h2>
+    <div class="social" id="socialLinks">
+      <a href="https://www.morzkulc.pl">www.morzkulc.pl</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap"><img class="footLogo" src="img/logo.jpg" alt="" width="281" height="180"><span>SKK Morzkulc · <a href="https://www.morzkulc.pl">www.morzkulc.pl</a></span></div>
+</footer>
+
+<script>
+(function () {
+  var API = "https://app.morzkulc.pl/api/public/site";
+  var ICONS = {
+    facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.8c0-.9.3-1.5 1.6-1.5h1.7V4.4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.4H7.6V14h2.8v8h3.1z"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.3A4.7 4.7 0 1 0 12 16.7 4.7 4.7 0 0 0 12 7.3zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm6-7.9a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0zM21.9 8c-.1-1.6-.4-3-1.6-4.2S17.6 2.2 16 2.1C14.4 2 9.6 2 8 2.1c-1.6.1-3 .4-4.2 1.6S2.2 6.4 2.1 8C2 9.6 2 14.4 2.1 16c.1 1.6.4 3 1.6 4.2s2.6 1.5 4.2 1.6c1.6.1 6.4.1 8 0 1.6-.1 3-.4 4.2-1.6s1.5-2.6 1.6-4.2c.1-1.6.1-6.4 0-8zm-2.1 9.7a3.3 3.3 0 0 1-1.8 1.8c-1.3.5-4.3.4-5.7.4s-4.4.1-5.7-.4a3.3 3.3 0 0 1-1.8-1.8c-.5-1.3-.4-4.3-.4-5.7s-.1-4.4.4-5.7A3.3 3.3 0 0 1 6.6 4.5c1.3-.5 4.3-.4 5.7-.4s4.4-.1 5.7.4a3.3 3.3 0 0 1 1.8 1.8c.5 1.3.4 4.3.4 5.7s.1 4.4-.4 5.7z"/></svg>'
+  };
+  var LABELS = {facebook: "Facebook", instagram: "Instagram"};
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function plDate(iso) {
+    var p = String(iso || "").split("-");
+    return p.length === 3 ? p[2] + "." + p[1] + "." + p[0] : "";
+  }
+  function range(a, b) {
+    if (!b || a === b) return plDate(a);
+    var pa = a.split("-"), pb = b.split("-");
+    if (pa[0] === pb[0] && pa[1] === pb[1]) return pa[2] + "–" + plDate(b);
+    if (pa[0] === pb[0]) return pa[2] + "." + pa[1] + "–" + plDate(b);
+    return plDate(a) + " – " + plDate(b);
+  }
+  function safeUrl(u) {
+    return /^https:\/\//i.test(String(u || "")) ? u : "";
+  }
+
+  function renderEvents(list) {
+    var ul = document.getElementById("events");
+    ul.textContent = "";
+    if (!list.length) {
+      ul.appendChild(el("li", null)).appendChild(el("span", "muted", "Brak zaplanowanych imprez — zajrzyj wkrótce."));
+      return;
+    }
+    list.forEach(function (ev) {
+      var li = el("li");
+      li.appendChild(el("span", "d", range(ev.startDate, ev.endDate)));
+      li.appendChild(el("span", "n", ev.name));
+      if (ev.location) li.appendChild(el("span", "l", ev.location));
+      ul.appendChild(li);
+    });
+  }
+
+  function renderZarzad(list, adres) {
+    if (list.length) {
+      var box = document.getElementById("zarzad");
+      box.textContent = "";
+      list.forEach(function (p) {
+        var d = el("div", "person");
+        d.appendChild(el("div", "f", p.funkcja));
+        d.appendChild(el("div", "nm", p.name));
+        var a = el("a", null, p.mailbox);
+        a.href = "mailto:" + p.mailbox;
+        d.appendChild(a);
+        box.appendChild(d);
+      });
+    }
+    if (adres) document.getElementById("adres").textContent = "Siedziba klubu: " + adres;
+  }
+
+  function socialLink(k, url) {
+    var a = el("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.innerHTML = ICONS[k];
+    return a;
+  }
+
+  // Socjale: ikony w nagłówku + przyciski z podpisem w sekcji „Bądź na bieżąco”.
+  function renderSocial(social) {
+    var box = document.getElementById("socialLinks");
+    var hero = document.getElementById("heroSocial");
+    ["facebook", "instagram"].forEach(function (k) {
+      var url = safeUrl(social[k]);
+      if (!url) return;
+      var icon = socialLink(k, url);
+      icon.setAttribute("aria-label", LABELS[k]);
+      icon.title = LABELS[k];
+      hero.appendChild(icon);
+      var a = socialLink(k, url);
+      a.appendChild(document.createTextNode(LABELS[k]));
+      box.appendChild(a);
+    });
+    var kurs = safeUrl(social.kurs);
+    if (kurs) document.getElementById("kursLink").href = kurs;
+  }
+
+  function fail() {
+    var ul = document.getElementById("events");
+    ul.textContent = "";
+    ul.appendChild(el("li")).appendChild(el("span", "muted", "Nie udało się wczytać listy — skorzystaj z pełnego kalendarza poniżej."));
+  }
+
+  if (!window.fetch) { fail(); return; }
+  fetch(API, {mode: "cors", credentials: "omit"})
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (data) {
+      renderEvents(data.events || []);
+      renderZarzad(data.zarzad || [], data.adres || "");
+      renderSocial(data.social || {});
+    })
+    .catch(fail);
+})();
+</script>
+</body>
+</html>

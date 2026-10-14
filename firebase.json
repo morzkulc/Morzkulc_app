@@ -563,6 +563,13 @@
           "functionId": "getKlubInfo",
           "region": "us-central1"
         }
+      },
+      {
+        "source": "/api/public/site",
+        "function": {
+          "functionId": "publicSiteInfo",
+          "region": "us-central1"
+        }
       }
     ]
   },
