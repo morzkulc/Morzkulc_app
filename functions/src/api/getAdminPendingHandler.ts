@@ -80,6 +80,8 @@ type GearSyncReport = {
     skippedNoId: number;
     skippedNotReal: number;
     scrapped: number;
+    photosKeptSameModel: Array<{id: string; number: string; activeId: string; model: string}>;
+    photosArchiveErrors: Array<{id: string; number: string; message: string}>;
   }>;
   error: string | null;
 };
@@ -475,7 +477,9 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
               totals: (d?.totals as Record<string, number>) || {},
               perCategory: Array.isArray(d?.perCategory) ?
                 d.perCategory
-                  .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.duplicateNumber) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0)
+                  .filter((c: any) => Number(c?.duplicateId) > 0 || Number(c?.duplicateNumber) > 0 || Number(c?.skippedNoId) > 0 || Number(c?.skippedNotReal) > 0 ||
+                    (Array.isArray(c?.photosKeptSameModel) && c.photosKeptSameModel.length > 0) ||
+                    (Array.isArray(c?.photosArchiveErrors) && c.photosArchiveErrors.length > 0))
                   .map((c: any) => ({
                     key: norm(c?.key),
                     label: norm(c?.label),
@@ -493,6 +497,12 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
                     skippedNoId: Number(c?.skippedNoId ?? 0),
                     skippedNotReal: Number(c?.skippedNotReal ?? 0),
                     scrapped: Number(c?.scrapped ?? 0),
+                    photosKeptSameModel: Array.isArray(c?.photosKeptSameModel) ? c.photosKeptSameModel.map((x: any) => ({
+                      id: norm(x?.id), number: norm(x?.number), activeId: norm(x?.activeId), model: norm(x?.model),
+                    })) : [],
+                    photosArchiveErrors: Array.isArray(c?.photosArchiveErrors) ? c.photosArchiveErrors.map((x: any) => ({
+                      id: norm(x?.id), number: norm(x?.number), message: norm(x?.message),
+                    })) : [],
                   })) :
                 [],
               error: null,

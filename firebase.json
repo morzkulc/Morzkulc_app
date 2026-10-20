@@ -21,7 +21,8 @@
   "firestore": {
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
+  "hosting": [{
+    "target": "app",
     "predeploy": ["node scripts/bump-sw-cache.js"],
     "public": "public",
     "ignore": [
@@ -573,6 +574,16 @@
       }
     ]
   },
+  {
+    "target": "kurs",
+    "public": "site_kurs",
+    "ignore": ["README.md", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "headers": [
+      { "source": "**/*.html", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },
+      { "source": "/img/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    ]
+  }],
   "emulators": {
     "functions": { "port": 5001 },
     "firestore": { "port": 8080 },

@@ -4,6 +4,24 @@
     "dev": "sprzet-skk-morzkulc",
     "prod": "morzkulc-e9df7"
   },
-  "targets": {},
+  "targets": {
+    "morzkulc-e9df7": {
+      "hosting": {
+        "app": [
+          "morzkulc-e9df7"
+        ],
+        "kurs": [
+          "morzkulc-kurs"
+        ]
+      }
+    },
+    "sprzet-skk-morzkulc": {
+      "hosting": {
+        "app": [
+          "sprzet-skk-morzkulc"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

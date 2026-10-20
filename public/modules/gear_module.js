@@ -4,7 +4,7 @@ import { storageFetchKayakCoverUrl, storageFetchKayakGalleryUrls, storageFetchLi
 import { createReservationCalendar } from "/core/date_range_calendar.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
 import { formatDatePL as formatDatePLFromIso, buildKayakTitle } from "/core/format_utils.js";
-import { formatCockpitSize } from "/core/cockpit_size.js";
+import { formatCockpitSize, formatSprayskirtSize } from "/core/cockpit_size.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -48,10 +48,10 @@ function loadPhotoWithOverlay({ imgEl, overlayEl, url, bumpGen, currentGen, onEr
 
 const GEAR_TABS = [
   { id: "kayaks", label: "Kajaki" },
+  { id: "sprayskirts", label: "Fartuchy" },
   { id: "paddles", label: "Wiosła" },
   { id: "lifejackets", label: "Kamizelki" },
   { id: "helmets", label: "Kaski" },
-  { id: "sprayskirts", label: "Fartuchy" },
   { id: "throwbags", label: "Rzutki" },
 ];
 
@@ -180,7 +180,9 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
                       "np. Diesel, Wave sport, niebieski, creek..." :
                       isPaddlesView ?
                         "np. TNP, symetryczne, żółty, 195..." :
-                        "np. Werner, L, czerwony, pool..."
+                        isSprayskirtsView ?
+                          "np. R4, neopren, Peak UK..." :
+                          "np. Werner, L, czerwony, pool..."
                   )}"
                 />
                 <button id="gearReloadBtn" type="button" class="gearReloadBtn ghost" title="Odśwież" aria-label="Odśwież">${refreshIconSvg()}</button>
@@ -270,6 +272,27 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
                       <option value="">Wszystkie</option>
                       <option value="pool">Tylko basenowe</option>
                       <option value="nopool">Bez basenowych</option>
+                    </select>
+                  </div>
+                </div>
+              ` : isSprayskirtsView ? `
+                <div class="gearFiltersBar">
+                  <label class="gearCheckPill" for="filterFavoritesOnly">
+                    <input id="filterFavoritesOnly" type="checkbox" />
+                    <span>Ulubione</span>
+                  </label>
+
+                  <div class="gearTypeFilter">
+                    <label for="filterDeckSelect">Deck</label>
+                    <select id="filterDeckSelect">
+                      <option value="">Wszystkie</option>
+                    </select>
+                  </div>
+
+                  <div class="gearTypeFilter">
+                    <label for="filterChimneySelect">Komin</label>
+                    <select id="filterChimneySelect">
+                      <option value="">Wszystkie</option>
                     </select>
                   </div>
                 </div>
@@ -452,6 +475,8 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
       const weightErrEl = viewEl.querySelector("#gearWeightErr");
       const filterSizeSelectEl = viewEl.querySelector("#filterSizeSelect");
       const filterPaddlePoolSelectEl = viewEl.querySelector("#filterPaddlePoolSelect");
+      const filterDeckSelectEl = viewEl.querySelector("#filterDeckSelect");
+      const filterChimneySelectEl = viewEl.querySelector("#filterChimneySelect");
 
       const bundleModalEl = viewEl.querySelector("#gearBundleModal");
       const bundleTitleEl = viewEl.querySelector("#gearBundleTitle");
@@ -902,6 +927,33 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         }
       };
 
+      // Fartuchy: opcje Deck (R2–R6) i Komin (XS–XL, regulowany) tylko z wartości
+      // obecnych na liście, w stałej kolejności rozmiarów (nie alfabetycznie).
+      const populateSprayskirtFilters = (items) => {
+        const fill = (el, keys, order, labelFor) => {
+          if (!el) return;
+          const currentValue = String(el.value || "");
+          const present = order.filter((k) => keys.has(k));
+          el.innerHTML = `
+            <option value="">Wszystkie</option>
+            ${present.map((k) => `<option value="${escapeAttr(k)}">${escapeHtml(labelFor(k))}</option>`).join("")}
+          `;
+          if (present.includes(currentValue)) el.value = currentValue;
+        };
+        fill(
+          filterDeckSelectEl,
+          new Set(items.map(sprayskirtDeckKey)),
+          [...SPRAYSKIRT_DECK_ORDER, SPRAYSKIRT_NO_DECK],
+          (k) => (k === SPRAYSKIRT_NO_DECK ? "regulowany / bez wymiaru" : k)
+        );
+        fill(
+          filterChimneySelectEl,
+          new Set(items.map((it) => sprayskirtChimneyKey(it) || SPRAYSKIRT_NO_CHIMNEY)),
+          [...SPRAYSKIRT_CHIMNEY_ORDER, SPRAYSKIRT_NO_CHIMNEY],
+          (k) => (k === SPRAYSKIRT_NO_CHIMNEY ? "brak danych" : k)
+        );
+      };
+
       const populateSizeFilter = (items) => {
         if (!filterSizeSelectEl) return;
 
@@ -952,7 +1004,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         const presentTerrainKeys = [...new Set(items.flatMap((it) => it?.terrainCategories || []))];
 
         listEl.innerHTML = `
-          ${presentTerrainKeys.length ? terrainCategoryLegendHtml(presentTerrainKeys) : ""}
+          ${isSprayskirtsView ? sprayskirtLegendHtml() : isKayaksView ? kayakDeckLegendHtml() : presentTerrainKeys.length ? terrainCategoryLegendHtml(presentTerrainKeys) : ""}
           <div class="gearGrid">
             ${cards}
           </div>
@@ -1090,6 +1142,11 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
               if (poolFilter === "pool" && !isPool) return false;
               if (poolFilter === "nopool" && isPool) return false;
             }
+          } else if (isSprayskirtsView) {
+            const deck = String(filterDeckSelectEl?.value || "");
+            if (deck && sprayskirtDeckKey(item) !== deck) return false;
+            const chimney = String(filterChimneySelectEl?.value || "");
+            if (chimney && (sprayskirtChimneyKey(item) || SPRAYSKIRT_NO_CHIMNEY) !== chimney) return false;
           } else {
             const selectedSize = normalizeSimpleValue(filterSizeSelectEl?.value || "");
             if (selectedSize) {
@@ -1146,7 +1203,8 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
                 item?.meta?.featherAngle,
                 item?.meta?.buoyancy,
                 item?.meta?.material,
-                item?.meta?.tunnelSize
+                item?.meta?.tunnelSize,
+                sprayskirtSizeLabel(item)
               ];
 
           const haystack = hay
@@ -1156,7 +1214,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           return haystack.includes(q);
         });
 
-        render(filtered);
+        render(isSprayskirtsView ? sortSprayskirts(filtered) : filtered);
       };
 
       const loadFavorites = async (category) => {
@@ -1191,6 +1249,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
 
           populateTypeFilter(all);
           populateSizeFilter(all);
+          if (isSprayskirtsView) populateSprayskirtFilters(all);
           applyFilter();
         } catch (e) {
           setErr(
@@ -1690,6 +1749,8 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         if (e.target?.closest("[data-gear-weight-close]")) closeWeightModal();
       });
       if (filterSizeSelectEl) filterSizeSelectEl.addEventListener("change", applyFilter);
+      if (filterDeckSelectEl) filterDeckSelectEl.addEventListener("change", applyFilter);
+      if (filterChimneySelectEl) filterChimneySelectEl.addEventListener("change", applyFilter);
       if (filterPaddlePoolSelectEl) filterPaddlePoolSelectEl.addEventListener("change", applyFilter);
 
       await loadGear(activeTab);
@@ -1737,12 +1798,15 @@ function renderKayakCard(k, isFav = false, canUserReserve = true) {
           </div>
 
           <div class="gearHeadSide">
-            <button
-              class="gearFavBtn${isFav ? " active" : ""}"
-              type="button"
-              data-gear-fav="${escapeAttr(String(k?.id || ""))}"
-              aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
-            >${heartSvg(isFav)}</button>
+            <div class="kayakHeadBadges">
+              ${kayakDeckBadgeHtml(k)}
+              <button
+                class="gearFavBtn${isFav ? " active" : ""}"
+                type="button"
+                data-gear-fav="${escapeAttr(String(k?.id || ""))}"
+                aria-label="${isFav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}"
+              >${heartSvg(isFav)}</button>
+            </div>
           </div>
         </div>
 
@@ -1955,18 +2019,128 @@ function renderPaddleCard(item, isFav = false, canUserReserve = true) {
   `;
 }
 
-// Wiersz 2 karty rzutki/fartucha: "Materiał: X · Rozmiar: Y · Rozmiar komina: Z"
-// — pola specyficzne dla fartuchów (rzutki ich nie mają w arkuszu, więc dla nich
-// ten wiersz zawsze wychodzi pusty i znika całkowicie).
+// Wiersz 2 karty rzutki/fartucha: "Materiał: Neopren · Wymiar: 70x44" — pola
+// specyficzne dla fartuchów (rzutki ich nie mają w arkuszu, więc dla nich ten wiersz
+// zawsze wychodzi pusty i znika całkowicie). Deck R i komin fartucha są na
+// plakietkach (sprayskirtBadgesHtml), więc tu tylko surowy wymiar z arkusza.
 function buildGenericGearLine2(item) {
   const material = String(item?.meta?.material || "").trim();
   const size = String(item?.size || "").trim();
-  const tunnelSize = String(item?.meta?.tunnelSize || "").trim();
   const parts = [];
   if (material) parts.push(`Materiał: ${material}`);
-  if (size) parts.push(`Rozmiar: ${size}`);
-  if (tunnelSize) parts.push(`Rozmiar komina: ${tunnelSize}`);
+  if (size) parts.push(item?.gearCategory === "sprayskirts" ? `Wymiar: ${size}` : `Rozmiar: ${size}`);
   return parts.join(" · ");
+}
+
+// Fartuch: kolumna "Rozmiar" = wymiary "dł x szer" (cm) zmierzone na płasko →
+// deck R2–R6 regułą Palma +1 rozmiar (formatSprayskirtSize, zasada użytkownika
+// 17.10.2026). Tekst bez wymiarów (np. "regulowany") wraca bez zmian.
+function sprayskirtSizeLabel(item) {
+  const size = String(item?.size || "").trim();
+  if (!size || item?.gearCategory !== "sprayskirts") return size;
+  return formatSprayskirtSize(size);
+}
+
+// ── Fartuchy: deck R, komin, materiał (plakietki, filtry, sortowanie) ──────────
+const SPRAYSKIRT_DECK_ORDER = ["R2", "R3", "R4", "R5", "R6"];
+const SPRAYSKIRT_CHIMNEY_ORDER = ["XS", "S", "S/M", "M", "M/L", "L", "XL", "regulowany"];
+// Wartość opcji filtra dla fartuchów bez decka R / bez komina.
+const SPRAYSKIRT_NO_DECK = "_none";
+const SPRAYSKIRT_NO_CHIMNEY = "_none";
+// Stałe kolory decków (jak kolory terenu) — mają się rzucać w oczy i wyglądać
+// tak samo w obu motywach.
+const SPRAYSKIRT_DECK_COLORS = { R2: "#7b5cd6", R3: "#1f7fd1", R4: "#14a06a", R5: "#e07b1a", R6: "#d23b3b" };
+
+function sprayskirtDeckKey(item) {
+  const m = sprayskirtSizeLabel(item).match(/^R\d/);
+  return m ? m[0] : SPRAYSKIRT_NO_DECK;
+}
+
+// Arkusz ma zapis mieszany ("xl", "Regulowany") → jeden klucz: XS–XL wielkimi
+// literami, "regulowany" małymi. Pusty → "".
+function sprayskirtChimneyKey(item) {
+  const s = String(item?.meta?.tunnelSize || "").trim();
+  if (!s) return "";
+  return /^regul/i.test(s) ? "regulowany" : s.toUpperCase();
+}
+
+function orderIndex(order, value) {
+  const i = order.indexOf(value);
+  return i === -1 ? order.length : i;
+}
+
+// Sortowanie listy fartuchów: deck (R2→R6, potem bez decka), komin (XS→XL,
+// regulowany, brak), numer.
+function sortSprayskirts(items) {
+  return [...items].sort((a, b) =>
+    orderIndex(SPRAYSKIRT_DECK_ORDER, sprayskirtDeckKey(a)) - orderIndex(SPRAYSKIRT_DECK_ORDER, sprayskirtDeckKey(b)) ||
+    orderIndex(SPRAYSKIRT_CHIMNEY_ORDER, sprayskirtChimneyKey(a)) - orderIndex(SPRAYSKIRT_CHIMNEY_ORDER, sprayskirtChimneyKey(b)) ||
+    (Number(a?.number) || 9999) - (Number(b?.number) || 9999)
+  );
+}
+
+// Ikonka materiału: neopren (kropla — nie przepuszcza wody) / materiałowy (splot).
+function sprayskirtMaterialIconHtml(item) {
+  const material = String(item?.meta?.material || "").trim();
+  const a = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+  if (/neopren/i.test(material)) {
+    return `<span class="skirtMatBadge skirtMatNeoprene" title="Neopren"><svg ${a}><path d="M12 3Q18 10.5 18 14.5a6 6 0 01-12 0Q6 10.5 12 3z"/></svg></span>`;
+  }
+  if (material) {
+    return `<span class="skirtMatBadge skirtMatFabric" title="Materiałowy (${escapeAttr(material)})"><svg ${a}><path d="M4 8h16M4 12h16M4 16h16M8 4v16M12 4v16M16 4v16"/></svg></span>`;
+  }
+  return "";
+}
+
+function sprayskirtBadgesHtml(item) {
+  const deck = sprayskirtDeckKey(item);
+  const chimney = sprayskirtChimneyKey(item);
+  const deckBadge = deck !== SPRAYSKIRT_NO_DECK
+    ? `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[deck]};" title="Deck ${escapeAttr(sprayskirtSizeLabel(item))}">${deck}</span>`
+    : "";
+  const chimneyBadge = chimney
+    ? `<span class="skirtChimneyBadge" title="Rozmiar komina"><small>komin</small>${escapeHtml(chimney === "regulowany" ? "reg." : chimney)}</span>`
+    : "";
+  return `<span class="skirtBadges">${sprayskirtMaterialIconHtml(item)}${deckBadge}${chimneyBadge}</span>`;
+}
+
+// Plakietka decka R na karcie kajaka (ten sam kolor co fartuch w tym rozmiarze,
+// żeby od razu było widać, który fartuch pasuje). Kanadyjki i kajaki bez wymiaru
+// kokpitu — bez plakietki.
+function kayakDeckBadgeHtml(k) {
+  if (String(k?.type || "").toLowerCase().includes("kanad")) return "";
+  const label = formatCockpitSize(k?.cockpit);
+  const m = label.match(/^R\d/);
+  if (!m) return "";
+  return `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[m[0]]};" title="Kokpit ${escapeAttr(label)} — pasuje fartuch ${m[0]}">${m[0]}</span>`;
+}
+
+function deckLegendBadgesHtml() {
+  return SPRAYSKIRT_DECK_ORDER.map((d) =>
+    `<span class="skirtDeckBadge skirtDeckBadgeSm" style="background:${SPRAYSKIRT_DECK_COLORS[d]};">${d}</span>`
+  ).join("");
+}
+
+// Legenda nad listą kajaków: kolory plakietek R (te same co na fartuchach).
+function kayakDeckLegendHtml() {
+  return `
+    <div class="terrainLegend skirtLegend">
+      <span class="terrainLegendItem"><span class="skirtLegendDecks">${deckLegendBadgesHtml()}</span> wielkość kokpitu</span>
+    </div>
+  `;
+}
+
+// Legenda nad listą fartuchów (ten sam kontener co legenda terenu).
+function sprayskirtLegendHtml() {
+  const decks = deckLegendBadgesHtml();
+  return `
+    <div class="terrainLegend skirtLegend">
+      <span class="terrainLegendItem">${sprayskirtMaterialIconHtml({ meta: { material: "Neopren" } })} neopren</span>
+      <span class="terrainLegendItem">${sprayskirtMaterialIconHtml({ meta: { material: "materiałowy" } })} materiałowy</span>
+      <span class="terrainLegendItem"><span class="skirtLegendDecks">${decks}</span> wielkość kokpitu</span>
+      <span class="terrainLegendItem"><span class="skirtChimneyBadge"><small>komin</small>M</span> rozmiar komina</span>
+    </div>
+  `;
 }
 
 // Wiersz 3: kolor + uwagi, jeśli są.
@@ -2012,7 +2186,9 @@ function renderGenericGearCard(item, isFav = false, canUserReserve = true) {
           </div>
 
           <div class="gearHeadSide">
-            ${terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
+            ${category === "sprayskirts"
+              ? sprayskirtBadgesHtml(item)
+              : terrainCategoryBadgeHtml(item?.terrainCategories, { large: true })}
           </div>
         </div>
 
@@ -2307,7 +2483,7 @@ function gearTabIcon(id) {
 
 // ── Kategorie terenowe sprzętu (górskie/nizinne/torowo-morskie) ──────────────
 // Pole `terrainCategories` — TABLICA (backend: gearSyncAllFromSheet.ts, kolumna "Typ"
-// w arkuszu, wspólna dla kamizelek/wioseł/fartuchów; wiosła mogą mieć wartość złożoną
+// w arkuszu, wspólna dla kamizelek i wioseł; wiosła mogą mieć wartość złożoną
 // typu "Niziny / Góry" → 2 elementy) — wyświetlane jako plakietki (1 lub 2 oddzielone
 // "/") przy każdej pozycji + legenda na górze listy. Świadomie kolory NIE z palety
 // motywu (jasny/ciemny) — to stałe, rozpoznawalne kolory terenu, muszą wyglądać tak

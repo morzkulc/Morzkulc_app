@@ -7,6 +7,7 @@
 import {describe, it, expect} from "vitest";
 import {FakeFirestore} from "./helpers/fake_firestore";
 import {handleGetPublicSite} from "../src/api/getPublicSiteHandler";
+import {parseHarmonogram, kursDate} from "../src/modules/kurs/kurs_public";
 
 function seed() {
   return new FakeFirestore({
@@ -23,6 +24,20 @@ function seed() {
       facebook_url: {value: "https://facebook.com/morzkulc"},
       instagram_url: {value: "javascript:alert(1)"},
       stan_konta: {value: "1000"},
+    }}, {_docId: "vars_kurs", vars: {
+      cena_kursu: {value: 2300},
+      kurs_edycja: {value: 2027},
+      kurs_zadatek: {value: "950"},
+      kurs_cena_student: {value: ""},
+      kurs_zapisy_status: {value: "Otwarte"},
+      kurs_zapisy_do: {value: "28.02.2027"},
+      kurs_link_zapisu: {value: "javascript:alert(1)"},
+      kurs_kontakt_email: {value: "szkoleniowiec@morzkulc.pl"},
+      koniec_kursu: {value: "30.09"},
+      kabina_punkty: {value: 1},
+      harmonogram_02: {value: "2027-04-24/2027-04-25 | wyjazd | Wyjazd I | Ostrzyce"},
+      harmonogram_01: {value: "2027-03-04 | spotkanie | Spotkanie organizacyjne"},
+      harmonogram_03: {value: "zła linia"},
     }}],
     users_active: [
       {_docId: "anna", email: "anna@gmail.com", profile: {firstName: "Anna", lastName: "Nowak", phone: "500"}},
@@ -94,5 +109,40 @@ describe("publicSite", () => {
   it("OPTIONS → 204, POST → 405", async () => {
     expect((await run(seed(), "OPTIONS")).status).toBe(204);
     expect((await run(seed(), "POST")).status).toBe(405);
+  });
+
+  it("kurs: tylko pola z whitelisty, normalizacja, puste i niepoprawne pominięte, harmonogram posortowany", async () => {
+    const {body} = await run(seed());
+    expect(body.kurs).toEqual({
+      edycja: "2027",
+      cena: 2300,
+      zadatek: 950,
+      zapisyStatus: "otwarte",
+      zapisyDo: "2027-02-28",
+      kontaktEmail: "szkoleniowiec@morzkulc.pl",
+      harmonogram: [
+        {from: "2027-03-04", to: "", type: "spotkanie", name: "Spotkanie organizacyjne", place: ""},
+        {from: "2027-04-24", to: "2027-04-25", type: "wyjazd", name: "Wyjazd I", place: "Ostrzyce"},
+      ],
+    });
+  });
+
+  it("CORS: strona kursu dostaje ACAO", async () => {
+    const r = await run(seed(), "GET", "https://kurs.morzkulc.pl");
+    expect(r.headers["Access-Control-Allow-Origin"]).toBe("https://kurs.morzkulc.pl");
+  });
+});
+
+describe("kurs_public parsery", () => {
+  it("kursDate: ISO i dd.mm.rrrr, reszta pusta", () => {
+    expect(kursDate("2027-03-01")).toBe("2027-03-01");
+    expect(kursDate("1.3.2027")).toBe("2027-03-01");
+    expect(kursDate("30.09")).toBe("");
+  });
+  it("parseHarmonogram: odrzuca nieznany typ, złą datę i brak nazwy", () => {
+    expect(parseHarmonogram("2027-04-06 | basen | Basen 1 | Żabi Kruk")).toEqual({from: "2027-04-06", to: "", type: "basen", name: "Basen 1", place: "Żabi Kruk"});
+    expect(parseHarmonogram("2027-04-06 | impreza | X")).toBeNull();
+    expect(parseHarmonogram("2027-04-06/zle | wyjazd | X")).toBeNull();
+    expect(parseHarmonogram("2027-04-06 | wyjazd | ")).toBeNull();
   });
 });

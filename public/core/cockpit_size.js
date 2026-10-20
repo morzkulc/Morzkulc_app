@@ -1,33 +1,46 @@
-// Rozmiar kokpitu kajaka wg rozmiarówki fartuchów neoprenowych (R2–R5).
-// Wejście = kolumna "Kokpit" z arkusza kajaków w formacie "dł x szer" w cm
-// (np. "88x45", "92 x 50"). Czysta funkcja — testy: functions/test/cockpit_size.test.ts.
+// Rozmiar kokpitu / fartucha wg rozmiarówki fartuchów Palm (R2–R6).
+// Wejście = "dł x szer" w cm (np. "88x45", "92 x 50") — kolumna "Kokpit" kajaków
+// albo "Rozmiar" fartuchów. Czysta funkcja — testy: functions/test/cockpit_size.test.ts.
 
-// Zakresy wymiarów kokpitu (cm) dla każdego rozmiaru fartucha — standardowa
-// rozmiarówka producentów, nie parametr klubowy.
+// Rozmiarówka Palm (palm.equipment, karta Roanoke Deck): górne granice długości
+// i szerokości (cm) każdego rozmiaru. Przedziały liczymy jako [min, max) — wartość
+// na styku dwóch rozmiarów (np. długość 75) idzie do większego, zgodnie z zasadą
+// Palma „use the largest dimension”.
 const SPRAYSKIRT_SIZES = [
-  { code: "R2", lengthMin: 66, lengthMax: 75, widthMin: 40, widthMax: 44 },
-  { code: "R3", lengthMin: 75, lengthMax: 83, widthMin: 44, widthMax: 47 },
-  { code: "R4", lengthMin: 83, lengthMax: 89, widthMin: 47, widthMax: 50 },
-  { code: "R5", lengthMin: 89, lengthMax: 95, widthMin: 50, widthMax: 53 }
+  { code: "R2", lengthMax: 75, widthMax: 44 },
+  { code: "R3", lengthMax: 83, widthMax: 47 },
+  { code: "R4", lengthMax: 89, widthMax: 50 },
+  { code: "R5", lengthMax: 95, widthMax: 53 },
+  { code: "R6", lengthMax: 101, widthMax: 56 }
 ];
 
-function sizeIndexesFor(value, minKey, maxKey) {
-  const out = [];
-  SPRAYSKIRT_SIZES.forEach((s, i) => {
-    if (value >= s[minKey] && value <= s[maxKey]) out.push(i);
-  });
-  return out;
+// Poniżej R2 → R2, powyżej R6 → R6: każdy wymiar dostaje rozmiar (decyzja
+// użytkownika 17.10.2026 — „nie mogą być poza rozmiarem”).
+function sizeIndexFor(value, maxKey) {
+  const i = SPRAYSKIRT_SIZES.findIndex((s) => value < s[maxKey]);
+  return i === -1 ? SPRAYSKIRT_SIZES.length - 1 : i;
 }
 
 /**
- * Zwraca etykietę kokpitu do szczegółów kajaka:
- * - pusta kolumna → "brak danych",
- * - nieczytelny format → surowy tekst z arkusza,
- * - długość i szerokość wskazują ten sam rozmiar → "R4 (86x48)",
- * - wskazują różne rozmiary → zakres "R3–R4 (88x45)" (decyzja użytkownika 07.10.2026),
- * - wymiary poza rozmiarówką → "poza rozmiarówką R2–R5 (100x60)".
+ * Zwraca etykietę rozmiaru, np. "R4 (88x45)":
+ * - pusta wartość → "brak danych",
+ * - nieczytelny format (np. "regulowany") → surowy tekst,
+ * - rozmiar = większy z rozmiarów wskazanych przez długość i szerokość (reguła Palma).
  */
 export function formatCockpitSize(raw) {
+  return formatWithShift(raw, 0);
+}
+
+/**
+ * Fartuch: kolumna "Rozmiar" = wymiary zmierzone NA PŁASKO. Neopren się rozciąga,
+ * więc fartuch pasuje na kokpit o jeden rozmiar większy niż wychodzi z tabeli
+ * (płaskie R3 → kokpit R4; zasada użytkownika 17.10.2026). R6 zostaje R6.
+ */
+export function formatSprayskirtSize(raw) {
+  return formatWithShift(raw, 1);
+}
+
+function formatWithShift(raw, shift) {
   const text = String(raw ?? "").trim();
   if (!text) return "brak danych";
 
@@ -36,18 +49,7 @@ export function formatCockpitSize(raw) {
 
   const length = Number(m[1].replace(",", "."));
   const width = Number(m[2].replace(",", "."));
-  const dims = `${m[1]}x${m[2]}`;
-
-  const byLength = sizeIndexesFor(length, "lengthMin", "lengthMax");
-  const byWidth = sizeIndexesFor(width, "widthMin", "widthMax");
-  if (!byLength.length || !byWidth.length) return `poza rozmiarówką R2–R5 (${dims})`;
-
-  // Wspólny rozmiar wygrywa; bez wspólnego — rozpiętość od najmniejszego do
-  // największego wskazanego.
-  const common = byLength.filter((i) => byWidth.includes(i));
-  const picked = common.length ? common : [...byLength, ...byWidth];
-
-  const lo = SPRAYSKIRT_SIZES[Math.min(...picked)].code;
-  const hi = SPRAYSKIRT_SIZES[Math.max(...picked)].code;
-  return `${lo === hi ? lo : `${lo}–${hi}`} (${dims})`;
+  const idx = Math.max(sizeIndexFor(length, "lengthMax"), sizeIndexFor(width, "widthMax"));
+  const shifted = Math.min(idx + shift, SPRAYSKIRT_SIZES.length - 1);
+  return `${SPRAYSKIRT_SIZES[shifted].code} (${m[1]}x${m[2]})`;
 }

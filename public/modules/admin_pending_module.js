@@ -195,6 +195,22 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
               }
               html += `</ul>`;
             }
+            if (cat.photosKeptSameModel?.length) {
+              html += `<div class="hint" style="margin:4px 0;">Zdjęcia NIE przeniesione do archiwum — złomowana sztuka ma ten sam numer i model co aktywna (duplikat wiersza / zmiana ID albo wymiana na identyczny model). Jeśli to nowy egzemplarz, usuń stare zdjęcia ręcznie w Storage:</div>`;
+              html += `<ul style="margin:0;padding-left:18px;">`;
+              for (const x of cat.photosKeptSameModel) {
+                html += `<li style="font-size:13px;">nr <strong>${escapeHtml(x.number)}</strong> ${escapeHtml(x.model)}: złomowane ID ${escapeHtml(x.id)}, aktywne ID ${escapeHtml(x.activeId)}</li>`;
+              }
+              html += `</ul>`;
+            }
+            if (cat.photosArchiveErrors?.length) {
+              html += `<div class="hint" style="margin:4px 0;">Błąd przenoszenia zdjęć złomowanej sztuki do archiwum:</div>`;
+              html += `<ul style="margin:0;padding-left:18px;">`;
+              for (const x of cat.photosArchiveErrors) {
+                html += `<li style="font-size:13px;">nr <strong>${escapeHtml(x.number)}</strong> (ID ${escapeHtml(x.id)}): ${escapeHtml(x.message)}</li>`;
+              }
+              html += `</ul>`;
+            }
             const skips = [];
             if (cat.skippedNoId) skips.push(`bez ID: ${cat.skippedNoId}`);
             if (cat.skippedNotReal) skips.push(`niekompletne (brak numeru/producenta/modelu): ${cat.skippedNotReal}`);

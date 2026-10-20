@@ -1,47 +1,42 @@
-# Kajaki: rozmiary kokpitów (R2–R5)
+# Kajaki i fartuchy: rozmiary R (Palm)
 
-Dane z prod z 06.10.2026: aktywne kajaki (`gear_kayaks`, kolumna „Kokpit”, dł x szer w cm). Rozmiar liczony regułą z `public/core/cockpit_size.js`. Kanadyjki pominięte, zostają 53 kajaki.
+Stan po syncu 17.10.2026. Logika: `public/core/cockpit_size.js`.
 
-## Jeden rozmiar: 27 kajaków
+## Reguła (WDROŻONA 17.10)
 
-| Rozmiar | Liczba | Kajaki (nr) |
-|---|---|---|
-| R2 | 1 | 62 Dagger Dynamo |
-| R3 | 6 | 1 SeaLion, 5 i 7 SeaLion LV, 19 Prijon Canyon, 20 i 21 Prijon Canion |
-| R4 | 13 | 2 Diesel 80, 6 Necky Switch, 11 Ammo M, 29 Dagger GT, 36 Redline, 37 Pyranha 4-20, 44 Dagger MX, 53 Burn S, 56 Granate, 57 Diesel 70, 58 Diesel 75, 60 Granate M, 61 Infrared |
-| R5 | 7 | 10 Exo Zion, 28 i 33 Burn M, 32 B-Two L, 38 Jackson 4fun, 49 Rocky M, 59 Rocky L |
-
-## Zakres (długość i szerokość wskazują różne rozmiary): 17 kajaków
-
-| Zakres | Liczba | Kajaki (nr) |
-|---|---|---|
-| R2–R3 | 1 | 25 Necky Gliss |
-| R2–R4 | 2 | 22 i 23 Pyranha H2 |
-| R3–R4 | 9 | 13 i 34 Eskimo Diablo, prywatne Eskimo Diablo (bez numeru), 35 Dagger RPM, 48 Spade Black Jack, 51 Prijon Seayak, 55 Dagger G-Force, 63 Żelazny Bert, 64 Spade Queen of Hearts |
-| R3–R5 | 1 | 3 Eskimo Kendo |
-| R4–R5 | 4 | 9 Eskimo Speedo, 45 Eskimo Diablo 2, 54 B-Two S, 65 Jackson AllStar |
-
-## Bez danych o kokpicie: 9 kajaków (do uzupełnienia w arkuszu)
-
-| Nr | Kajak |
+| Co | Jak |
 |---|---|
-| 4 | Prijon Alpin |
-| 8 | Perception Dancer |
-| 12 | Prijon Chopper |
-| 14 | Perception Dancer |
-| 15 | Eskimo Salto |
-| 16 | Prijon Alpin |
-| 31 | Prijon Alpin |
-| 50 | Tedi sport Eagle (morski) |
-| — | Lettmann Machete (prywatny, bez numeru) |
+| Kajak | kolumna „Kokpit” (dł x szer, cm) → rozmiarówka Palma; rozstrzyga **większy** wymiar |
+| Fartuch | kolumna „Rozmiar” = wymiar zmierzony **na płasko** → Palm **+1 rozmiar** (płaskie R3 = kokpit R4) |
+| Granice | przedziały [min, max): wartość na styku idzie do większego rozmiaru |
+| Poza tabelą | poniżej R2 → R2, powyżej R6 → R6 (nic nie wypada poza rozmiar) |
 
-Pominięte kanadyjki: nr 42 Rainbow Kayaks Apache i nr 46 Prijon Poziomka.
-
-## Rozmiarówka fartuchów
-
-| Rozmiar | Nazwa | Długość kokpitu (cm) | Szerokość kokpitu (cm) |
+| Rozmiar | Nazwa | Długość (cm) | Szerokość (cm) |
 |---|---|---|---|
 | R2 | Extra small | 66–75 | 40–44 |
 | R3 | Small | 75–83 | 44–47 |
 | R4 | Keyhole | 83–89 | 47–50 |
 | R5 | Bigdeck | 89–95 | 50–53 |
+| R6 | Super big | 95–101 | 53–56 |
+
+Źródło: palm.equipment, karta Roanoke Deck.
+
+## Kajaki (53 aktywne, bez kanadyjek 42 i 46)
+
+| Deck | Szt. | Kajaki (nr) |
+|---|---|---|
+| R3 | 5 | 5, 7 SeaLion LV; 50 Tedi Eagle; 51 Prijon Seayak; 62 Dagger Dynamo |
+| R4 | 24 | 1, 2, 3, 4, 6, 9, 11, 12, 13, 24, 25, 29, 31, 34, 35, 36, 37, 45, 55, 57, 58, 61, 64, prywatne Eskimo Diablo |
+| R5 | 24 | 10, 15, 17, 18, 19, 20, 21, 22, 23, 26, 28, 32, 33, 38, 44, 48, 49, 53, 54, 56, 59, 60, 63, 65 |
+
+## Fartuchy (Palm +1)
+
+| Deck | XS | S | S/M | M | M/L | L | XL | reg. | brak komina | Razem |
+|---|---|---|---|---|---|---|---|---|---|---|
+| R3 | – | – | – | 2 | – | – | – | – | – | 2 |
+| R4 | 4 | 1 | 1 | 3 | 1 | 2 | 1 | – | 2 | 15 |
+| R5 | – | 2 | – | 2 | – | 1 | 2 | – | 1 | 8 |
+| R6 | – | 1 | 1 | 2 | – | 1 | 2 | 3 | – | 10 |
+
+Poza tabelą: 11 szmacianych regulowanych, 1 bez wymiarów (nr 50 „Big”).
+Do sprawdzenia w arkuszu: nr 17 (48x46), 36 (48x49), 39 (49x46).

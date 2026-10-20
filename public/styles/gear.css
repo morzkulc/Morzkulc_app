@@ -1690,3 +1690,131 @@
   border-color: #ef4444;
 }
 
+
+/* ─── Fartuchy: plakietki materiału, decka R i komina ─── */
+.skirtBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skirtMatBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.skirtMatBadge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.skirtMatNeoprene {
+  color: #1f7fd1;
+}
+
+.skirtMatFabric {
+  color: #b07a35;
+}
+
+/* Kolor tła decka ustawiany inline (SPRAYSKIRT_DECK_COLORS w gear_module.js). */
+.skirtDeckBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.skirtChimneyBadge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1.5px solid var(--text);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.skirtChimneyBadge small {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 1px;
+}
+
+/* Mniejszy wariant plakietki decka w legendzie listy fartuchów. */
+.skirtDeckBadgeSm {
+  min-width: 26px;
+  height: 22px;
+  padding: 0 5px;
+  margin-right: 2px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* Karta kajaka: plakietka decka R obok serca. */
+.kayakHeadBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Legenda fartuchów: na wąskim ekranie pozycje i plakietki decków mają się
+   zawijać, a nie rozpychać listę poza okno. */
+.skirtLegend .terrainLegendItem {
+  white-space: normal;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.skirtLegendDecks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.skirtBadges {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Lista nigdy szersza niż ekran: kolumny 1fr = minmax(auto, 1fr) rosły do
+   szerokości najszerszej treści (legenda/plakietki fartuchów) i wypychały
+   karty poza okno na telefonie. */
+#gearList {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gearGrid,
+.gearCardNoPhoto .gearCardInner {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gearCardNoPhoto .gearHead {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 420px) {
+  .gearCardNoPhoto .gearHead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

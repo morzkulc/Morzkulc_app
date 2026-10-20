@@ -4,7 +4,8 @@
 /**
  * GET /api/public/site — BEZ logowania. Dane dla statycznej wizytówki klubu na
  * www.morzkulc.pg.gda.pl (i docelowo www.morzkulc.pl): nadchodzące imprezy, zarząd
- * (funkcja + imię i nazwisko + skrzynka funkcyjna), adres klubu, linki do socjali.
+ * (funkcja + imię i nazwisko + skrzynka funkcyjna), adres klubu, linki do socjali;
+ * oraz dla strony kursu (kurs.morzkulc.pl): `kurs` z setup/vars_kurs (buildPublicKurs).
  *
  * Endpoint publiczny → zwraca WYŁĄCZNIE pola przeznaczone do publikacji (whitelist):
  * z imprez bez contact/description/kierowników, z zarządu bez prywatnych e-maili,
@@ -18,6 +19,7 @@ import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {listUpcomingEvents} from "../modules/calendar/events_service";
 import {resolveZarzad} from "../modules/setup/function_roles_service";
+import {buildPublicKurs} from "../modules/kurs/kurs_public";
 
 export const PUBLIC_SITE_ORIGINS = new Set<string>([
   "http://www.morzkulc.pg.gda.pl",
@@ -26,6 +28,8 @@ export const PUBLIC_SITE_ORIGINS = new Set<string>([
   "https://morzkulc.pg.gda.pl",
   "https://www.morzkulc.pl",
   "https://morzkulc.pl",
+  "https://kurs.morzkulc.pl",
+  "https://morzkulc-kurs.web.app",
 ]);
 
 const MAX_EVENTS = 8;
@@ -70,10 +74,11 @@ export async function handleGetPublicSite(req: Request, res: Response, deps: Get
   }
 
   try {
-    const [events, stateSnap, varsSnap] = await Promise.all([
+    const [events, stateSnap, varsSnap, kursSnap] = await Promise.all([
       listUpcomingEvents(db),
       db.collection("service_state").doc("function_roles").get(),
       db.collection("setup").doc("vars_members").get(),
+      db.collection("setup").doc("vars_kurs").get(),
     ]);
     const state = (stateSnap.exists ? (stateSnap.data() as any) : null) || {};
     const vars = (varsSnap.exists ? (varsSnap.data() as any)?.vars : null) || {};
@@ -98,6 +103,7 @@ export async function handleGetPublicSite(req: Request, res: Response, deps: Get
       zarzad,
       adres: String(vars?.adres_klub?.value || "").trim(),
       social,
+      kurs: buildPublicKurs(kursSnap.exists ? (kursSnap.data() as any)?.vars : null),
     });
   } catch (err: any) {
     logger.error("getPublicSite failed", {message: err?.message, stack: err?.stack});

@@ -3,6 +3,7 @@ import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
 import {normNullish} from "../../modules/shared/text_utils";
+import {archiveGearPhotos, BucketLike} from "../../modules/equipment/shared/gear_photos_archive";
 
 /**
  * Task: gear.syncAllFromSheet
@@ -43,8 +44,9 @@ const SCRAP_FIELD_NAME = "gearScrapped";
 const SCRAP_AT_FIELD_NAME = "scrappedAt";
 
 // Kategorie terenowe (górskie/nizinne/torowo-morskie) — jedna, spójna kolumna "Typ" w
-// arkuszu, wspólna dla kamizelek/wioseł/fartuchów (dla wioseł/fartuchów to przemianowana
-// dawna kolumna "Zdjęcie", która nigdzie nie była wykorzystywana w apce). Dopasowanie po
+// arkuszu, wspólna dla kamizelek i wioseł (dla wioseł to przemianowana dawna kolumna
+// "Zdjęcie", która nigdzie nie była wykorzystywana w apce). Fartuchy miały ją do
+// 17.10.2026 — kolumna usunięta z arkusza, pole czyszczone w syncu. Dopasowanie po
 // fragmencie słowa (nie exact-match) — odporne na odmianę przez rodzaj (górski/górska/górskie).
 // TABLICA nie pojedyncza wartość: wiosła mogą mieć wartość złożoną typu "Niziny / Góry"
 // (sztuka nadaje się do obu terenów) — zwracamy WSZYSTKIE dopasowane kategorie, zawsze w
@@ -245,7 +247,7 @@ function buildDoc(key: string, id: string, r: Row, now: any, sheetTab: string): 
       material: normNullish(r["Materiał"]),
       size: normNullish(r["Rozmiar"]),
       tunnelSize: normNullish(r["Rozmiar Komina"]),
-      terrainCategories: normalizeTerrainCategories(r["Typ"]),
+      terrainCategories: admin.firestore.FieldValue.delete(), // kolumna "Typ" usunięta z arkusza fartuchów, 17.10.2026
       terrainCategory: admin.firestore.FieldValue.delete(), // sierota po starym (pojedynczym) polu, 07.09.2026
       isPoolAllowed: parseBool(r["Basen"]),
       isLowlandAllowed: parseBool(r["Niziny"]),
@@ -305,7 +307,58 @@ type CatSummary = {
   skippedNoId: number; skippedNotReal: number; scrapped: number;
   sheetRows: number; duplicateId: number; duplicates: DuplicateIdEntry[];
   duplicateNumber: number; duplicateNumbers: DuplicateNumberEntry[];
+  newlyScrapped: number;
+  photosArchived: {id: string; number: string; moved: {from: string; to: string}[]}[];
+  photosArchiveErrors: {id: string; number: string; message: string}[];
+  photosKeptSameModel: {id: string; number: string; activeId: string; model: string}[];
 };
+
+// demo = wpis testowy (kopia istniejącej sztuki z dopiskiem "DEMO", np. do testów modułu
+// basenowego) — jego numer i zdjęcia należą do prawdziwej sztuki, więc zdjęć nie ruszamy.
+export type ExistingGearDoc = {number: string; scrapped: boolean; demo?: boolean; brand?: string; model?: string};
+export type ActiveGearItem = {id: string; brand: string; model: string};
+
+const normKey = (s: any) => normNullish(s).toLowerCase().replace(/\s+/g, " ");
+
+export function isDemoGearDoc(x: Record<string, any>): boolean {
+  return /demo/i.test(`${x?.brand || ""} ${x?.model || ""}`);
+}
+
+/**
+ * Które dokumenty złomować: te, których nie ma w arkuszu i które NIE są jeszcze
+ * złomowane. Już złomowanych nie ruszamy — wcześniej sync co przebieg nadpisywał
+ * im scrappedAt (data złomowania była nieprawdziwa) i archiwizowałby zdjęcia
+ * ponownie, zabierając je nowej sztuce o tym samym numerze. Czysta funkcja.
+ */
+export type ScrapItem = {id: string; number: string; archivePhotos: boolean; sameModelActiveId?: string};
+
+/**
+ * activeByNumber (numer lower-case -> aktywna sztuka z arkusza): jeśli pod tym samym
+ * numerem jest aktywna sztuka o IDENTYCZNYM producencie i modelu, zdjęć nie ruszamy —
+ * to najpewniej ta sama sztuka (usunięty duplikat wiersza / zmienione ID, np. kaski
+ * 30–34 → 20–24, 18.10.2026). Zgłaszamy do ręcznej decyzji (sameModelActiveId).
+ */
+export function planScrap(existing: Map<string, ExistingGearDoc>, sheetIds: Set<string>, activeByNumber: Map<string, ActiveGearItem> = new Map()): {
+  toScrap: ScrapItem[];
+  alreadyScrapped: number;
+} {
+  const toScrap: ScrapItem[] = [];
+  let alreadyScrapped = 0;
+  for (const [id, d] of existing) {
+    if (sheetIds.has(id)) continue;
+    if (d.scrapped) {
+      alreadyScrapped++;
+      continue;
+    }
+    const active = d.number ? activeByNumber.get(d.number.toLowerCase()) : undefined;
+    const sameModel = !d.demo && Boolean(active && normKey(active.brand) === normKey(d.brand) && normKey(active.model) === normKey(d.model));
+    toScrap.push({
+      id, number: d.number, archivePhotos: !d.demo && !sameModel,
+      ...(sameModel && active ? {sameModelActiveId: active.id} : {}),
+    });
+  }
+  return {toScrap, alreadyScrapped};
+}
 
 // Etykieta "numeru" sztuki różni się między kategoriami (Numer Kajaka / Numer / Nazwa).
 function rowNumberLabel(r: Row): string {
@@ -381,7 +434,8 @@ async function syncCategory(
   now: any,
   dryRun: boolean,
   limit: number | null,
-  logger: {info: (...a: any[]) => void; warn: (...a: any[]) => void}
+  logger: {info: (...a: any[]) => void; warn: (...a: any[]) => void},
+  bucket: BucketLike
 ): Promise<CatSummary> {
   let table;
   try {
@@ -397,9 +451,13 @@ async function syncCategory(
   const rows = limit ? table.rows.slice(0, limit) : table.rows;
   const col = firestore.collection(cat.collection);
 
-  // Jedno czytanie istniejących ID — do zachowania createdAt (nowe dok.) i do złomowania.
-  const existingSnap = await col.select().get();
-  const existingIds = new Set<string>(existingSnap.docs.map((d) => d.id));
+  // Jedno czytanie istniejących dokumentów — do zachowania createdAt (nowe dok.) i do
+  // złomowania (numer = katalog zdjęć w Storage).
+  const existingSnap = await col.select("number", "brand", "model", SCRAP_FIELD_NAME).get();
+  const existing = new Map<string, ExistingGearDoc>(existingSnap.docs.map((d) => {
+    const x = d.data() || {};
+    return [d.id, {number: normNullish(x.number), scrapped: x[SCRAP_FIELD_NAME] === true, demo: isDemoGearDoc(x), brand: normNullish(x.brand), model: normNullish(x.model)}];
+  }));
 
   // Bramki wierszy (pusty ID / niekompletny / duplikat ID) — czysta, testowalna logika.
   const {toUpsert, duplicates, skippedNoId, skippedNotReal} = classifyGearRows(cat.key, cat.idHeader, rows);
@@ -410,6 +468,7 @@ async function syncCategory(
 
   let processed = 0;
   let upserted = 0;
+  const activeByNumber = new Map<string, ActiveGearItem>();
 
   // Zapisy wsadowe (limit Firestore: 500 op/batch → flush co 400).
   let batch = firestore.batch();
@@ -424,20 +483,28 @@ async function syncCategory(
 
   for (const {id, row} of toUpsert) {
     const doc = buildDoc(cat.key, id, row, now, cat.sheetTab);
+    const nr = normNullish(doc.number).toLowerCase();
+    if (nr && !activeByNumber.has(nr)) activeByNumber.set(nr, {id, brand: normNullish(doc.brand), model: normNullish(doc.model)});
     processed++;
     upserted++;
 
     if (dryRun) continue;
 
-    const data = existingIds.has(id) ? doc : {...doc, createdAt: now};
+    const data = existing.has(id) ? doc : {...doc, createdAt: now};
     batch.set(col.doc(id), data, {merge: true});
     ops++;
     if (ops >= 400) await flush();
   }
   if (!dryRun) await flush();
 
-  // Scrapping: dokumenty w kolekcji, których nie ma już w arkuszu.
-  let scrapped = 0;
+  // Scrapping: dokumenty w kolekcji, których nie ma już w arkuszu. `scrapped` liczy
+  // wszystkie (jak dotąd, dla raportu), zapis i archiwizacja zdjęć tylko dla świeżo złomowanych.
+  const {toScrap, alreadyScrapped} = planScrap(existing, sheetIds, activeByNumber);
+  const scrapped = toScrap.length + alreadyScrapped;
+  const photosArchived: CatSummary["photosArchived"] = [];
+  const photosArchiveErrors: CatSummary["photosArchiveErrors"] = [];
+  const photosKeptSameModel: CatSummary["photosKeptSameModel"] = [];
+  const dateIso = new Date().toISOString().slice(0, 10);
   let sbatch = firestore.batch();
   let sops = 0;
   const sflush = async () => {
@@ -448,9 +515,25 @@ async function syncCategory(
     }
   };
 
-  for (const id of existingIds) {
-    if (sheetIds.has(id)) continue;
-    scrapped++;
+  for (const {id, number, archivePhotos, sameModelActiveId} of toScrap) {
+    if (sameModelActiveId) {
+      const a = activeByNumber.get(number.toLowerCase());
+      photosKeptSameModel.push({id, number, activeId: sameModelActiveId, model: [a?.brand, a?.model].filter(Boolean).join(" ")});
+    }
+    // Zdjęcia są pod NUMEREM — bez archiwizacji nowa sztuka o tym samym numerze
+    // pokazywałaby zdjęcia złomowanej. Błąd Storage nie blokuje syncu.
+    let movedTo: string[] = [];
+    try {
+      const {moved} = !archivePhotos ? {moved: []} : await archiveGearPhotos({bucket, categoryKey: cat.key, id, number, dateIso, dryRun});
+      if (moved.length) {
+        photosArchived.push({id, number, moved});
+        movedTo = moved.map((m) => m.to);
+      }
+    } catch (e: any) {
+      const message = e?.message || String(e);
+      photosArchiveErrors.push({id, number, message});
+      logger.warn("gearSyncAll: archiwizacja zdjęć nieudana", {key: cat.key, id, number, message});
+    }
     if (dryRun) continue;
     sbatch.update(col.doc(id), {
       [SCRAP_FIELD_NAME]: true,
@@ -458,14 +541,16 @@ async function syncCategory(
       updatedAt: now,
       status: "scrapped",
       isActive: false,
+      ...(movedTo.length ? {photosArchivedTo: movedTo} : {}),
     });
     sops++;
     if (sops >= 400) await sflush();
   }
   if (!dryRun) await sflush();
 
-  logger.info("gearSyncAll: category done", {key: cat.key, processed, upserted, scrapped, skippedNoId, skippedNotReal, duplicateId, duplicateNumber, dryRun});
-  return {key: cat.key, label: cat.label, processed, upserted, skippedNoId, skippedNotReal, scrapped, sheetRows: rows.length, duplicateId, duplicates, duplicateNumber, duplicateNumbers};
+  const newlyScrapped = toScrap.length;
+  logger.info("gearSyncAll: category done", {key: cat.key, processed, upserted, scrapped, newlyScrapped, photosArchived: photosArchived.length, photosArchiveErrors: photosArchiveErrors.length, photosKeptSameModel: photosKeptSameModel.length, skippedNoId, skippedNotReal, duplicateId, duplicateNumber, dryRun});
+  return {key: cat.key, label: cat.label, processed, upserted, skippedNoId, skippedNotReal, scrapped, sheetRows: rows.length, duplicateId, duplicates, duplicateNumber, duplicateNumbers, newlyScrapped, photosArchived, photosArchiveErrors, photosKeptSameModel};
 }
 
 export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
@@ -560,9 +645,10 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
       return {ok: true, message: msg, details: {validationError: true, duplicateIdErrors, privateIssues, dryRun}};
     }
 
+    const bucket = admin.storage().bucket() as unknown as BucketLike;
     const summaries: CatSummary[] = [];
     for (const cat of GEAR_CATEGORIES) {
-      const s = await syncCategory(firestore, sheets, spreadsheetId, cat, now, dryRun, limit, ctx.logger);
+      const s = await syncCategory(firestore, sheets, spreadsheetId, cat, now, dryRun, limit, ctx.logger, bucket);
       summaries.push(s);
     }
 
@@ -586,7 +672,7 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
     // w Firestore (kolaps do jednego dokumentu), więc utrwalamy go tu, w momencie odczytu arkusza.
     // Tylko realny przebieg (nie dry-run) odświeża raport.
     if (!dryRun) {
-      const hasWarnings = summaries.some((s) => s.duplicateId > 0 || s.duplicateNumber > 0 || s.skippedNoId > 0 || s.skippedNotReal > 0);
+      const hasWarnings = summaries.some((s) => s.duplicateId > 0 || s.duplicateNumber > 0 || s.skippedNoId > 0 || s.skippedNotReal > 0 || s.photosKeptSameModel.length > 0 || s.photosArchiveErrors.length > 0);
       try {
         await firestore.collection("service_reports").doc("gearSync").set({
           ranAt: now,
@@ -613,6 +699,10 @@ export const gearSyncAllFromSheetTask: ServiceTask<Payload> = {
             skippedNoId: s.skippedNoId,
             skippedNotReal: s.skippedNotReal,
             scrapped: s.scrapped,
+            newlyScrapped: s.newlyScrapped,
+            photosArchived: s.photosArchived,
+            photosArchiveErrors: s.photosArchiveErrors,
+            photosKeptSameModel: s.photosKeptSameModel,
           })),
         });
       } catch (e: any) {
