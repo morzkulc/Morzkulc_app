@@ -1,0 +1,63 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><title>Vars_KURS – opisy zmiennych</title>
+<style>body{font:14px Arial,sans-serif;margin:24px;max-width:1100px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:5px 8px;text-align:left;vertical-align:top}th{background:#eee}td:first-child{white-space:nowrap;font-family:monospace}button{font-size:15px;padding:8px 16px;margin:0 8px 12px 0;cursor:pointer}#ok{color:green}</style>
+<h2>Vars_KURS – opisy zmiennych (39)</h2>
+<p><b>Kopiuj opisy</b> kopiuje samą kolumnę Opis w kolejności z tabeli — wklej w kolumnę Opis przy <code>kabina_punkty</code>, jeśli kolejność wierszy w arkuszu jest taka sama. Jeśli nie — użyj <b>Kopiuj nazwę + opis</b> i wklej obok, albo kopiuj pojedyncze komórki.</p>
+<button id="o">Kopiuj opisy</button><button id="b">Kopiuj nazwę + opis</button><span id="ok"></span><textarea id="fb" style="display:none;width:100%;height:160px;margin-bottom:12px"></textarea>
+<table id="t"><thead><tr><th>Zmienna_nazwa</th><th>Opis</th></tr></thead><tbody>
+<tr><td>kabina_punkty</td><td>Wywrotolotek: punkty za 1 kabinę (wywrotka i wyjście z kajaka) w rankingu kursantów w aplikacji (Ranking/km). Puste = 1.</td></tr>
+<tr><td>eskimoska_punkty</td><td>Wywrotolotek: punkty za 1 eskimoskę (powrót z wywrotki bez wychodzenia z kajaka). Puste = 0,5.</td></tr>
+<tr><td>dziubek_punkty</td><td>Wywrotolotek: punkty za 1 dziubka (powrót z wywrotki z pomocą dziobu kajaka partnera). Puste = 0,25.</td></tr>
+<tr><td>kurs_wypożycza</td><td>Główny włącznik: TRUE = kursanci mogą rezerwować sprzęt klubowy w aplikacji (bezpłatnie, do dnia z koniec_kursu). FALSE lub puste = kursanci nie wypożyczają.</td></tr>
+<tr><td>koniec_kursu</td><td>Dzień września, w którym kończy się okres kursanta w aplikacji (wypożyczanie, dostęp). Wpisz sam dzień, np. 30. Puste = 30 września.</td></tr>
+<tr><td>cena_kursu</td><td>Cena kursu w zł. Widoczna na stronie kurs.morzkulc.pl i w profilu kursanta w aplikacji.</td></tr>
+<tr><td>kurs_edycja</td><td>Rok edycji kursu, np. 2027. Na stronie kursu: „Kurs 2027”, „Zobacz harmonogram Kursu 2027”.</td></tr>
+<tr><td>kurs_zadatek</td><td>Zadatek w zł, płatny przy zapisie. Strona kursu: cena i FAQ. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_cena_student</td><td>Cena dla studentów w zł. Strona kursu: cena i FAQ. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_termin_doplaty</td><td>Ostatni dzień wpłaty pełnej ceny (= ostatni dzień rezygnacji wg regulaminu). Format 2027-03-01. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_limit_miejsc</td><td>Liczba miejsc na kursie. Strona kursu: sekcja zapisów. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_zapisy_status</td><td>Stan zapisów na stronie kursu: wkrotce / otwarte / rezerwowa / zamkniete. Zmienia napisy i przycisk „Zapisz się” (aktywny tylko przy otwarte i rezerwowa).</td></tr>
+<tr><td>kurs_zapisy_od</td><td>Dzień startu zapisów, np. 2026-12-01. Strona kursu: „Zapisy od …” (przy statusie wkrotce).</td></tr>
+<tr><td>kurs_zapisy_do</td><td>Ostatni dzień zapisów. Strona kursu: „Zapisy do …” (przy statusie otwarte).</td></tr>
+<tr><td>kurs_link_zapisu</td><td>Adres (https://…), pod który prowadzi przycisk „Zapisz się” na stronie kursu, np. formularz zgłoszeniowy.</td></tr>
+<tr><td>kurs_kontakt_email</td><td>E-mail kontaktowy kursu, w stopce strony kursu. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_kontakt_telefon</td><td>Telefon kontaktowy kursu, w stopce strony kursu. Puste = nie pokazuje.</td></tr>
+<tr><td>kurs_baseny_w_cenie</td><td>Ile zajęć basenowych jest w cenie kursu. Strona kursu: lista „W cenie” i FAQ.</td></tr>
+<tr><td>kurs_min_basenow</td><td>Minimalna liczba basenów do ukończenia kursu (regulamin: 1). Strona kursu: FAQ o warunkach ukończenia.</td></tr>
+<tr><td>kurs_min_wyjazdow</td><td>Minimalna liczba wyjazdów do ukończenia kursu (regulamin: 2). Strona kursu: FAQ o warunkach ukończenia.</td></tr>
+<tr><td>kurs_film_url</td><td>Link do filmu z kursu (YouTube lub plik wideo). Strona kursu: film nad galerią. Puste = brak filmu.</td></tr>
+<tr><td>harmonogram_01</td><td>Pozycja harmonogramu na stronie kursu. Format: data_od[/data_do] | typ | nazwa | miejsce. Typ: spotkanie, wyklad, basen, wyjazd, po_kursie. Strona sortuje po dacie, liczy wyjazdy i odlicza dni do pierwszej pozycji.</td></tr>
+<tr><td>harmonogram_02</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_03</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_04</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_05</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_06</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_07</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_08</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_09</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_10</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_11</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_12</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_13</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_14</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_15</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_16</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_17</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+<tr><td>harmonogram_18</td><td>Pozycja harmonogramu (format jak w harmonogram_01).</td></tr>
+</tbody></table>
+<script>
+function rows(f){return [].map.call(document.querySelectorAll('#t tbody tr'),function(r){return f([].map.call(r.cells,function(c){return c.textContent;}));}).join(String.fromCharCode(10));}
+function cp(s){
+  var a=document.createElement('textarea');a.value=s;a.style.position='fixed';a.style.top='0';a.style.opacity='0';
+  document.body.appendChild(a);a.focus();a.select();var ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  a.remove();
+  if(!ok&&navigator.clipboard){navigator.clipboard.writeText(s).then(function(){msg(true);},function(){msg(false,s);});return;}
+  msg(ok,s);
+}
+function msg(ok,s){
+  document.getElementById('ok').textContent=ok?'Skopiowano — wklej w arkuszu (Ctrl+V)':'Kopiowanie zablokowane — zaznacz tekst poniżej i Ctrl+C';
+  var t=document.getElementById('fb');if(!ok){t.style.display='block';t.value=s;t.select();}else t.style.display='none';
+}
+document.getElementById('o').addEventListener('click',function(){cp(rows(function(c){return c[1];}));});
+document.getElementById('b').addEventListener('click',function(){cp(rows(function(c){return c.join(String.fromCharCode(9));}));});
+</script></html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Zapis na kurs — SKK Morzkulc</title>
+<meta name="theme-color" content="#06141f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/kurs.css?v=12">
+</head>
+<body>
+<header class="nav scrolled">
+  <a class="brand" href="/"><span class="brand-dot"></span>SKK Morzkulc <span class="brand-sub">Kurs <span class="js-edycja"></span></span></a>
+  <a class="btn btn-sm btn-ghost" style="margin-left:auto" href="/">← Strona kursu</a>
+</header>
+
+<main class="doc zapis">
+  <div class="wrap narrow">
+    <p class="eyebrow">Kurs Kajakarstwa Górskiego i Morskiego <span class="js-edycja"></span></p>
+    <h1>Zapis na kurs</h1>
+    <p class="z-demo js-demo" hidden></p>
+
+    <!-- ładowanie -->
+    <div class="z-state" data-state="loading"><p class="muted">Wczytywanie…</p></div>
+
+    <!-- błąd -->
+    <div class="z-state" data-state="error" hidden><div class="z-card z-err"><p class="js-error"></p></div></div>
+
+    <!-- logowanie -->
+    <div class="z-state" data-state="login" hidden>
+      <div class="z-card">
+        <p>Zapis zaczyna się od zalogowania kontem Google. Tego samego konta użyjesz potem w aplikacji klubowej — przez nią zapisujesz się m.in. na baseny.</p>
+        <ol class="z-steps">
+          <li>Zaloguj się kontem Google.</li>
+          <li>Wypełnij formularz (ok. 10 minut).</li>
+          <li>Wpłać zadatek — dane do przelewu zobaczysz od razu i dostaniesz mailem.</li>
+          <li>Po zaksięgowaniu zadatku dostaniesz dostęp do aplikacji klubowej.</li>
+        </ol>
+        <button type="button" class="btn btn-accent js-login">Zaloguj się kontem Google</button>
+      </div>
+    </div>
+
+    <!-- zapisy zamknięte -->
+    <div class="z-state" data-state="closed" hidden>
+      <div class="z-card"><p class="js-closed"></p><p><button type="button" class="btn btn-ghost btn-sm js-logout2" hidden>Zaloguj się innym kontem</button> <a href="/">Wróć na stronę kursu</a></p></div>
+    </div>
+
+    <!-- formularz -->
+    <form class="z-state z-form" data-state="form" hidden novalidate>
+      <p class="z-who">Zalogowano jako <strong class="js-email"></strong> · <button type="button" class="z-link js-logout">zmień konto</button></p>
+
+      <fieldset>
+        <legend>1. Dane uczestnika</legend>
+        <div class="z-grid">
+          <label class="z-f">Imię *<input name="imie" autocomplete="given-name" required></label>
+          <label class="z-f">Nazwisko *<input name="nazwisko" autocomplete="family-name" required></label>
+          <label class="z-f">Telefon *<input name="telefon" type="tel" autocomplete="tel" required></label>
+          <label class="z-f">Data urodzenia *<input name="dataUrodzenia" type="date" required></label>
+          <label class="z-f">Miejscowość zamieszkania *<input name="miejscowosc" autocomplete="address-level2" required></label>
+          <label class="z-f" data-if="brakPesel!=true">PESEL *<input name="pesel" inputmode="numeric" maxlength="11">
+            <small>Potrzebny do zgłoszenia do grupowego ubezpieczenia NNW.</small></label>
+          <label class="z-f" data-if="brakPesel=true">Numer paszportu lub dowodu osobistego *<input name="dokument" maxlength="40">
+            <small>Potrzebny do zgłoszenia do grupowego ubezpieczenia NNW.</small></label>
+          <label class="z-check z-nopesel"><input type="checkbox" name="brakPesel" value="true"> <span>Nie mam numeru PESEL</span></label>
+        </div>
+        <p class="z-sub">Osoba do kontaktu w nagłej sytuacji (ICE) *</p>
+        <div class="z-grid">
+          <label class="z-f">Imię i nazwisko<input name="iceImie" required></label>
+          <label class="z-f">Telefon<input name="iceTelefon" type="tel" required></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2. Kajaki, sport i doświadczenie</legend>
+        <div class="z-f"><span>Czy pływałeś/-aś wcześniej kajakiem? *</span><div class="z-opts" data-name="doswiadczenie" data-type="radio"></div></div>
+        <div class="z-f"><span>Jak oceniasz swoją umiejętność pływania wpław? *</span><div class="z-opts" data-name="plywanie" data-type="radio"></div></div>
+        <label class="z-f">Jakie sporty lub aktywności uprawiasz obecnie?<textarea name="sporty" rows="2"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>3. Zdrowie i bezpieczeństwo</legend>
+        <div class="z-f"><span>Czy chorujesz przewlekle? *</span><div class="z-opts" data-name="chorobyPrzewlekle" data-type="yesno"></div></div>
+        <label class="z-f" data-if="chorobyPrzewlekle=true">Na co chorujesz? *<textarea name="chorobyOpis" rows="2"></textarea></label>
+        <div class="z-f"><span>Czy regularnie przyjmujesz leki, które mogą mieć znaczenie podczas aktywności fizycznej? *</span><div class="z-opts" data-name="leki" data-type="yesno"></div></div>
+        <label class="z-f" data-if="leki=true">Jakie? *<textarea name="lekiOpis" rows="2"></textarea></label>
+        <div class="z-f"><span>Czy dotyczą Cię któreś z poniższych sytuacji? (można zaznaczyć kilka)</span><div class="z-opts" data-name="schorzenia" data-type="checkbox"></div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>4. Dobór sprzętu</legend>
+        <div class="z-grid">
+          <label class="z-f">Wzrost (cm) *<input name="wzrost" type="number" inputmode="numeric" min="100" max="230" required></label>
+          <label class="z-f">Waga (kg) *<input name="waga" type="number" inputmode="decimal" min="30" max="250" step="0.1" required></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>5. Organizacja i wyżywienie</legend>
+        <div class="z-f"><span>Czy posiadasz status studenta? *</span><div class="z-opts" data-name="student" data-type="yesno"></div></div>
+        <label class="z-f" data-if="student=true">Na jakiej uczelni studiujesz? *<input name="uczelnia"></label>
+        <div class="z-f"><span>Jak się odżywiasz? *</span><div class="z-opts" data-name="dieta" data-type="radio" data-values="wszystko|wege" data-labels="Jem wszystko|Wegetarianin / wegetarianka"></div></div>
+        <div class="z-f" data-if="dieta=wege"><span>Pytanie logistyczno-filozoficzne: czy jeden awaryjny posiłek mięsny podczas kilkudniowego wyjazdu stanowiłby dla Ciebie problem?</span><div class="z-opts" data-name="wegeMieso" data-type="radio" data-values="Nie|Tak" data-labels="Nie|Tak"></div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>6. Poznajmy się</legend>
+        <label class="z-f">Dlaczego chcesz zapisać się na kurs?<textarea name="dlaczego" rows="3"></textarea></label>
+        <div class="z-f"><span>Co najbardziej interesuje Cię w kajakarstwie? (można zaznaczyć kilka)</span><div class="z-opts" data-name="zainteresowania" data-type="checkbox"></div></div>
+        <label class="z-f">Co chciałbyś/chciałabyś robić rok po ukończeniu kursu?<textarea name="rokPoKursie" rows="3"></textarea></label>
+        <label class="z-f">Opowiedz nam kilka słów o swoich pasjach.<small>Co robisz poza pracą lub studiami? Co Cię interesuje? Jak najchętniej spędzasz wolny czas?</small><textarea name="pasje" rows="3"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>7. Pytanie rekrutacyjne</legend>
+        <label class="z-f">Liczba miejsc na kursie jest ograniczona. Dlaczego to właśnie Ciebie powinniśmy przyjąć?<small>Nie szukamy idealnej odpowiedzi. Chcemy po prostu lepiej Cię poznać.</small><textarea name="dlaczegoTy" rows="4"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>8. Skąd o nas wiesz?</legend>
+        <div class="z-f"><span>Skąd dowiedziałeś/-aś się o kursie? *</span><div class="z-opts" data-name="skad" data-type="radio"></div></div>
+      </fieldset>
+
+      <fieldset class="z-consents">
+        <label class="z-check" data-err="zgodaRegulamin"><input type="checkbox" name="zgodaRegulamin"> <span>Zapoznałem/am się z <a href="/regulamin" target="_blank" rel="noopener">regulaminem kursu</a> i akceptuję jego postanowienia. *</span></label>
+        <label class="z-check" data-err="zgodaZdrowie"><input type="checkbox" name="zgodaZdrowie"> <span>Potwierdzam, że podane informacje zdrowotne są zgodne z prawdą i nie zataiłem/am żadnych okoliczności mogących mieć wpływ na moje bezpieczeństwo podczas kursu. *</span></label>
+        <label class="z-check"><input type="checkbox" name="zgodaWizerunek"> <span>Wyrażam zgodę na rozpowszechnianie wizerunku na zasadach opisanych w treści zgody poniżej. <small>(dobrowolna — brak zgody nie wpływa na udział w kursie; można ją wycofać w każdej chwili)</small></span></label>
+        <details class="z-doc">
+          <summary>Przeczytaj treść zgody na rozpowszechnianie wizerunku</summary>
+          <p>W związku z udziałem w Kursie Kajakarstwa Górskiego i Morskiego organizowanym przez Stowarzyszenie SKK Morzkulc z siedzibą w Gdańsku („Klub”), wyrażam zgodę na nieodpłatne utrwalanie oraz rozpowszechnianie mojego wizerunku utrwalonego podczas zajęć, wyjazdów, wydarzeń towarzyszących oraz innych aktywności związanych z Kursem.</p>
+          <p>Zgoda obejmuje wykorzystanie mojego wizerunku w materiałach informacyjnych, promocyjnych i dokumentacyjnych związanych z działalnością Klubu, w szczególności poprzez:</p>
+          <ul>
+                <li>publikację na stronie internetowej Klubu;</li>
+                <li>publikację w mediach społecznościowych prowadzonych przez Klub;</li>
+                <li>publikację w materiałach promujących przyszłe edycje kursów i działalność Klubu;</li>
+                <li>publikację w materiałach drukowanych, prezentacjach, relacjach oraz kronikach klubowych.</li>
+          </ul>
+          <p>Przyjmuję do wiadomości, że:</p>
+          <ul>
+                <li>Udzielenie zgody jest dobrowolne.</li>
+                <li>Brak zgody nie wpływa na możliwość uczestnictwa w Kursie.</li>
+                <li>Zgodę mogę wycofać w dowolnym momencie poprzez złożenie oświadczenia Klubowi.</li>
+                <li>Wycofanie zgody nie wpływa na zgodność z prawem wykorzystania mojego wizerunku dokonanego przed jej wycofaniem.</li>
+                <li>Klub nie ma obowiązku wycofywania z obrotu materiałów drukowanych ani usuwania materiałów przekazanych osobom trzecim przed cofnięciem zgody, jeżeli zostały one rozpowszechnione zgodnie z prawem przed jej cofnięciem.</li>
+                <li>Wizerunek nie będzie wykorzystywany w sposób naruszający moje dobra osobiste ani przedstawiający mnie w kontekście obraźliwym lub niezgodnym z rzeczywistym przebiegiem wydarzeń.</li>
+          </ul>
+          <h3>Dokumentowanie zajęć do celów innych niż promocja</h3>
+          <p>Klub może wykonywać zdjęcia i nagrania podczas zajęć oraz wyjazdów w zakresie niezbędnym do celów organizacyjnych, szkoleniowych, dokumentowania zdarzeń związanych z bezpieczeństwem, ustalania przebiegu incydentów albo ustalenia, dochodzenia lub obrony roszczeń, z poszanowaniem prywatności uczestników i zgodnie z obowiązującymi przepisami. Materiały takie nie będą wykorzystywane w celach promocyjnych bez odrębnej zgody uczestnika.</p>
+          <p><a href="/zgoda-wizerunek" target="_blank" rel="noopener">Otwórz w nowej karcie</a></p>
+        </details>
+      </fieldset>
+
+      <p class="z-formerr js-formerr" hidden></p>
+      <button type="submit" class="btn btn-accent btn-lg js-submit">Zarezerwuj miejsce i przejdź do płatności zadatku</button>
+    </form>
+
+    <!-- po zgłoszeniu -->
+    <div class="z-state" data-state="done" hidden>
+      <div class="z-card">
+        <p class="z-status js-status"></p>
+        <p class="js-status-sub"></p>
+      </div>
+      <div class="z-card z-pay js-pay">
+        <h2>Dane do przelewu</h2>
+        <dl class="z-dl">
+          <dt>Zadatek</dt><dd><strong class="js-zadatek"></strong></dd>
+          <dt>Numer konta</dt><dd><strong class="js-konto"></strong> <button type="button" class="z-copy" data-copy="konto">kopiuj</button><br><span class="muted js-bank"></span></dd>
+          <dt>Tytuł przelewu</dt><dd><strong class="js-tytul"></strong> <button type="button" class="z-copy" data-copy="tytul">kopiuj</button></dd>
+          <dt class="js-cena-row">Cena kursu</dt><dd class="js-cena-row"><span class="js-cena"></span><span class="js-doplata"></span></dd>
+        </dl>
+        <p class="note">Te dane wysłaliśmy też na <span class="js-email"></span>.</p>
+      </div>
+      <p><a href="/">← Wróć na stronę kursu</a></p>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/zapis.js?v=7"></script>
+</body>
+</html>

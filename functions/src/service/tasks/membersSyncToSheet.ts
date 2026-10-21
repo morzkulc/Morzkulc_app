@@ -23,13 +23,13 @@ const STATUS_LABEL_FALLBACK: Record<string, string> = {
   status_skreslony: "Skreślony",
 };
 
-function roleLabel(roleKey: string, roleMappings?: Record<string, {label?: string}>): string {
+export function roleLabel(roleKey: string, roleMappings?: Record<string, {label?: string}>): string {
   const fromSetup = roleMappings?.[roleKey]?.label;
   if (fromSetup) return String(fromSetup);
   return ROLE_LABEL_FALLBACK[roleKey] || roleKey || "";
 }
 
-function statusLabel(statusKey: string, statusMappings?: Record<string, {label?: string}>): string {
+export function statusLabel(statusKey: string, statusMappings?: Record<string, {label?: string}>): string {
   const fromSetup = statusMappings?.[statusKey]?.label;
   if (fromSetup) return String(fromSetup);
   return STATUS_LABEL_FALLBACK[statusKey] || statusKey || "";

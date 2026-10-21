@@ -33,6 +33,7 @@ const KURS_VARS: Array<{key: string; out: string; kind: Kind}> = [
   {key: "kurs_zapisy_status", out: "zapisyStatus", kind: "status"},
   {key: "kurs_zapisy_od", out: "zapisyOd", kind: "date"},
   {key: "kurs_zapisy_do", out: "zapisyDo", kind: "date"},
+  {key: "kurs_zapisy_demo_do", out: "zapisyDemoDo", kind: "date"},
   {key: "kurs_link_zapisu", out: "linkZapisu", kind: "url"},
   {key: "kurs_kontakt_email", out: "kontaktEmail", kind: "email"},
   {key: "kurs_kontakt_telefon", out: "kontaktTelefon", kind: "text"},

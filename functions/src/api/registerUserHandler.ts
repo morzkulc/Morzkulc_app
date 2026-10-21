@@ -398,7 +398,7 @@ async function findNicknameOwnerUid(
 }
 
 type KursantEligibility =
-  | {ok: true}
+  | {ok: true; memberId: number | null}
   | {ok: false; code: "kursant_not_found" | "kursant_window_closed"; message: string};
 
 /**
@@ -410,6 +410,10 @@ type KursantEligibility =
  * z setup/vars_members.vars.koniec_kursu — getKursWindowEndSuffix) — ta sama reguła co
  * bramka rezerwacji sprzętu (gear_bundle_service.isFreeRentalExempt), żeby kursant
  * z zeszłego rocznika nie mógł się już zadeklarować po wygaśnięciu okna.
+ * Rocznik przyszłoroczny też przechodzi: zapisy (zadatek) ruszają jesienią roku
+ * poprzedzającego kurs, a kursant musi mieć aplikację przed zapisami na baseny.
+ * memberId z members_roster przechodzi do nowego konta — inaczej membersSyncToSheet
+ * nadałby osobie już wpisanej do arkusza drugi numer.
  */
 async function resolveKursantEligibility(
   db: FirebaseFirestore.Firestore,
@@ -431,7 +435,9 @@ async function resolveKursantEligibility(
   const now = new Date();
   const todayIso = now.toISOString().slice(0, 10);
   const windowEndSuffix = await getKursWindowEndSuffix(db);
-  const windowOpen = typeof rok === "number" && rok === now.getUTCFullYear() && todayIso <= `${rok}-${windowEndSuffix}`;
+  const year = now.getUTCFullYear();
+  const windowOpen = typeof rok === "number" &&
+    (rok > year || (rok === year && todayIso <= `${rok}-${windowEndSuffix}`));
   if (!windowOpen) {
     return {
       ok: false,
@@ -440,7 +446,8 @@ async function resolveKursantEligibility(
     };
   }
 
-  return {ok: true};
+  const memberId = Number(roster?.memberId);
+  return {ok: true, memberId: Number.isFinite(memberId) && memberId > 0 ? memberId : null};
 }
 
 type Szkoleniowiec = {name: string; email: string};
@@ -862,6 +869,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
 
       let roleKey: string = newUserRoleCode;
       let applyOpeningMatch = false;
+      let kursantMemberId: number | null = null;
       if (incomingProfile.iAmKursant === true) {
         const eligibility = await resolveKursantEligibility(db, email);
         if (!eligibility.ok) {
@@ -869,6 +877,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           return;
         }
         roleKey = "rola_kursant";
+        kursantMemberId = eligibility.memberId;
       } else if (found.openingMatch && found.obData) {
         if (found.matchMethod === "name") {
           // Dopasowanie po imieniu+nazwisku (mail nieznaleziony) wymaga potwierdzenia (Problem 1).
@@ -915,6 +924,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
       if (incomingProfile.iAmKursant === true) {
         docToCreate.kursantSelfDeclared = true;
         docToCreate.kursantSelfDeclaredAt = admin.firestore.FieldValue.serverTimestamp();
+        if (kursantMemberId) docToCreate.memberId = kursantMemberId;
       }
 
       if (Object.keys(incomingProfile).length > 0) {

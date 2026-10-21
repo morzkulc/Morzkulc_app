@@ -2,6 +2,7 @@ import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { setHash } from "/core/router.js";
 import { renderReportsPanel } from "/modules/raporty/reports_panel.js";
+import { renderKursZgloszeniaPanel } from "/modules/kurs_zgloszenia_panel.js";
 import { CLUB_DISPLAY_NAMES } from "/core/club_badges.js";
 import { escapeHtml } from "/core/html_utils.js";
 import { formatDatePL } from "/core/format_utils.js";
@@ -52,6 +53,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           <div class="modTabs" role="tablist">
             <button type="button" class="modTab active" data-tab="administracja">Administracja</button>
             <button type="button" class="modTab" data-tab="raporty">Raporty</button>
+            <button type="button" class="modTab" data-tab="kurs">Kurs</button>
           </div>
 
           <div class="modTabPanel" data-panel="administracja">
@@ -72,6 +74,10 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
 
           <div class="modTabPanel hidden" data-panel="raporty">
             <div id="reportsPanel"></div>
+          </div>
+
+          <div class="modTabPanel hidden" data-panel="kurs">
+            <div id="kursZgloszeniaPanel"></div>
           </div>
         </div>
 
@@ -621,10 +627,11 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
 
       reloadBtn.addEventListener("click", load);
 
-      // ── Przełączanie zakładek (Raporty montowane leniwie) ──────────────────
+      // ── Przełączanie zakładek (Raporty i Kurs montowane leniwie) ───────────
       const tabs = Array.from(viewEl.querySelectorAll(".modTab"));
       const panels = Array.from(viewEl.querySelectorAll(".modTabPanel"));
       let reportsMounted = false;
+      let kursMounted = false;
       tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
           const name = tab.getAttribute("data-tab");
@@ -633,6 +640,10 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           if (name === "raporty" && !reportsMounted) {
             reportsMounted = true;
             renderReportsPanel({ container: viewEl.querySelector("#reportsPanel"), ctx });
+          }
+          if (name === "kurs" && !kursMounted) {
+            kursMounted = true;
+            renderKursZgloszeniaPanel({ container: viewEl.querySelector("#kursZgloszeniaPanel"), ctx });
           }
         });
       });

@@ -36,6 +36,13 @@ import { eventsNotifyKierownikTask } from "./tasks/eventsNotifyKierownik";
 import { gearNotifyDamageReportTask } from "./tasks/gearNotifyDamageReport";
 import { godzinkiNotifyRejectedTask } from "./tasks/godzinkiNotifyRejected";
 import { gearNotifyHalfHalfOwnerTask } from "./tasks/gearNotifyHalfHalfOwner";
+import {
+  kursNotifyZgloszenieTask,
+  kursPromoteToMembersTask,
+  kursMarkPaidTask,
+  kursRemoveKursantTask,
+  kursPurgeDemoTask,
+} from "./tasks/kursZgloszenia";
 
 const tasks: ServiceTask[] = [
   onUserRegisteredWelcomeTask,
@@ -77,6 +84,11 @@ const tasks: ServiceTask[] = [
   gearNotifyDamageReportTask,
   godzinkiNotifyRejectedTask,
   gearNotifyHalfHalfOwnerTask,
+  kursNotifyZgloszenieTask,
+  kursPromoteToMembersTask,
+  kursMarkPaidTask,
+  kursRemoveKursantTask,
+  kursPurgeDemoTask,
 ];
 
 export function getTaskRegistry(): Map<string, ServiceTask> {

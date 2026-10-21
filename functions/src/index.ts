@@ -69,6 +69,8 @@ import {handleGetKursInfo} from "./api/getKursInfoHandler";
 import {handleGetKursantStats} from "./api/getKursantStatsHandler";
 import {handleGetKlubInfo} from "./api/getKlubInfoHandler";
 import {handleGetPublicSite} from "./api/getPublicSiteHandler";
+import {handleKursZgloszenie} from "./api/kursZgloszenieHandler";
+import {handleAdminKursZgloszenia, handleAdminKursZgloszenieAction} from "./api/adminKursZgloszeniaHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
 import {handleEventInterestToggle} from "./api/eventInterestToggleHandler";
@@ -1764,6 +1766,34 @@ export const getKlubInfo = onRequest({invoker: "private"}, async (req, res) => {
  */
 export const publicSiteInfo = onRequest({invoker: "private"}, async (req, res) => {
   return handleGetPublicSite(req, res, {db, requireAllowedHost, setCorsHeaders});
+});
+
+/**
+ * GET/POST /api/kurs/zgloszenie (authenticated Google, wołane z kurs.morzkulc.pl)
+ * Formularz zgłoszeniowy na kurs + dane do przelewu. Własne CORS (originy strony kursu).
+ */
+export const kursZgloszenie = onRequest({invoker: "private"}, async (req, res) => {
+  return handleKursZgloszenie(req, res, {db, requireAllowedHost, requireIdToken});
+});
+
+/**
+ * GET /api/admin/kurs/zgloszenia (authenticated, role: zarzad/kr)
+ * Lista zgłoszeń bieżącej edycji kursu (lista główna/rezerwowa, dane do przelewu).
+ */
+export const adminKursZgloszenia = onRequest({invoker: "private"}, async (req, res) => {
+  return handleAdminKursZgloszenia(req, res, {
+    db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
+  });
+});
+
+/**
+ * POST /api/admin/kurs/zgloszenie (authenticated, role: zarzad/kr)
+ * Zadatek wpłacony / pełna wpłata / rezygnacja — przenosi kursanta do arkusza członków lub sprząta.
+ */
+export const adminKursZgloszenieAction = onRequest({invoker: "private"}, async (req, res) => {
+  return handleAdminKursZgloszenieAction(req, res, {
+    db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
+  });
 });
 
 export const userWeight = onRequest({invoker: "private"}, async (req, res) => {

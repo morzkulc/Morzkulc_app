@@ -4,6 +4,7 @@ import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
 import {parseSchoolYear} from "../../modules/equipment/bundle/gear_bundle_service";
 import {normNullish} from "../../modules/shared/text_utils";
+import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zgloszenia";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -25,13 +26,7 @@ type Payload = {
   requestedBy?: string;
 };
 
-function normalizeHeader(h: string): string {
-  return String(h == null ? "" : h).trim().toLowerCase()
-    .split(" ").join("_").split("-").join("_")
-    .replace(/ą/g, "a").replace(/ć/g, "c").replace(/ę/g, "e").replace(/ł/g, "l")
-    .replace(/ń/g, "n").replace(/ó/g, "o").replace(/ś/g, "s").replace(/ż/g, "z").replace(/ź/g, "z")
-    .replace(/[^a-z0-9_]/g, "");
-}
+const normalizeHeader = normalizeSheetHeader;
 
 function normalizeBoolish(v: any): boolean {
   if (typeof v === "boolean") return v;
@@ -211,27 +206,29 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
           problems.push("rok szkoleniówki (puste albo nie da się rozpoznać roku)");
         }
 
-        if ("pesel" in hmap) {
+        // Kursant bez PESEL (obcokrajowiec): wystarczy numer w kolumnie „Dokument tożsamości”.
+        const hasDokument = "dokument_tozsamosci" in hmap && g(row, "dokument_tozsamosci") !== "";
+        if ("pesel" in hmap && !(g(row, "pesel") === "" && hasDokument)) {
           const pesel = g(row, "pesel");
           if (!/^\d{11}$/.test(pesel)) {
             problems.push(
               pesel ?
                 "PESEL (musi mieć dokładnie 11 cyfr — sprawdź, czy komórka nie jest sformatowana jako liczba, bo traci wiodące zero)" :
-                "PESEL (puste)"
+                "PESEL (puste — przy braku PESEL wpisz numer w kolumnie „Dokument tożsamości”)"
             );
           }
         }
 
         if ("waga" in hmap) {
           const waga = toNumberOrNull(g(row, "waga"));
-          if (waga === null || waga < 30 || waga > 250) {
+          if (waga === null || waga < KURSANT_LIMITS.wagaMin || waga > KURSANT_LIMITS.wagaMax) {
             problems.push("waga (puste albo poza zakresem 30–250 kg)");
           }
         }
 
         if ("wzrost" in hmap) {
           const wzrost = toNumberOrNull(g(row, "wzrost"));
-          if (wzrost === null || wzrost < 100 || wzrost > 230) {
+          if (wzrost === null || wzrost < KURSANT_LIMITS.wzrostMin || wzrost > KURSANT_LIMITS.wzrostMax) {
             problems.push("wzrost (puste albo poza zakresem 100–230 cm)");
           }
         }

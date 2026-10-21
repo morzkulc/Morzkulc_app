@@ -53,10 +53,31 @@
     });
   }
 
+  // Tryb demo zapisów (kurs_zapisy_demo_do): formularz działa testowo niezależnie od
+  // statusu — strona mówi to wprost (pasek na każdej podstronie + przyciski „(test)”).
+  function demoActive(k) {
+    if (!k.zapisyDemoDo) return false;
+    var t = today(), d = parseIso(k.zapisyDemoDo);
+    return t <= d;
+  }
+
+  function demoBar(k) {
+    if (!demoActive(k)) return;
+    var bar = document.createElement("div");
+    bar.className = "demo-bar";
+    bar.textContent = "Tryb testowy zapisów do " + fmtDate(k.zapisyDemoDo) +
+      " — zgłoszenia są próbne i zostaną usunięte. Testuj kontem Google, którego nie ma w aplikacji klubowej. Nie wpłacaj pieniędzy.";
+    document.body.appendChild(bar);
+    document.body.classList.add("has-demo-bar");
+  }
+
   function status(k) {
     var s = k.zapisyStatus;
     var label = "Zapisy", sub = "", btn = "Zapytaj o kurs", href = "#kontakt", enabled = true;
-    if (s === "otwarte") {
+    if (demoActive(k)) {
+      label = "Zapisy testowe"; sub = "tryb demo do " + fmtDate(k.zapisyDemoDo);
+      btn = "Zapisz się (test)"; href = k.linkZapisu || "/zapis";
+    } else if (s === "otwarte") {
       label = "Zapisy otwarte"; sub = k.zapisyDo ? "do " + fmtDate(k.zapisyDo) : "zapisz się już teraz";
       btn = "Zapisz się"; href = k.linkZapisu || "#kontakt";
     } else if (s === "wkrotce") {
@@ -80,6 +101,7 @@
       el.classList.toggle("is-disabled", !enabled);
     });
     if (!enabled) $$(".js-cta").forEach(function (el) { el.textContent = label; });
+    if (demoActive(k)) $$(".js-cta").forEach(function (el) { el.textContent = btn; el.href = href; });
   }
 
   function timeline(k) {
@@ -96,6 +118,7 @@
       var type = document.createElement("span"); type.className = "tl-type"; type.textContent = TYPE_LABEL[x.type] || x.type;
       var name = document.createElement("strong"); name.textContent = x.name;
       card.appendChild(type); card.appendChild(name);
+      if (x.type === "basen") { var pick = document.createElement("span"); pick.className = "tl-pick"; pick.textContent = "do wyboru"; card.appendChild(pick); }
       if (x.place) { var pl = document.createElement("span"); pl.className = "tl-place"; pl.textContent = x.place; card.appendChild(pl); }
       li.appendChild(date); li.appendChild(card); ol.appendChild(li);
     });
@@ -103,16 +126,33 @@
     h.forEach(function (x) { counts[x.type] = (counts[x.type] || 0) + 1; });
     var parts = [];
     if (counts.wyklad) parts.push(counts.wyklad + " " + plural(counts.wyklad, "wykład|wykłady|wykładów"));
-    if (counts.basen) parts.push(counts.basen + " " + plural(counts.basen, "basen|baseny|basenów"));
+    if (counts.basen) parts.push(counts.basen + " " + plural(counts.basen, "termin basenowy|terminy basenowe|terminów basenowych") + " do wyboru");
     if (counts.wyjazd) parts.push(counts.wyjazd + " " + plural(counts.wyjazd, "wyjazd|wyjazdy|wyjazdów"));
     var sum = document.querySelector(".js-hsum");
     if (sum && parts.length) sum.textContent = parts.join(" · ") + ". Od " + fmtDate(h[0].from) + ".";
+    basenNote(k, counts.basen || 0);
     var cd = document.querySelector(".js-cd");
     var days = Math.round((parseIso(h[0].from) - t0) / 86400000);
     if (cd) {
       if (days > 0) cd.textContent = days;
       else cd.closest(".countdown").classList.add("is-missing");
     }
+  }
+
+  // Baseny to terminy do wyboru, nie obowiązkowy cykl: kursant wybiera od minimum
+  // do liczby basenów w cenie (Vars_KURS) i zapisuje się na nie w aplikacji.
+  function basenNote(k, count) {
+    var el = document.querySelector(".js-basen-note");
+    if (!el || !count) return;
+    var min = Number(k.minBasenow) || 0, inc = Number(k.basenyWCenie) || 0;
+    var range = min && inc && min < inc ? min + "–" + inc : String(inc || min || "");
+    var txt = "Baseny: " + (range ? "wybierasz " + range + " z " + count + " " + plural(count, "terminu|terminów|terminów") + ". " : "terminy do wyboru. ");
+    if (inc) txt += inc + " " + plural(inc, "basen jest|baseny są|basenów jest") + " w cenie";
+    if (inc && min) txt += ", do ukończenia kursu wystarczy " + min + ". ";
+    else if (inc) txt += ". ";
+    txt += "Na wybrane terminy zapisujesz się w aplikacji klubowej.";
+    el.textContent = txt;
+    el.hidden = false;
   }
 
   function film(k) {
@@ -149,7 +189,7 @@
 
   function apply(data) {
     var k = derive((data && data.kurs) || {});
-    fill(k); status(k); timeline(k); film(k); contact(data || {}, k);
+    fill(k); status(k); demoBar(k); timeline(k); film(k); contact(data || {}, k);
   }
 
   // ---------- UI ----------

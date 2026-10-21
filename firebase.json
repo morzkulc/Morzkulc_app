@@ -566,6 +566,27 @@
         }
       },
       {
+        "source": "/api/kurs/zgloszenie",
+        "function": {
+          "functionId": "kursZgloszenie",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/admin/kurs/zgloszenia",
+        "function": {
+          "functionId": "adminKursZgloszenia",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/admin/kurs/zgloszenie",
+        "function": {
+          "functionId": "adminKursZgloszenieAction",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/public/site",
         "function": {
           "functionId": "publicSiteInfo",

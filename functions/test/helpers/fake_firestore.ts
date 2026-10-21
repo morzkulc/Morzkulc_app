@@ -293,6 +293,14 @@ export class FakeDocumentReference {
     this.db.writes.push({op: "set", path: this.path, data: clone(resolved)});
   }
 
+  /** Jak Firestore create(): błąd ALREADY_EXISTS (code 6), gdy dokument istnieje. */
+  async create(data: Data): Promise<void> {
+    if (this.db.store(this.collectionPath).has(this.id)) {
+      throw Object.assign(new Error(`FakeFirestore: ${this.path} already exists`), {code: 6});
+    }
+    await this.set(data);
+  }
+
   async update(data: Data): Promise<void> {
     const store = this.db.store(this.collectionPath);
     const existing = store.get(this.id);
