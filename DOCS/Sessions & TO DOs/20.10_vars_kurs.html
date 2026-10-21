@@ -1,0 +1,46 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><title>Vars_KURS – nowe zmienne</title>
+<style>body{font:14px Arial,sans-serif;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;text-align:left;white-space:nowrap}th{background:#eee}button{font-size:15px;padding:8px 16px;margin-bottom:12px;cursor:pointer}#ok{color:green;margin-left:10px}</style>
+<h2>Vars_KURS – nowe zmienne (33 wierszy)</h2>
+<p>Kliknij „Kopiuj wiersze” (bez nagłówka) i wklej w arkuszu w pierwszą wolną komórkę kolumny Zmienna_nazwa — wiersze rozłożą się na 4 kolumny.</p>
+<button id="b">Kopiuj wiersze</button><button id="h">Kopiuj z nagłówkiem</button><span id="ok"></span>
+<table id="t"><thead><tr><th>Zmienna_nazwa</th><th>Wartość_zmiennej</th><th>Grupa zmiennych</th><th>Opis</th></tr></thead><tbody>
+<tr><td>kurs_edycja</td><td>2027</td><td>Strona kursu</td><td>Edycja kursu (tytuł strony)</td></tr>
+<tr><td>kurs_zadatek</td><td>950</td><td>Strona kursu</td><td>Zadatek w zł</td></tr>
+<tr><td>kurs_cena_student</td><td></td><td>Strona kursu</td><td>Cena studencka w zł; puste = ukryta (S5)</td></tr>
+<tr><td>kurs_termin_doplaty</td><td></td><td>Strona kursu</td><td>Termin dopłaty do pełnej kwoty (rrrr-mm-dd)</td></tr>
+<tr><td>kurs_limit_miejsc</td><td></td><td>Strona kursu</td><td>Liczba miejsc</td></tr>
+<tr><td>kurs_zapisy_status</td><td>wkrotce</td><td>Strona kursu</td><td>wkrotce / otwarte / rezerwowa / zamkniete</td></tr>
+<tr><td>kurs_zapisy_od</td><td></td><td>Strona kursu</td><td>Start zapisów (rrrr-mm-dd)</td></tr>
+<tr><td>kurs_zapisy_do</td><td></td><td>Strona kursu</td><td>Koniec zapisów (rrrr-mm-dd)</td></tr>
+<tr><td>kurs_link_zapisu</td><td></td><td>Strona kursu</td><td>Link przycisku „Zapisz się” (https://…)</td></tr>
+<tr><td>kurs_kontakt_email</td><td></td><td>Strona kursu</td><td>E-mail kontaktowy kursu</td></tr>
+<tr><td>kurs_kontakt_telefon</td><td></td><td>Strona kursu</td><td>Telefon kontaktowy; puste = ukryty</td></tr>
+<tr><td>kurs_baseny_w_cenie</td><td>2</td><td>Strona kursu</td><td>Liczba basenów w cenie</td></tr>
+<tr><td>kurs_min_basenow</td><td></td><td>Strona kursu</td><td>Min. basenów do ukończenia (S4)</td></tr>
+<tr><td>kurs_min_wyjazdow</td><td>2</td><td>Strona kursu</td><td>Min. wyjazdów do ukończenia</td></tr>
+<tr><td>kurs_film_url</td><td></td><td>Strona kursu</td><td>Film w galerii (YouTube lub plik)</td></tr>
+<tr><td>harmonogram_01</td><td>2027-03-04 | spotkanie | Spotkanie organizacyjne</td><td>Harmonogram</td><td>data_od[/data_do] | typ | nazwa | miejsce</td></tr>
+<tr><td>harmonogram_02</td><td>2027-04-01 | wyklad | Wykład 1 – inauguracyjny: szkoleniówka, sprzęt, basen</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_03</td><td>2027-04-06 | basen | Basen 1</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_04</td><td>2027-04-08 | wyklad | Wykład 2 – pierwsza pomoc i ratownictwo</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_05</td><td>2027-04-10 | basen | Basen 2</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_06</td><td>2027-04-15 | basen | Basen 3</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_07</td><td>2027-04-17 | basen | Basen 4</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_08</td><td>2027-04-20 | basen | Basen 5</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_09</td><td>2027-04-24/2027-04-25 | wyjazd | Wyjazd I | Ostrzyce</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_10</td><td>2027-04-24/2027-04-25 | wyklad | Wykład 3 – technika pływania + wideoanaliza</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_11</td><td>2027-05-01/2027-05-03 | wyjazd | Wyjazd II | Platforma</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_12</td><td>2027-05-01 | wyklad | Wykład 4 – technika pływania II, na mokro</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_13</td><td>2027-05-08/2027-05-09 | wyjazd | Wyjazd III | Platforma</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_14</td><td>2027-05-15/2027-05-16 | wyjazd | Wyjazd IV – morski | Puck</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_15</td><td>2027-05-15 | wyklad | Wykład 5 – pływanie morskie + wideoanaliza</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_16</td><td>2027-05-22/2027-05-24 | wyjazd | Wyjazd V – tor kajakowy | Czeskie Budziejowice</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_17</td><td>2027-05-27/2027-05-30 | po_kursie | ASP | Salza</td><td>Harmonogram</td><td></td></tr>
+<tr><td>harmonogram_18</td><td>2027-06-19/2027-07-04 | po_kursie | Sjoa | Norwegia</td><td>Harmonogram</td><td></td></tr>
+</tbody></table>
+<script>
+function tsv(head){return [...document.querySelectorAll(head?'#t tr':'#t tbody tr')].map(r=>[...r.cells].map(c=>c.textContent).join('	')).join('
+');}
+function cp(head){const s=tsv(head);(navigator.clipboard?navigator.clipboard.writeText(s):Promise.reject()).catch(()=>{const a=document.createElement('textarea');a.value=s;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();}).finally(()=>{document.getElementById('ok').textContent='Skopiowano';});}
+b.onclick=()=>cp(false);h.onclick=()=>cp(true);
+</script></html>

@@ -98,12 +98,13 @@ describe("publicSite", () => {
     expect(body.social).toEqual({facebook: "https://facebook.com/morzkulc"});
   });
 
-  it("CORS: origin wizytówki dostaje ACAO, obcy nie; odpowiedź cache'owalna", async () => {
+  it("CORS: ACAO * niezależnie od originu (odporne na cache CDN); odpowiedź cache'owalna", async () => {
     const ok = await run(seed());
-    expect(ok.headers["Access-Control-Allow-Origin"]).toBe("http://www.morzkulc.pg.gda.pl");
+    expect(ok.headers["Access-Control-Allow-Origin"]).toBe("*");
+    expect(ok.headers["Vary"]).toBeUndefined();
     expect(ok.headers["Cache-Control"]).toBe("public, max-age=900");
-    const evil = await run(seed(), "GET", "https://evil.example");
-    expect(evil.headers["Access-Control-Allow-Origin"]).toBeUndefined();
+    const other = await run(seed(), "GET", "https://kurs.morzkulc.pl");
+    expect(other.headers["Access-Control-Allow-Origin"]).toBe("*");
   });
 
   it("OPTIONS → 204, POST → 405", async () => {
@@ -125,11 +126,6 @@ describe("publicSite", () => {
         {from: "2027-04-24", to: "2027-04-25", type: "wyjazd", name: "Wyjazd I", place: "Ostrzyce"},
       ],
     });
-  });
-
-  it("CORS: strona kursu dostaje ACAO", async () => {
-    const r = await run(seed(), "GET", "https://kurs.morzkulc.pl");
-    expect(r.headers["Access-Control-Allow-Origin"]).toBe("https://kurs.morzkulc.pl");
   });
 });
 

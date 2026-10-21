@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/img/morze-fala.webp">
-<link rel="stylesheet" href="/kurs.css">
+<link rel="stylesheet" href="/kurs.css?v=5">
 </head>
 <body>
 
@@ -25,6 +25,7 @@
     <a href="#harmonogram">Harmonogram</a>
     <a href="#cena">Cena</a>
     <a href="#faq">FAQ</a>
+    <a href="/poznaj">Poznaj nas</a>
   </nav>
   <a class="btn btn-sm btn-accent js-cta" href="#zapisy">Zapisz się</a>
 </header>
@@ -52,6 +53,33 @@
       <div class="fact" data-need="start"><span class="fact-v" data-k="start" data-fmt="date-short"></span><span class="fact-l">start kursu</span></div>
       <div class="fact" data-need="wyjazdy"><span class="fact-v"><span data-k="wyjazdy" data-plural="wyjazd|wyjazdy|wyjazdów"></span></span><span class="fact-l">weekendy na wodzie</span></div>
       <div class="fact fact-status"><span class="fact-v js-status-label">Zapisy</span><span class="fact-l js-status-sub"></span></div>
+    </div>
+  </section>
+
+  <!-- SOBOTNI PORANEK -->
+  <section class="section story">
+    <div class="wrap story-grid">
+      <div class="story-text">
+        <p class="eyebrow reveal">Wyobraź sobie</p>
+        <h2 class="reveal">Jest sobotni poranek.</h2>
+        <p class="story-lead reveal">Ty i grupa znajomych, których dziś jeszcze nie znasz, pakujecie kajaki na samochody. Wkrótce zmierzycie się z górską rzeką. Lub będziecie pływać wśród morskich fal.</p>
+        <p class="reveal">Nie dlatego, że jesteście zawodowcami. Dlatego, że podjęliście decyzję, by spróbować czegoś nowego.</p>
+        <p class="reveal">Większość ludzi spędza weekendy podobnie. <strong>My wolimy wracać z nich z historiami.</strong></p>
+        <ul class="moments reveal">
+          <li>Wschód słońca na Bałtyku</li>
+          <li>Nocleg pod gwiazdami po całym dniu na wodzie</li>
+          <li>Satysfakcja po pokonaniu pierwszego bystrza</li>
+          <li>Widoki dostępne wyłącznie z kajaka</li>
+          <li>Poczucie sprawczości, gdy robisz rzeczy wymagające wysiłku i zaangażowania</li>
+          <li>Wśród wspaniałej grupy ludzi</li>
+        </ul>
+        <p class="story-end reveal">To właśnie jest świat, do którego Cię zapraszamy.</p>
+        <a class="more reveal" href="/poznaj">Poznaj nas i przeczytaj więcej →</a>
+      </div>
+      <div class="story-media reveal">
+        <img class="sm-a" loading="lazy" src="/img/morze-piatka-800.webp" alt="Przybijanie piątki na plaży po zajęciach">
+        <img class="sm-b" loading="lazy" src="/img/grupa-radosc-800.webp" alt="Radość w grupie na wodzie">
+      </div>
     </div>
   </section>
 
@@ -172,6 +200,32 @@
     </div>
   </section>
 
+  <!-- SPOŁECZNOŚĆ -->
+  <section class="section club">
+    <div class="wrap">
+      <p class="eyebrow reveal">Więcej niż kurs</p>
+      <h2 class="reveal">Dołączasz do ludzi, nie do usługi</h2>
+      <p class="sub reveal">Kurs prowadzą doświadczeni instruktorzy i klubowicze SKK Morzkulc. Uczysz się od nich, pływasz z nimi, a po kursie zostajesz w klubie na kolejne wyjazdy, treningi i wyprawy.</p>
+      <div class="club-grid">
+        <article class="club-card reveal">
+          <span class="club-n">01</span>
+          <h3>Przychodzisz sam, zostajesz z ekipą</h3>
+          <p>Wiele osób przychodzi na kurs samodzielnie, a później pływa dalej z ludźmi poznanymi na kursie.</p>
+        </article>
+        <article class="club-card reveal">
+          <span class="club-n">02</span>
+          <h3>Biwaki, ogniska, wspólne wyjazdy</h3>
+          <p>Intensywna nauka idzie w parze z klubową atmosferą. Razem pakujemy sprzęt, rozbijamy obóz, gotujemy i siadamy przy ognisku.</p>
+        </article>
+        <article class="club-card reveal">
+          <span class="club-n">03</span>
+          <h3>Dziś kursant, jutro kadra</h3>
+          <p>Większość osób, które dziś organizują klubowe wyjazdy, prowadzą szkolenia lub realizują ambitne projekty kajakowe, kiedyś przyszła na kurs dokładnie tak samo jak Ty.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- PO KURSIE -->
   <section class="section section-alt">
     <div class="wrap after">
@@ -185,6 +239,7 @@
           <li>rozwijasz technikę z bardziej doświadczonymi kajakarzami</li>
           <li>planujesz własne wyjazdy z ludźmi poznanymi na kursie</li>
         </ul>
+        <a class="btn btn-accent after-cta" href="#zapisy">Chcę być tą osobą</a>
       </div>
       <img class="after-img reveal" loading="lazy" src="/img/morze-ekipa-800.webp" srcset="/img/morze-ekipa-800.webp 800w, /img/morze-ekipa.webp 2000w" sizes="(max-width: 800px) 100vw, 45vw" alt="Ekipa po zajęciach na morzu">
     </div>
@@ -196,6 +251,7 @@
       <h2 class="reveal">Najczęstsze pytania</h2>
       <div class="faq">
         <details><summary>Nigdy nie siedziałem w kajaku. Czy dam sobie radę?</summary><p>Tak. Kurs jest dla osób zaczynających od zera i dla tych z doświadczeniem. Zaczynamy od podstaw i stopniowo podnosimy poziom trudności.</p></details>
+        <details><summary>Mam już doświadczenie kajakowe. Czy kurs jest dla mnie?</summary><p>Tak. Kurs jest również dla osób, które chcą uporządkować wiedzę, poprawić technikę i rozwinąć się w kierunku kajakarstwa górskiego lub morskiego.</p></details>
         <details><summary>Czy muszę umieć pływać?</summary><p>Tak. Wymagamy umiejętności pływania wpław w stopniu pozwalającym na bezpieczny udział w zajęciach. Nie musisz być pływakiem sportowym, ale w wodzie powinieneś czuć się swobodnie.</p></details>
         <details><summary>Czy są ograniczenia wiekowe?</summary><p>Kurs jest przeznaczony dla osób pełnoletnich. Udział osoby niepełnoletniej wymaga zgody Zarządu Klubu i pisemnej zgody przedstawiciela ustawowego.</p></details>
         <details><summary>Czy kurs jest tylko dla studentów?</summary><p>Nie. Zapraszamy wszystkie osoby pełnoletnie.<span data-need="cenaStudent"> Studenci płacą <span data-k="cenaStudent" data-fmt="pln"></span>.</span></p></details>
@@ -211,11 +267,14 @@
         <details><summary>Nie jestem bardzo wysportowany. Czy to problem?</summary><p>Nie oczekujemy przygotowania zawodniczego. Ważniejsze są zaangażowanie i chęć nauki, a stan zdrowia powinien pozwalać na bezpieczny udział w zajęciach.</p></details>
         <details><summary>Co jeśli nie mogę pojechać na jeden z wyjazdów?</summary><p>Nic się nie stanie. Harmonogram jest napięty i wiele osób opuszcza jeden lub dwa wyjazdy.<span data-need="minBasenow"> Warunkiem ukończenia kursu jest udział w co najmniej <span data-k="minBasenow"></span> zajęciach basenowych<span data-need="minWyjazdow"> i <span data-k="minWyjazdow"></span> wyjazdach</span>.</span> Polecamy udział w przynajmniej jednym z dwóch pierwszych wyjazdów.</p></details>
         <details><summary>Czy po kursie mogę dalej pływać z Morzkulcem?</summary><p>Tak, właśnie po to organizujemy kurs. Zaraz po nim zapraszamy na kilkudniowy wyjazd w Alpy z kadrą.</p></details>
+        <details><summary>Jak wygląda atmosfera na kursie?</summary><p>Kurs łączy intensywną naukę z klubową atmosferą, wspólnymi wyjazdami, biwakami i ogniskami. Wiele osób przychodzi samodzielnie, a później kontynuuje pływanie z ludźmi poznanymi podczas kursu.</p></details>
         <details><summary>Czy po kursie zostanę instruktorem?</summary><p>Nie. Kurs rozwija praktyczne umiejętności, ale nie nadaje formalnych uprawnień instruktorskich.</p></details>
         <details><summary>Czy muszę mieć samochód z bagażnikiem dachowym?</summary><p>Nie. Transport uczestników i sprzętu organizujemy wspólnie. Jeśli masz auto z belkami dachowymi, daj znać — to pomaga.</p></details>
         <details><summary>Czy muszę mieć kurs pierwszej pomocy?</summary><p>Nie. Na kursie omawiamy reagowanie w sytuacjach awaryjnych w kajakarstwie, ale nie zastępuje to certyfikowanego szkolenia z pierwszej pomocy.</p></details>
         <details><summary>Jak dbacie o bezpieczeństwo? Czy jest ratownik?</summary><p>Zajęcia prowadzi kadra, która dobiera trasę i ćwiczenia do warunków i poziomu grupy. Zapewniamy sprzęt ochronny i ratowniczy. Obecność odrębnego ratownika zależy od miejsca zajęć; kurs nie zakłada ratownika wodnego na każdym wyjeździe.</p></details>
         <details><summary>Czy do części morskiej potrzebuję patentu?</summary><p>Nie. Nie wymagamy patentu ani wcześniejszych uprawnień. Umiejętności rozwijamy stopniowo na basenie i wyjazdach.</p></details>
+        <details><summary>Czy śpimy wyłącznie w namiotach? Jak nocują osoby, które się nie znały?</summary><p>Część wyjazdów to noclegi biwakowe we własnym namiocie lub innym uzgodnionym sprzęcie biwakowym. Bez namiotu możesz go wypożyczyć albo uzgodnić wspólny nocleg z osobą, która ma wolne miejsce. Takie ustalenia odbywają się przed wyjazdem i zawsze wymagają zgody wszystkich zainteresowanych.</p></details>
+        <details><summary>Czy uczestników dobieracie według wieku, sytuacji rodzinnej lub zainteresowań?</summary><p>Nie. Kurs jest otwarty dla osób pełnoletnich spełniających warunki udziału, a o przyjęciu decydują zasady zapisów i możliwości organizacyjne Klubu.</p></details>
         <details><summary>Czy będę ubezpieczony?</summary><p>Tak. Cena obejmuje ubezpieczenie NNW uwzględniające kajakarstwo, w tym morskie i górskie.</p></details>
       </div>
     </div>
@@ -225,11 +284,13 @@
   <section class="section cta-final" id="zapisy">
     <img class="cta-bg" loading="lazy" src="/img/tor-grupa.webp" alt="">
     <div class="wrap narrow cta-inner">
-      <h2 class="reveal">Zrób pierwszy krok</h2>
-      <p class="sub reveal js-status-text">Szukasz wyzwania, nowych umiejętności i przygód, które zostają w pamięci na lata? Ten kurs jest dla Ciebie.</p>
+      <p class="eyebrow reveal">Dołącz do Morzkulca</p>
+      <h2 class="reveal cta-h">Za rok możesz nadal oglądać relacje z cudzych wypraw. Albo wspominać własne.</h2>
+      <p class="sub reveal">Pierwszą morską falę, pierwszy przepłynięty kilometr na otwartym morzu, pierwszą górską rzekę i ludzi, z którymi będziesz planować kolejne wyjazdy. Jeżeli szukasz wyzwania, nowych umiejętności i przygód, które zostają w pamięci na lata, ten kurs jest dla Ciebie.</p>
       <p class="seats reveal" data-need="limitMiejsc">Liczba miejsc: <strong data-k="limitMiejsc"></strong></p>
       <div class="hero-cta reveal">
         <a class="btn btn-accent btn-lg js-signup" href="#kontakt">Zapisz się</a>
+        <a class="btn btn-ghost btn-lg" href="#harmonogram">Zobacz harmonogram Kursu <span data-k="edycja"></span></a>
       </div>
       <p class="note reveal">Zapis oznacza akceptację <a href="/regulamin">regulaminu kursu</a>.</p>
     </div>
@@ -241,7 +302,6 @@
   <div class="wrap foot-grid">
     <div>
       <p class="brand"><span class="brand-dot"></span>SKK Morzkulc</p>
-      <p class="muted">Stowarzyszenie SKK Morzkulc, Gdańsk</p>
       <p class="muted js-adres"></p>
     </div>
     <div>
@@ -251,6 +311,7 @@
     </div>
     <div>
       <p class="foot-h">Więcej</p>
+      <p><a href="/poznaj">Poznaj nas</a></p>
       <p><a href="/regulamin">Regulamin kursu</a></p>
       <p class="js-social"></p>
       <p><a href="https://www.morzkulc.pl">www.morzkulc.pl</a></p>
@@ -266,6 +327,6 @@
   <span class="lb-count"></span>
 </div>
 
-<script src="/kurs.js" defer></script>
+<script src="/kurs.js?v=4" defer></script>
 </body>
 </html>

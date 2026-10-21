@@ -580,7 +580,7 @@
     "ignore": ["README.md", "**/.*", "**/node_modules/**"],
     "cleanUrls": true,
     "headers": [
-      { "source": "**/*.html", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },
+      { "source": "**/*.@(html|js|css)", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },
       { "source": "/img/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
     ]
   }],

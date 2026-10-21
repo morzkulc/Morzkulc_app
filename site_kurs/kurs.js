@@ -154,7 +154,7 @@
 
   // ---------- UI ----------
   var nav = document.getElementById("nav");
-  function onScroll() { nav.classList.toggle("scrolled", window.scrollY > 40); }
+  function onScroll() { if (nav) nav.classList.toggle("scrolled", window.scrollY > 40); }
   window.addEventListener("scroll", onScroll, {passive: true}); onScroll();
 
   if ("IntersectionObserver" in window) {
@@ -166,46 +166,48 @@
     $$(".reveal").forEach(function (el) { el.classList.add("in"); });
   }
 
-  // Galeria: podgląd z przewijaniem (strzałki, klawiatura, przesunięcie palcem).
+  // Galeria (tylko strona główna): podgląd z przewijaniem (strzałki, klawiatura, przesunięcie palcem).
   var lb = document.getElementById("lightbox");
-  var lbImg = lb.querySelector("img");
-  var lbCap = lb.querySelector(".lb-cap");
-  var lbCount = lb.querySelector(".lb-count");
-  var items = $$(".js-gallery a");
-  var cur = 0;
-  function show(i) {
-    cur = (i + items.length) % items.length;
-    var a = items[cur];
-    lbImg.classList.remove("lb-swap"); void lbImg.offsetWidth; lbImg.classList.add("lb-swap");
-    lbImg.src = a.href;
-    lbImg.alt = a.querySelector("img").alt;
-    lbCap.textContent = lbImg.alt;
-    lbCount.textContent = (cur + 1) + " / " + items.length;
-    [cur - 1, cur + 1].forEach(function (n) { new Image().src = items[(n + items.length) % items.length].href; });
-  }
-  function close() { lb.hidden = true; lbImg.src = ""; document.body.style.overflow = ""; }
-  items.forEach(function (a, i) {
-    a.addEventListener("click", function (e) {
-      e.preventDefault(); lb.hidden = false; document.body.style.overflow = "hidden"; show(i);
+  if (lb) {
+    var lbImg = lb.querySelector("img");
+    var lbCap = lb.querySelector(".lb-cap");
+    var lbCount = lb.querySelector(".lb-count");
+    var items = $$(".js-gallery a");
+    var cur = 0;
+    function show(i) {
+      cur = (i + items.length) % items.length;
+      var a = items[cur];
+      lbImg.classList.remove("lb-swap"); void lbImg.offsetWidth; lbImg.classList.add("lb-swap");
+      lbImg.src = a.href;
+      lbImg.alt = a.querySelector("img").alt;
+      lbCap.textContent = lbImg.alt;
+      lbCount.textContent = (cur + 1) + " / " + items.length;
+      [cur - 1, cur + 1].forEach(function (n) { new Image().src = items[(n + items.length) % items.length].href; });
+    }
+    function close() { lb.hidden = true; lbImg.src = ""; document.body.style.overflow = ""; }
+    items.forEach(function (a, i) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault(); lb.hidden = false; document.body.style.overflow = "hidden"; show(i);
+      });
     });
-  });
-  lb.querySelector(".lb-prev").addEventListener("click", function (e) { e.stopPropagation(); show(cur - 1); });
-  lb.querySelector(".lb-next").addEventListener("click", function (e) { e.stopPropagation(); show(cur + 1); });
-  lb.querySelector(".lb-close").addEventListener("click", close);
-  lb.addEventListener("click", function (e) { if (e.target === lb || e.target.classList.contains("lb-fig")) close(); });
-  document.addEventListener("keydown", function (e) {
-    if (lb.hidden) return;
-    if (e.key === "Escape") close();
-    else if (e.key === "ArrowRight") show(cur + 1);
-    else if (e.key === "ArrowLeft") show(cur - 1);
-  });
-  var x0 = null;
-  lb.addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; }, {passive: true});
-  lb.addEventListener("touchend", function (e) {
-    if (x0 === null) return;
-    var dx = e.changedTouches[0].clientX - x0; x0 = null;
-    if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
-  });
+    lb.querySelector(".lb-prev").addEventListener("click", function (e) { e.stopPropagation(); show(cur - 1); });
+    lb.querySelector(".lb-next").addEventListener("click", function (e) { e.stopPropagation(); show(cur + 1); });
+    lb.querySelector(".lb-close").addEventListener("click", close);
+    lb.addEventListener("click", function (e) { if (e.target === lb || e.target.classList.contains("lb-fig")) close(); });
+    document.addEventListener("keydown", function (e) {
+      if (lb.hidden) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowRight") show(cur + 1);
+      else if (e.key === "ArrowLeft") show(cur - 1);
+    });
+    var x0 = null;
+    lb.addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; }, {passive: true});
+    lb.addEventListener("touchend", function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1));
+    });
+  }
 
   fetch(API, {mode: "cors", credentials: "omit"})
     .then(function (r) { return r.ok ? r.json() : null; })

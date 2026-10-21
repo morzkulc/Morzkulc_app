@@ -11,8 +11,10 @@
  * z imprez bez contact/description/kierowników, z zarządu bez prywatnych e-maili,
  * żadnych telefonów, KR, kluczy ani finansów.
  *
- * CORS: własna lista originów (wizytówki), globalnego ALLOWED_ORIGINS nie rozszerzamy,
- * żeby nie otwierać pozostałych endpointów na obce strony.
+ * CORS: `Access-Control-Allow-Origin: *` (dane publiczne, bez credentials). NIE lista
+ * originów: odpowiedź jest cache'owana w CDN Hosting (max-age=900), który ignoruje
+ * `Vary: Origin` — zbuforowana odpowiedź bez ACAO blokowała stronę kursu (20.10.2026).
+ * Globalnego ALLOWED_ORIGINS nie rozszerzamy.
  */
 
 import type {Request, Response} from "express";
@@ -20,17 +22,6 @@ import {logger} from "firebase-functions/v2";
 import {listUpcomingEvents} from "../modules/calendar/events_service";
 import {resolveZarzad} from "../modules/setup/function_roles_service";
 import {buildPublicKurs} from "../modules/kurs/kurs_public";
-
-export const PUBLIC_SITE_ORIGINS = new Set<string>([
-  "http://www.morzkulc.pg.gda.pl",
-  "https://www.morzkulc.pg.gda.pl",
-  "http://morzkulc.pg.gda.pl",
-  "https://morzkulc.pg.gda.pl",
-  "https://www.morzkulc.pl",
-  "https://morzkulc.pl",
-  "https://kurs.morzkulc.pl",
-  "https://morzkulc-kurs.web.app",
-]);
 
 const MAX_EVENTS = 8;
 
@@ -57,11 +48,7 @@ export async function handleGetPublicSite(req: Request, res: Response, deps: Get
 
   if (!requireAllowedHost(req, res)) return;
   setCorsHeaders(req, res);
-  const origin = String(req.headers.origin || "");
-  if (PUBLIC_SITE_ORIGINS.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  }
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
 
   if (req.method === "OPTIONS") {

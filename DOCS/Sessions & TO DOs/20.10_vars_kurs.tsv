@@ -1,0 +1,33 @@
+kurs_edycja	2027	Strona kursu	Edycja kursu (tytuł strony)
+kurs_zadatek	950	Strona kursu	Zadatek w zł
+kurs_cena_student		Strona kursu	Cena studencka w zł; puste = ukryta (S5)
+kurs_termin_doplaty		Strona kursu	Termin dopłaty do pełnej kwoty (rrrr-mm-dd)
+kurs_limit_miejsc		Strona kursu	Liczba miejsc
+kurs_zapisy_status	wkrotce	Strona kursu	wkrotce / otwarte / rezerwowa / zamkniete
+kurs_zapisy_od		Strona kursu	Start zapisów (rrrr-mm-dd)
+kurs_zapisy_do		Strona kursu	Koniec zapisów (rrrr-mm-dd)
+kurs_link_zapisu		Strona kursu	Link przycisku „Zapisz się” (https://…)
+kurs_kontakt_email		Strona kursu	E-mail kontaktowy kursu
+kurs_kontakt_telefon		Strona kursu	Telefon kontaktowy; puste = ukryty
+kurs_baseny_w_cenie	2	Strona kursu	Liczba basenów w cenie
+kurs_min_basenow		Strona kursu	Min. basenów do ukończenia (S4)
+kurs_min_wyjazdow	2	Strona kursu	Min. wyjazdów do ukończenia
+kurs_film_url		Strona kursu	Film w galerii (YouTube lub plik)
+harmonogram_01	2027-03-04 | spotkanie | Spotkanie organizacyjne	Harmonogram	data_od[/data_do] | typ | nazwa | miejsce
+harmonogram_02	2027-04-01 | wyklad | Wykład 1 – inauguracyjny: szkoleniówka, sprzęt, basen	Harmonogram	
+harmonogram_03	2027-04-06 | basen | Basen 1	Harmonogram	
+harmonogram_04	2027-04-08 | wyklad | Wykład 2 – pierwsza pomoc i ratownictwo	Harmonogram	
+harmonogram_05	2027-04-10 | basen | Basen 2	Harmonogram	
+harmonogram_06	2027-04-15 | basen | Basen 3	Harmonogram	
+harmonogram_07	2027-04-17 | basen | Basen 4	Harmonogram	
+harmonogram_08	2027-04-20 | basen | Basen 5	Harmonogram	
+harmonogram_09	2027-04-24/2027-04-25 | wyjazd | Wyjazd I | Ostrzyce	Harmonogram	
+harmonogram_10	2027-04-24/2027-04-25 | wyklad | Wykład 3 – technika pływania + wideoanaliza	Harmonogram	
+harmonogram_11	2027-05-01/2027-05-03 | wyjazd | Wyjazd II | Platforma	Harmonogram	
+harmonogram_12	2027-05-01 | wyklad | Wykład 4 – technika pływania II, na mokro	Harmonogram	
+harmonogram_13	2027-05-08/2027-05-09 | wyjazd | Wyjazd III | Platforma	Harmonogram	
+harmonogram_14	2027-05-15/2027-05-16 | wyjazd | Wyjazd IV – morski | Puck	Harmonogram	
+harmonogram_15	2027-05-15 | wyklad | Wykład 5 – pływanie morskie + wideoanaliza	Harmonogram	
+harmonogram_16	2027-05-22/2027-05-24 | wyjazd | Wyjazd V – tor kajakowy | Czeskie Budziejowice	Harmonogram	
+harmonogram_17	2027-05-27/2027-05-30 | po_kursie | ASP | Salza	Harmonogram	
+harmonogram_18	2027-06-19/2027-07-04 | po_kursie | Sjoa | Norwegia	Harmonogram	
