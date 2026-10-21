@@ -69,6 +69,10 @@ export type ZgloszenieForm = {
   skad: string;
   zgodaRegulamin: boolean;
   zgodaZdrowie: boolean;
+  // Te same zgody co przy rejestracji w aplikacji (render_shell.js: consentRodo / consentStatute)
+  // → „Zgody RODO” = TAK w arkuszu członków.
+  zgodaRodo: boolean;
+  zgodaStatut: boolean;
   zgodaWizerunek: boolean;
 };
 
@@ -188,6 +192,8 @@ export function validateZgloszenie(body: any, todayIso: string):
 
   if (body?.zgodaRegulamin !== true) f.zgodaRegulamin = "Wymagana akceptacja regulaminu";
   if (body?.zgodaZdrowie !== true) f.zgodaZdrowie = "Wymagane potwierdzenie";
+  if (body?.zgodaRodo !== true) f.zgodaRodo = "Wymagana akceptacja polityki prywatności";
+  if (body?.zgodaStatut !== true) f.zgodaStatut = "Wymagana akceptacja statutu i regulaminów";
 
   if (Object.keys(f).length) return {ok: false, fields: f};
 
@@ -207,6 +213,8 @@ export function validateZgloszenie(body: any, todayIso: string):
       skad,
       zgodaRegulamin: true,
       zgodaZdrowie: true,
+      zgodaRodo: true,
+      zgodaStatut: true,
       zgodaWizerunek: body?.zgodaWizerunek === true,
     },
   };

@@ -126,6 +126,8 @@ function collect(form) {
     pasje: v("pasje"), dlaczegoTy: v("dlaczegoTy"), skad: radioVal(form, "skad"),
     zgodaRegulamin: form.elements.zgodaRegulamin.checked,
     zgodaZdrowie: form.elements.zgodaZdrowie.checked,
+    zgodaRodo: form.elements.zgodaRodo.checked,
+    zgodaStatut: form.elements.zgodaStatut.checked,
     zgodaWizerunek: form.elements.zgodaWizerunek.checked,
   };
 }

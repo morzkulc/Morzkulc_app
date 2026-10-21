@@ -67,6 +67,7 @@ function details(z) {
     ${row("Pasje", f.pasje)}
     ${row("Dlaczego Ty", f.dlaczegoTy)}
     ${row("Skąd wie", f.skad)}
+    ${row("Zgody RODO + statut", yn(f.zgodaRodo && f.zgodaStatut))}
     ${row("Zgoda na wizerunek", yn(f.zgodaWizerunek))}
     ${row("Tytuł przelewu", z.przelew?.tytul)}
     ${row("Do zapłaty", pln(z.przelew?.cena))}

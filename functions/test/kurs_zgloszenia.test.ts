@@ -38,7 +38,7 @@ import {
   isValidPesel, validateZgloszenie, computeListy, resolveSheetHeaders, przelewTitle, cenaFor, isAdult,
 } from "../src/modules/kurs/kurs_zgloszenia";
 import {handleKursZgloszenie} from "../src/api/kursZgloszenieHandler";
-import {buildApplicantMail} from "../src/modules/kurs/kurs_zgloszenia_mail";
+import {buildApplicantMail, buildPaymentMail} from "../src/modules/kurs/kurs_zgloszenia_mail";
 import {handleAdminKursZgloszenieAction} from "../src/api/adminKursZgloszeniaHandler";
 import {
   kursPromoteToMembersTask, kursRemoveKursantTask, kursNotifyZgloszenieTask, kursMarkPaidTask, kursPurgeDemoTask,
@@ -56,7 +56,7 @@ function validBody(over: Record<string, any> = {}) {
     chorobyPrzewlekle: false, leki: false, schorzenia: ["Żadne z powyższych"],
     wzrost: 170, waga: "65,5", student: true, uczelnia: "PG", dieta: "wszystko",
     zainteresowania: ["Wyprawy", "nieznane"], skad: "Instagram",
-    zgodaRegulamin: true, zgodaZdrowie: true, zgodaWizerunek: false,
+    zgodaRegulamin: true, zgodaZdrowie: true, zgodaRodo: true, zgodaStatut: true, zgodaWizerunek: false,
     ...over,
   };
 }
@@ -95,11 +95,11 @@ describe("walidacja formularza", () => {
   it("pola warunkowe, zakresy i zgody", () => {
     const v = validateZgloszenie(validBody({
       pesel: "123", chorobyPrzewlekle: true, chorobyOpis: "", student: true, uczelnia: "",
-      waga: 20, zgodaRegulamin: false, dieta: "",
+      waga: 20, zgodaRegulamin: false, dieta: "", zgodaRodo: false,
     }), TODAY);
     expect(v.ok).toBe(false);
     if (v.ok) return;
-    expect(Object.keys(v.fields).sort()).toEqual(["chorobyOpis", "dieta", "pesel", "uczelnia", "waga", "zgodaRegulamin"]);
+    expect(Object.keys(v.fields).sort()).toEqual(["chorobyOpis", "dieta", "pesel", "uczelnia", "waga", "zgodaRegulamin", "zgodaRodo"]);
   });
 
   it("„Żadne z powyższych” znika przy innych schorzeniach", () => {
@@ -280,7 +280,7 @@ describe("akcje panelu", () => {
   });
 });
 
-const HEADERS = ["ID", "e-mail", "imię", "nazwisko", "telefon", "data urodzenia", "rok szkoleniówki", "Rola", "Status", "PESEL", "Waga", "Wzrost", "Opłata za kurs", "Dokument tożsamości"];
+const HEADERS = ["ID", "e-mail", "imię", "nazwisko", "telefon", "data urodzenia", "rok szkoleniówki", "Rola", "Status", "PESEL", "Waga", "Wzrost", "Opłata za kurs", "Zgody RODO", "Dokument tożsamości"];
 
 function ctx(db: FakeFirestore) {
   const mails: Array<{to: string; subject: string}> = [];
@@ -310,7 +310,7 @@ describe("taski: przeniesienie i rezygnacja", () => {
     expect(r.ok).toBe(true);
     const row = sheet.rows.find((x) => x["e-mail"] === "ala@gmail.com") as any;
     expect(row).toMatchObject({"ID": "41", "Rola": "Kursant", "Status": "Aktywny", "rok szkoleniówki": "2027",
-      "PESEL": PESEL, "Waga": "65.5", "Opłata za kurs": "950", "imię": "Ala"});
+      "PESEL": PESEL, "Waga": "65.5", "Opłata za kurs": "950", "imię": "Ala", "Zgody RODO": "TAK"});
     expect(db.dump("members_roster")[0]).toMatchObject({email: "ala@gmail.com", rola: "rola_kursant", rokSzkoleniowki: 2027, memberId: 41});
     expect(db.dump("counters")[0].nextId).toBe(42);
     expect(mails.map((m) => m.to)).toEqual(["ala@gmail.com"]);
@@ -325,11 +325,14 @@ describe("taski: przeniesienie i rezygnacja", () => {
     expect([row["PESEL"], row["Dokument tożsamości"]]).toEqual(["", "AB 123456"]);
   });
 
-  it("pełna wpłata aktualizuje opłatę w wierszu", async () => {
+  it("pełna wpłata aktualizuje opłatę w wierszu i wysyła potwierdzenie raz", async () => {
     sheet.rows.push({"ID": "41", "e-mail": "ala@gmail.com", "Rola": "Kursant", "Opłata za kurs": "950"});
     const db = seedDb({kurs_zgloszenia: [zgl("oplacony")]});
-    await kursMarkPaidTask.run({id: "2027_ala@gmail.com"}, ctx(db).c);
+    const {c, mails} = ctx(db);
+    await kursMarkPaidTask.run({id: "2027_ala@gmail.com"}, c);
+    await kursMarkPaidTask.run({id: "2027_ala@gmail.com"}, c);
     expect(sheet.rows[1]["Opłata za kurs"]).toBe("2300");
+    expect(mails.map((m) => m.subject)).toEqual(["Kurs 2027 opłacony — potwierdzenie wpłaty"]);
   });
 
   it("rezygnacja bez konta: wiersz i members_roster usunięte, cudzy wiersz nietknięty", async () => {
@@ -355,7 +358,7 @@ describe("taski: przeniesienie i rezygnacja", () => {
     expect(db.dump("service_jobs").map((j: any) => j.taskId)).toEqual(["users.syncRolesFromSheet"]);
   });
 
-  it("osoba z kontem: użyty jej numer, zapamiętana poprzednia rola, bez maila o dostępie", async () => {
+  it("osoba z kontem: użyty jej numer, zapamiętana poprzednia rola, potwierdzenie bez instrukcji rejestracji", async () => {
     sheet.rows.push({"ID": "7", "e-mail": "ala@gmail.com", "Rola": "Sympatyk", "imię": "Alicja"});
     const db = seedDb({kurs_zgloszenia: [zgl("zadatek")],
       users_active: [{_docId: "u1", email: "ala@gmail.com", role_key: "rola_sympatyk", memberId: 7}]});
@@ -364,7 +367,7 @@ describe("taski: przeniesienie i rezygnacja", () => {
     expect(sheet.rows[1]).toMatchObject({"ID": "7", "Rola": "Kursant", "imię": "Alicja"});
     expect(db.dump("kurs_zgloszenia")[0].previousRoleKey).toBe("rola_sympatyk");
     expect(db.dump("service_jobs").map((j: any) => j.taskId)).toEqual(["users.syncRolesFromSheet"]);
-    expect(mails).toHaveLength(0);
+    expect(mails.map((m) => m.subject)).toEqual(["Zadatek zaksięgowany — Kurs 2027"]);
   });
 
   it("purge demo: wycofuje z arkusza i kasuje tylko zgłoszenia demo; dry nic nie zmienia", async () => {
@@ -430,6 +433,16 @@ describe("taski: przeniesienie i rezygnacja", () => {
       expect(m.text).toContain(frag);
     }
     expect(m.html).toContain("Harmonogram kursu 2027");
+  });
+
+  it("mail po zadatku: pozostała kwota, termin, dane do przelewu, instrukcja aplikacji", () => {
+    const cfg: any = {konto: "12 3456", bank: "mBank", appUrl: "https://app.morzkulc.pl/", kursUrl: "https://kurs.morzkulc.pl",
+      kurs: {edycja: "2027", cena: 2300, zadatek: 950, terminDoplaty: "2027-03-01",
+        harmonogram: [{from: "2027-03-04", to: "", type: "spotkanie", name: "Spotkanie organizacyjne", place: "Klub"}]}};
+    const m = buildPaymentMail(zgl("zadatek"), cfg, "zadatek", false);
+    for (const frag of ["950 zł", "1350 zł", "1 marca 2027", "Kurs 2027 – Ala Kot", "zaznacz, że jesteś kursantem", "4 marca — Spotkanie organizacyjne (Klub)"]) {
+      expect(m.text.replace(/\u00a0/g, " ")).toContain(frag);
+    }
   });
 
   it("mail zgłoszeniowy: do zgłaszającego i kontaktu kursu, tylko raz", async () => {

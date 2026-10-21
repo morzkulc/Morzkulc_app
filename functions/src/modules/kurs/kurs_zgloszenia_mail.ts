@@ -153,3 +153,69 @@ export function buildApplicantMail(z: any, cfg: KursSignupConfig): {subject: str
 
   return {subject: `${z.demo ? "[TEST] " : ""}Zgłoszenie na Kurs ${z.edycja} — co dalej (SKK Morzkulc)`, text, html};
 }
+
+/**
+ * Potwierdzenie wpłaty po kliknięciu w panelu zarządu:
+ *  - "zadatek": zadatek zaksięgowany + ile i do kiedy dopłacić + (bez konta) jak wejść do aplikacji,
+ *  - "oplacony": cały kurs opłacony + pierwsze wydarzenie z harmonogramu.
+ * hasAccount: osoba ma już konto w aplikacji (wtedy bez instrukcji rejestracji).
+ */
+export function buildPaymentMail(z: any, cfg: KursSignupConfig, kind: "zadatek" | "oplacony", hasAccount: boolean):
+  {subject: string; text: string; html: string} {
+  const p = przelewInfo(cfg, z);
+  const harmonogram = Array.isArray(cfg.kurs.harmonogram) ? cfg.kurs.harmonogram : [];
+  const first = harmonogram[0];
+  const paras: Array<{text: string; html: string}> = [];
+  const para = (t: string) => paras.push({text: t, html: esc(t)});
+
+  if (kind === "zadatek") {
+    para(`Potwierdzamy wpłatę zadatku${p.zadatek ? ` (${pln(p.zadatek)})` : ""} — Twoje miejsce na Kursie ${z.edycja} jest zarezerwowane.`);
+    const reszta = p.cena != null && p.zadatek != null ? p.cena - p.zadatek : null;
+    if (reszta && reszta > 0) {
+      const termin = p.terminDoplaty ? ` do ${dateLong(p.terminDoplaty)}` : "";
+      paras.push({
+        text: `Pozostało do zapłaty: ${pln(reszta)}${termin}.\n${przelewText(p, reszta, "Kwota")}`,
+        html: `Pozostało do zapłaty: <b>${esc(pln(reszta))}</b>${esc(termin)}.${przelewHtml(p, reszta, "Kwota")}`,
+      });
+    }
+  } else {
+    para(`Potwierdzamy wpłatę pełnej kwoty za kurs${p.cena ? ` (${pln(p.cena)})` : ""} — Kurs ${z.edycja} jest opłacony.`);
+  }
+
+  if (hasAccount) {
+    paras.push({
+      text: `Twoje konto w aplikacji klubowej ma rolę kursanta: ${cfg.appUrl}`,
+      html: `Twoje konto w aplikacji klubowej ma rolę kursanta: <a href="${esc(cfg.appUrl)}">${esc(cfg.appUrl)}</a>`,
+    });
+  } else {
+    paras.push({
+      text: `Masz już dostęp do aplikacji klubowej: ${cfg.appUrl}\nZaloguj się kontem Google ${z.email} i przy rejestracji zaznacz, że jesteś kursantem. ` +
+        "W aplikacji zapisujesz się na baseny i znajdziesz informacje o wyjazdach.",
+      html: `Masz już dostęp do aplikacji klubowej: <a href="${esc(cfg.appUrl)}">${esc(cfg.appUrl)}</a><br>` +
+        `Zaloguj się kontem Google <b>${esc(z.email)}</b> i przy rejestracji zaznacz, że jesteś kursantem. ` +
+        "W aplikacji zapisujesz się na baseny i znajdziesz informacje o wyjazdach.",
+    });
+  }
+  if (first) {
+    para(`Pierwsze spotkanie: ${rangePL(first.from, first.to)} — ${first.name}${first.place ? ` (${first.place})` : ""}.`);
+  }
+  if (cfg.kursUrl) {
+    paras.push({
+      text: `Harmonogram i FAQ: ${cfg.kursUrl}`,
+      html: `Harmonogram i FAQ: <a href="${esc(cfg.kursUrl)}">${esc(cfg.kursUrl)}</a>`,
+    });
+  }
+
+  const subject = (z.demo ? "[TEST] " : "") +
+    (kind === "zadatek" ? `Zadatek zaksięgowany — Kurs ${z.edycja}` : `Kurs ${z.edycja} opłacony — potwierdzenie wpłaty`);
+  const text = [
+    ...(z.demo ? [DEMO_NOTE, ""] : []),
+    `Cześć ${z.form.imie}!`, "",
+    ...paras.flatMap((x) => [x.text, ""]),
+    "Do zobaczenia na wodzie!", "SKK Morzkulc",
+  ].join("\n");
+  const html = (z.demo ? `<p style="background:#fff3cd;padding:8px 12px"><b>${esc(DEMO_NOTE)}</b></p>` : "") +
+    `<p>Cześć ${esc(z.form.imie)}!</p>` + paras.map((x) => `<p>${x.html}</p>`).join("") +
+    "<p>Do zobaczenia na wodzie!<br>SKK Morzkulc</p>";
+  return {subject, text, html};
+}

@@ -5,7 +5,7 @@ import {getServiceConfig} from "../service_config";
 import {roleLabel, statusLabel} from "./membersSyncToSheet";
 import {ZGLOSZENIA_COLLECTION, resolveSheetHeaders} from "../../modules/kurs/kurs_zgloszenia";
 import {loadKursSignupConfig, przelewInfo} from "../../modules/kurs/kurs_signup_config";
-import {buildApplicantMail, esc} from "../../modules/kurs/kurs_zgloszenia_mail";
+import {buildApplicantMail, buildPaymentMail} from "../../modules/kurs/kurs_zgloszenia_mail";
 import {parseSchoolYear} from "../../modules/equipment/bundle/gear_bundle_service";
 
 /**
@@ -28,7 +28,7 @@ type Payload = {id: string};
 
 const ROW_KEYS = [
   "id", "e_mail", "imie", "nazwisko", "telefon", "data_urodzenia", "rok_szkoleniowki",
-  "rola", "status", "pesel", "waga", "wzrost", "oplata_za_kurs",
+  "rola", "status", "pesel", "waga", "wzrost", "oplata_za_kurs", "zgody_rodo",
 ];
 
 function validateId(payload: Payload) {
@@ -183,6 +183,8 @@ export const kursPromoteToMembersTask: ServiceTask<Payload> = {
       [h.wzrost]: String(z.form.wzrost),
       [h.oplata_za_kurs]: String(oplata),
     };
+    // Jak membersSyncToSheet: TAK, gdy obie zgody z rejestracji (RODO + statut) są zaznaczone.
+    if (z.form.zgodaRodo && z.form.zgodaStatut) patch[h.zgody_rodo] = "TAK";
     if (!existingRow) {
       patch[h.imie] = z.form.imie;
       patch[h.nazwisko] = z.form.nazwisko;
@@ -217,29 +219,17 @@ export const kursPromoteToMembersTask: ServiceTask<Payload> = {
     }
     await ref.update(update);
 
-    if (user) {
+    if (user && String(user.data?.role_key) !== "rola_kursant") {
       // Konto już istnieje: rolę w users_active (grupy, mail o zmianie roli) zmienia sync ról.
-      if (String(user.data?.role_key) !== "rola_kursant") await enqueue(db, "users.syncRolesFromSheet", {});
-    } else if (!z.notify?.accessAt) {
-      const subject = `${z.demo ? "[TEST] " : ""}Dostęp do aplikacji klubowej — Kurs ${z.edycja}`;
-      const text = [
-        `Cześć ${z.form.imie}!`,
-        "",
-        "Zadatek zaksięgowany — jesteś na kursie. Masz już dostęp do aplikacji klubowej:",
-        cfg.appUrl,
-        "",
-        `Zaloguj się kontem Google ${z.email} i przy rejestracji zaznacz, że jesteś kursantem.`,
-        "W aplikacji zapisujesz się na baseny i znajdziesz informacje o wyjazdach.",
-        "",
-        "SKK Morzkulc",
-      ].join("\n");
-      const html = `<p>Cześć ${esc(z.form.imie)}!</p>` +
-        "<p>Zadatek zaksięgowany — jesteś na kursie. Masz już dostęp do aplikacji klubowej: " +
-        `<a href="${esc(cfg.appUrl)}">${esc(cfg.appUrl)}</a></p>` +
-        `<p>Zaloguj się kontem Google <b>${esc(z.email)}</b> i przy rejestracji zaznacz, że jesteś kursantem. ` +
-        "W aplikacji zapisujesz się na baseny i znajdziesz informacje o wyjazdach.</p><p>SKK Morzkulc</p>";
-      await ctx.workspace.sendGenericEmailHtml(z.email, subject, text, html);
-      await ref.update({"notify.accessAt": admin.firestore.FieldValue.serverTimestamp()});
+      await enqueue(db, "users.syncRolesFromSheet", {});
+    }
+    // Potwierdzenie wpłaty (zadatek albo od razu cały kurs) — raz na rodzaj.
+    const kind = z.status === "oplacony" ? "oplacony" : "zadatek";
+    const marker = kind === "oplacony" ? "paidAt" : "accessAt";
+    if (!z.notify?.[marker]) {
+      const mail = buildPaymentMail(z, cfg, kind, Boolean(user));
+      await ctx.workspace.sendGenericEmailHtml(z.email, mail.subject, mail.text, mail.html);
+      await ref.update({[`notify.${marker}`]: admin.firestore.FieldValue.serverTimestamp()});
     }
 
     return {ok: true, message: `Kursant w arkuszu (${res.action}, wiersz ${res.rowNumber}), ID ${memberId}`,
@@ -252,7 +242,7 @@ export const kursMarkPaidTask: ServiceTask<Payload> = {
   description: "Pełna wpłata za kurs: „Opłata za kurs” w arkuszu członków = cena kursu.",
   validate: validateId,
   run: async (payload, ctx) => {
-    const {z} = await loadZgloszenie(ctx, payload.id);
+    const {ref, z} = await loadZgloszenie(ctx, payload.id);
     if (!z || z.status !== "oplacony") return {ok: true, message: "Brak zgłoszenia albo status inny niż oplacony — pominięte"};
     const cfg = await loadKursSignupConfig(ctx.firestore);
     const cena = przelewInfo(cfg, z).cena;
@@ -266,6 +256,12 @@ export const kursMarkPaidTask: ServiceTask<Payload> = {
       return {ok: true, message: "Brak wiersza — zlecono przeniesienie do arkusza"};
     }
     await sheets.writeRowCells(table, Number(row._rowNumber), {[h.oplata_za_kurs]: String(cena)});
+    if (!z.notify?.paidAt) {
+      const user = await findUserByEmail(ctx.firestore, z.email);
+      const mail = buildPaymentMail(z, cfg, "oplacony", Boolean(user));
+      await ctx.workspace.sendGenericEmailHtml(z.email, mail.subject, mail.text, mail.html);
+      await ref.update({"notify.paidAt": admin.firestore.FieldValue.serverTimestamp()});
+    }
     return {ok: true, message: `Opłata za kurs = ${cena} (wiersz ${row._rowNumber})`};
   },
 };
