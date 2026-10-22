@@ -587,6 +587,20 @@
         }
       },
       {
+        "source": "/api/blachy/**",
+        "function": {
+          "functionId": "blachyApi",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/admin/blachy",
+        "function": {
+          "functionId": "adminBlachy",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/public/site",
         "function": {
           "functionId": "publicSiteInfo",

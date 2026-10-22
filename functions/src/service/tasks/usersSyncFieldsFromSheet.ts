@@ -5,6 +5,7 @@ import {getServiceConfig} from "../service_config";
 import {parseSchoolYear} from "../../modules/equipment/bundle/gear_bundle_service";
 import {normNullish} from "../../modules/shared/text_utils";
 import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zgloszenia";
+import {BLACHY_COLLECTION, BlachaDoc, findInRegistry, parseBlacha} from "../../modules/blachy/blachy_registry";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -316,6 +317,9 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
     let roleStatusChanged = 0;
     let rosterUpserted = 0;
     const now = new Date().toISOString();
+    const registry: Array<{id: string; d: Partial<BlachaDoc>}> =
+      (await firestore.collection(BLACHY_COLLECTION).get()).docs.map((d) => ({id: d.id, d: d.data() as Partial<BlachaDoc>}));
+    const blachyAdded: string[] = [];
 
     for (const row of table.rows) {
       const memberIdRaw = g(row, "id");
@@ -339,6 +343,29 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       }
 
       const rowEmail = g(row, "e_mail").toLowerCase();
+
+      // Rejestr Blach: kolumna „blacha" DOPISUJE osobę do rejestru (niezależnie od tego, czy ma konto).
+      // Nigdy nie usuwa ani nie zmienia istniejącego wpisu — blacha jest trwała (regulamin § 1 pkt 5),
+      // a pusta komórka nie może jej skasować (błąd z 11.08: admin.badge nadpisywane pustką).
+      const blacha = parseBlacha(g(row, "blacha"));
+      if (blacha.has) {
+        const who = {email: rowEmail, memberId, imie: g(row, "imie"), nazwisko: g(row, "nazwisko")};
+        if (!findInRegistry(registry, who)) {
+          const id = `m_${memberId}`;
+          const doc = {
+            imie: who.imie, nazwisko: who.nazwisko, ksywa: g(row, "ksywa"), rok: blacha.rok, nr: null,
+            uzasadnienie: "", klub: "", zalozycielska: "", sp: false, email: rowEmail, memberId,
+            zrodlo: "arkusz_czlonkow" as const,
+          };
+          if (!dryRun) {
+            await firestore.collection(BLACHY_COLLECTION).doc(id).set({
+              ...doc, createdAt: now, updatedAt: now, updatedBy: who.email ? `sheet:${who.email}` : "sheet",
+            });
+          }
+          registry.push({id, d: doc});
+          blachyAdded.push(`${who.imie} ${who.nazwisko}`.trim());
+        }
+      }
 
       // Mirror KAŻDEGO wiersza (niezależnie od tego, czy users_active już istnieje) do
       // members_roster/{email} — jedyne źródło, po którym registerUserHandler.ts sprawdza
@@ -371,7 +398,6 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
           schoolYear: g(row, "rok_szkoleniowki"),
           entryFeeYear: g(row, "wpisowe_rok"),
           hasClubKeys: normalizeBoolish(g(row, "klucze_do_siedziby")),
-          badge: g(row, "blacha"),
           notes: g(row, "uwagi"),
           contributions: g(row, "skladki"),
           hours: g(row, "godzinki"),
@@ -399,7 +425,6 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         ["admin.schoolYear", sheetUser.admin.schoolYear],
         ["admin.entryFeeYear", sheetUser.admin.entryFeeYear],
         ["admin.hasClubKeys", sheetUser.admin.hasClubKeys],
-        ["admin.badge", sheetUser.admin.badge],
         ["admin.notes", sheetUser.admin.notes],
         ["admin.contributions", sheetUser.admin.contributions],
         ["admin.hours", sheetUser.admin.hours],
@@ -519,12 +544,12 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       logger.info("usersSyncFieldsFromSheet: enqueued users.syncRolesFromSheet", {roleStatusChanged});
     }
 
-    const details = {found, patched, unchanged, notFound, skipped, roleStatusChanged, rosterUpserted, dryRun};
+    const details = {found, patched, unchanged, notFound, skipped, roleStatusChanged, rosterUpserted, blachyAdded, dryRun};
     logger.info("usersSyncFieldsFromSheet: done", details);
 
     return {
       ok: true,
-      message: `Users fields synced: found=${found}, patched=${patched}, unchanged=${unchanged}, notFound=${notFound}, skipped=${skipped}, roleStatusChanged=${roleStatusChanged}, rosterUpserted=${rosterUpserted}`,
+      message: `Users fields synced: found=${found}, patched=${patched}, unchanged=${unchanged}, notFound=${notFound}, skipped=${skipped}, roleStatusChanged=${roleStatusChanged}, rosterUpserted=${rosterUpserted}, blachyAdded=${blachyAdded.length}`,
       details,
     };
   },

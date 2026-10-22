@@ -1,9 +1,10 @@
 // public/modules/klub_module.js
-import { apiGetJson } from "/core/api_client.js";
+import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { setHash } from "/core/router.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { storageFetchKlubVideoUrl } from "/core/firebase_client.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { mountBlachyProcedura } from "/modules/blachy_procedura.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -19,6 +20,11 @@ const KLUB_TABS = [
     id: "klucze",
     label: "Klucze",
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>`,
+  },
+  {
+    id: "blachy",
+    label: "Blachy",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M8.5 10.2L6 2h4l2 5 2-5h4l-2.5 8.2"/></svg>`,
   },
   {
     id: "kto-jest-kim",
@@ -55,6 +61,70 @@ const LINK_TILES = [
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
   },
 ];
+
+// ── Blachy klubowe (Rejestr Blach, regulamin § 6 pkt 7) ──────────────────────
+// Lista jawna dla zalogowanych; zarząd/KR (canEditBlachy) dodaje, poprawia i usuwa
+// błędne wpisy. Nowe blachy dopisuje też kolumna „blacha" w arkuszu członków (sync).
+const BLACHY_ADMIN_URL = "/api/admin/blachy";
+
+function blachaName(b) {
+  const full = [b.imie, b.nazwisko].filter(Boolean).join(" ");
+  const ks = b.ksywa && b.ksywa !== b.imie ? ` „${b.ksywa}”` : "";
+  return `${b.sp ? "ś.p. " : ""}${full || b.ksywa}${full ? ks : ""}`;
+}
+
+function renderBlachyTab(data, editId) {
+  const list = Array.isArray(data?.blachy) ? data.blachy : [];
+  const canEdit = data?.canEditBlachy === true;
+  const head = `<p class="hint blachyIntro">Osoby wyróżnione Blachą Klubową: <strong>${list.length}</strong>. Blachy nadane przed aplikacją zachowują ważność; brakujące dane historyczne oznaczamy jako nieznane.</p>`;
+  const addBtn = canEdit && editId !== "new"
+    ? `<div class="blachyActions"><button type="button" class="primary" data-blacha-add>Dodaj blachę</button></div>` : "";
+  const form = canEdit && editId === "new" ? renderBlachaForm(null) : "";
+  if (!list.length) return `${head}${addBtn}${form}<p class="hint">Rejestr jest pusty.</p>`;
+
+  const rows = list.map((b) => {
+    if (canEdit && editId === b.id) return `<tr><td colspan="${canEdit ? 3 : 2}">${renderBlachaForm(b)}</td></tr>`;
+    const extra = [
+      b.nr != null ? `Blacha nr ${b.nr}` : "",
+      b.klub ? `klub: ${b.klub}` : "",
+      b.zalozycielska ? `Blacha Założycielska: ${b.zalozycielska}` : "",
+    ].filter(Boolean).join(" · ");
+    return `<tr>
+      <td class="blachyRok">${b.rok != null ? escapeHtml(String(b.rok)) : `<span class="hint">nieznany</span>`}</td>
+      <td><div class="blachyOsoba">${escapeHtml(blachaName(b))}</div>${
+        extra ? `<div class="hint">${escapeHtml(extra)}</div>` : ""}${
+        b.uzasadnienie ? `<details class="blachyUzas"><summary>Uzasadnienie</summary><p>${escapeHtml(b.uzasadnienie)}</p></details>` : ""}</td>
+      ${canEdit ? `<td class="blachyEdit"><button type="button" class="ghost" data-blacha-edit="${escapeAttr(b.id)}">Edytuj</button></td>` : ""}
+    </tr>`;
+  }).join("");
+  return `${head}${addBtn}${form}<div class="tableWrapper"><table class="reportTable blachyTable"><thead><tr><th>Rok</th><th>Osoba</th>${
+    canEdit ? "<th></th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function renderBlachaForm(b) {
+  const v = (k) => escapeAttr(b && b[k] != null ? String(b[k]) : "");
+  const field = (name, label, attrs = "") =>
+    `<label class="blachyField"><span>${label}</span><input name="${name}" value="${v(name)}" ${attrs}></label>`;
+  return `<form class="blachyForm" data-blacha-form="${escapeAttr(b ? b.id : "new")}" novalidate>
+    <div class="blachyGrid">
+      ${field("imie", "Imię")}
+      ${field("nazwisko", "Nazwisko")}
+      ${field("ksywa", "Ksywa")}
+      ${field("rok", "Rok nadania (puste = nieznany)", 'inputmode="numeric"')}
+      ${field("nr", "Numer blachy (opcjonalnie)", 'inputmode="numeric"')}
+      ${field("klub", "Klub (osoba spoza Morzkulca)")}
+      ${field("zalozycielska", "Blacha Założycielska w klubie")}
+    </div>
+    <label class="blachyField"><span>Uzasadnienie</span><textarea name="uzasadnienie" rows="3">${b ? escapeHtml(b.uzasadnienie || "") : ""}</textarea></label>
+    <label class="blachyCheck"><input type="checkbox" name="sp" ${b?.sp ? "checked" : ""}> ś.p.</label>
+    <p class="err" data-blacha-err hidden></p>
+    <div class="blachyActions">
+      <button type="submit" class="primary">Zapisz</button>
+      <button type="button" class="ghost" data-blacha-cancel>Anuluj</button>
+      ${b ? `<button type="button" class="dangerBtn" data-blacha-delete="${escapeAttr(b.id)}">Usuń błędny wpis</button>` : ""}
+    </div>
+  </form>`;
+}
 
 // Ten sam wzorzec otwierania mapy co w render_shell.js (kafelek "mapa" na
 // stronie głównej).
@@ -279,11 +349,16 @@ export function createKlubModule({ id, type, label, defaultRoute, order, enabled
       let activeTab = KLUB_TABS[0].id;
       let data = null;
       let videoUrl = null;
+      let blachaEditId = null;
 
       const renderActiveTab = () => {
         if (activeTab === "klucze") {
           const osoby = Array.isArray(data?.kluczeOsoby) ? data.kluczeOsoby : [];
           tabBodyEl.innerHTML = renderKluczeTable(osoby);
+        } else if (activeTab === "blachy") {
+          // Procedura (nominacje, Kapituła, Zarząd) nad Rejestrem; ładuje się sama z /api/blachy/stan.
+          tabBodyEl.innerHTML = `<div data-blachy-proc></div>${renderBlachyTab(data, blachaEditId)}`;
+          mountBlachyProcedura(tabBodyEl.querySelector("[data-blachy-proc]"), ctx);
         } else {
           tabBodyEl.innerHTML = renderKtoJestKimTab(data, videoUrl);
         }
@@ -302,6 +377,54 @@ export function createKlubModule({ id, type, label, defaultRoute, order, enabled
       });
 
       viewEl.querySelector("[data-klub-action='mapa']")?.addEventListener("click", openMap);
+
+      // Rejestr Blach — akcje zarządu (delegacja zdarzeń: treść zakładki jest przerysowywana).
+      const reloadKlub = async () => {
+        data = await apiGetJson({ url: KLUB_URL, idToken: ctx.idToken });
+        blachaEditId = null;
+        renderActiveTab();
+      };
+      const blachaPost = async (body, errEl) => {
+        try {
+          await apiPostJson({ url: BLACHY_ADMIN_URL, idToken: ctx.idToken, body });
+          await reloadKlub();
+        } catch (e) {
+          const fields = e?.fields;
+          const msg = fields ? Object.values(fields).join(" · ") : mapUserFacingApiError(e, "Nie udało się zapisać.");
+          if (errEl) {
+            errEl.textContent = msg;
+            errEl.hidden = false;
+          }
+        }
+      };
+      tabBodyEl.addEventListener("click", (ev) => {
+        const t = ev.target.closest("button");
+        if (!t) return;
+        if (t.hasAttribute("data-blacha-add")) {
+          blachaEditId = "new";
+          renderActiveTab();
+        } else if (t.hasAttribute("data-blacha-edit")) {
+          blachaEditId = t.getAttribute("data-blacha-edit");
+          renderActiveTab();
+        } else if (t.hasAttribute("data-blacha-cancel")) {
+          blachaEditId = null;
+          renderActiveTab();
+        } else if (t.hasAttribute("data-blacha-delete")) {
+          if (!window.confirm("Usunąć ten wpis z Rejestru Blach? Używaj tylko do błędnych wpisów — blacha jest wyróżnieniem trwałym.")) return;
+          blachaPost({ action: "delete", id: t.getAttribute("data-blacha-delete") }, t.closest("form")?.querySelector("[data-blacha-err]"));
+        }
+      });
+      tabBodyEl.addEventListener("submit", (ev) => {
+        const form = ev.target.closest("[data-blacha-form]");
+        if (!form) return;
+        ev.preventDefault();
+        const id = form.getAttribute("data-blacha-form");
+        const fd = new FormData(form);
+        const dataIn = {};
+        for (const k of ["imie", "nazwisko", "ksywa", "rok", "nr", "klub", "zalozycielska", "uzasadnienie"]) dataIn[k] = String(fd.get(k) || "").trim();
+        dataIn.sp = form.querySelector("[name=sp]")?.checked === true;
+        blachaPost(id === "new" ? { action: "add", data: dataIn } : { action: "update", id, data: dataIn }, form.querySelector("[data-blacha-err]"));
+      });
 
       // Kafelki z linkami — dokładane dopiero, gdy /api/klub przyniesie adresy.
       // Świadomie <a target="_blank">, a nie window.location jak przy mapie: mapa

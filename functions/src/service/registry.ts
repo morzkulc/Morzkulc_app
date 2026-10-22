@@ -1,4 +1,6 @@
 import { ServiceTask } from "./types";
+import { blachyImportOpeningBalanceTask } from "./tasks/blachyImportOpeningBalance";
+import { blachyAnnounceTask, blachyDailyTask, blachyNominacjaMailTask, blachyRequestAcceptanceTask } from "./tasks/blachyProcedura";
 import { onUserRegisteredWelcomeTask } from "./tasks/onUserRegisteredWelcome";
 import { godzinkiSyncFromSheetTask, godzinkiWriteToSheetTask } from "./tasks/godzinkiSyncFromSheet";
 import { godzinkiImportTransitionFromSheetTask } from "./tasks/godzinkiImportTransitionFromSheet";
@@ -89,6 +91,11 @@ const tasks: ServiceTask[] = [
   kursMarkPaidTask,
   kursRemoveKursantTask,
   kursPurgeDemoTask,
+  blachyImportOpeningBalanceTask,
+  blachyDailyTask,
+  blachyNominacjaMailTask,
+  blachyRequestAcceptanceTask,
+  blachyAnnounceTask,
 ];
 
 export function getTaskRegistry(): Map<string, ServiceTask> {

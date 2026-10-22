@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><title>Vars_CZLONKOWIE — zmienne Blach 22.10</title>
+<style>body{font:15px system-ui,sans-serif;margin:24px;color:#111}table{border-collapse:collapse;margin-top:12px}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left;vertical-align:top}th{background:#eee}button{padding:8px 14px;cursor:pointer}#ok{color:green;margin-left:8px}.note{max-width:900px}</style></head>
+<body>
+<h2>Vars_CZLONKOWIE — zmienne procedury Blach (22.10)</h2>
+<p class="note">Wklej na końcu zakładki <b>Vars_CZLONKOWIE</b> (arkusz App_SETUP), kolumny <b>Zmienna_nazwa | Wartość_zmiennej | Grupa zmiennych | Opis</b>, potem sync.<br>
+Skład Kapituły uzupełnij e-mailami (konta Google, którymi te osoby logują się do aplikacji). <b>blachy_procedura</b> zostaw FALSE do uchwały regulaminu.</p>
+<button id="all">Kopiuj wiersze</button><span id="ok"></span>
+<textarea id="fb" style="display:none;width:100%;height:160px;margin-top:12px"></textarea>
+<table id="t"><thead><tr><th>Zmienna_nazwa</th><th>Wartość_zmiennej</th><th>Grupa zmiennych</th><th>Opis</th></tr></thead><tbody>
+<tr><td>blachy_procedura</td><td>FALSE</td><td>Blachy</td><td>Włącznik procedury nadawania Blach: TRUE = formularz zgłoszeń, maile na listę, panel Kapituły i Zarządu działają według terminów poniżej. FALSE = widoczny tylko Rejestr Blach.</td></tr>
+<tr><td>blachy_edycja_zarzad</td><td>TRUE</td><td>Blachy</td><td>TRUE = Zarząd i KR mogą dodawać/poprawiać wpisy w Rejestrze Blach (okres uzupełniania danych). FALSE = edytuje wyłącznie Kapituła.</td></tr>
+<tr><td>blachy_nominacje_od</td><td>01.09</td><td>Blachy</td><td>Pierwszy dzień zgłaszania kandydatów (dzień.miesiąc, co roku). Tego dnia rano mail na listę o otwarciu nominacji.</td></tr>
+<tr><td>blachy_nominacje_do</td><td>30.09</td><td>Blachy</td><td>Ostatni dzień zgłoszeń. Następnego dnia: jedno zestawienie kandydatur do każdej osoby z Kapituły + mail na listę o zamknięciu.</td></tr>
+<tr><td>blachy_weryfikacja_do</td><td>15.10</td><td>Blachy</td><td>Termin weryfikacji zgłoszeń przez Kapitułę (łączenie, odrzucanie nieprawidłowych).</td></tr>
+<tr><td>blachy_glosowanie_do</td><td>31.10</td><td>Blachy</td><td>Ostatni dzień, w którym przewodniczący może otworzyć głosowanie Kapituły.</td></tr>
+<tr><td>blachy_zatwierdzenie_do</td><td>15.11</td><td>Blachy</td><td>Termin zatwierdzenia wyników przez Zarząd (informacyjnie w aplikacji i mailach).</td></tr>
+<tr><td>blachy_przypomnienie_dni</td><td>7</td><td>Blachy</td><td>Ile dni przed końcem nominacji wysłać przypomnienie na listę.</td></tr>
+<tr><td>blachy_kapitula_1</td><td></td><td>Blachy</td><td>Kapituła — miejsce 1 (posiadacz Blachy): e-mail konta w aplikacji.</td></tr>
+<tr><td>blachy_kapitula_2</td><td></td><td>Blachy</td><td>Kapituła — miejsce 2 (posiadacz Blachy): e-mail.</td></tr>
+<tr><td>blachy_kapitula_3</td><td></td><td>Blachy</td><td>Kapituła — miejsce 3 (posiadacz Blachy): e-mail.</td></tr>
+<tr><td>blachy_kapitula_4</td><td></td><td>Blachy</td><td>Kapituła — miejsce 4 (przedstawiciel Zarządu): e-mail.</td></tr>
+<tr><td>blachy_kapitula_5</td><td></td><td>Blachy</td><td>Kapituła — miejsce 5 (przedstawiciel członków bez Blachy): e-mail.</td></tr>
+<tr><td>blachy_kapitula_zastepca_1</td><td></td><td>Blachy</td><td>Zastępca miejsca 1 — głosuje, gdy członek jest kandydatem albo zgłosi konflikt interesów.</td></tr>
+<tr><td>blachy_kapitula_zastepca_2</td><td></td><td>Blachy</td><td>Zastępca miejsca 2.</td></tr>
+<tr><td>blachy_kapitula_zastepca_3</td><td></td><td>Blachy</td><td>Zastępca miejsca 3.</td></tr>
+<tr><td>blachy_kapitula_zastepca_4</td><td></td><td>Blachy</td><td>Zastępca miejsca 4.</td></tr>
+<tr><td>blachy_kapitula_zastepca_5</td><td></td><td>Blachy</td><td>Zastępca miejsca 5.</td></tr>
+<tr><td>blachy_kapitula_przewodniczacy</td><td></td><td>Blachy</td><td>Przewodniczący Kapituły (e-mail jednego z członków): otwiera głosowania, łączy/odrzuca kandydatury, wpisuje uzasadnienia.</td></tr>
+</tbody></table>
+<script>
+var NL = String.fromCharCode(10), TAB = String.fromCharCode(9);
+document.getElementById("all").onclick = function () {
+  var rows = Array.prototype.map.call(document.querySelectorAll("#t tbody tr"), function (tr) {
+    return Array.prototype.map.call(tr.cells, function (td) { return td.textContent; }).join(TAB);
+  }).join(NL);
+  var ok = document.getElementById("ok");
+  navigator.clipboard.writeText(rows).then(function () { ok.textContent = "Skopiowane"; }, function () {
+    var fb = document.getElementById("fb"); fb.style.display = "block"; fb.value = rows; fb.select();
+    ok.textContent = "Zaznacz i skopiuj z pola poniżej (Ctrl+C)";
+  });
+};
+</script>
+</body></html>

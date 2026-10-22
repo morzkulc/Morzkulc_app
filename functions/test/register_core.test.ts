@@ -138,7 +138,7 @@ describe("opening_balance_fields — helpery nagłówków bilansu", () => {
     expect(getObHours(null)).toBe(0);
   });
 
-  it("buildOpeningBalanceAdminPatch: pełny wiersz → admin.* z przyciętymi wartościami; puste pomijane", () => {
+  it("buildOpeningBalanceAdminPatch: pełny wiersz → admin.* z przyciętymi wartościami; puste pomijane; blacha poza admin.*", () => {
     const patch = buildOpeningBalanceAdminPatch({
       "Składki 2026": " opłacone ",
       "Godzinki Bilans otwarcia01.04.2026": "14",
@@ -153,7 +153,6 @@ describe("opening_balance_fields — helpery nagłówków bilansu", () => {
       contributions: "opłacone",
       hours: "14",
       schoolYear: "2024",
-      badge: "123",
       legNr: "7",
       clubFunctions: "skarbnik",
       founder: true,

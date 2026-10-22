@@ -132,7 +132,8 @@
     if (sum && parts.length) sum.textContent = parts.join(" · ") + ". Od " + fmtDate(h[0].from) + ".";
     basenNote(k, counts.basen || 0);
     var cd = document.querySelector(".js-cd");
-    var days = Math.round((parseIso(h[0].from) - t0) / 86400000);
+    // Do startu kursu (kurs_start); bez niej — do pierwszej pozycji harmonogramu.
+    var days = Math.round((parseIso(k.start || h[0].from) - t0) / 86400000);
     if (cd) {
       if (days > 0) cd.textContent = days;
       else cd.closest(".countdown").classList.add("is-missing");

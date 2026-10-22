@@ -185,6 +185,26 @@
 .mentorName { color: var(--text); font-weight: 700; text-align: right; }
 
 /* ── Box „Klub" w karcie profilu (zarząd, KR, konto, dokumenty) ── */
+/* Rejestr Blach (moduł Klub, zakładka „Blachy") */
+.blachyIntro { margin: 4px 0 10px; }
+.blachyRok { white-space: nowrap; font-weight: 800; width: 1%; }
+.blachyOsoba { font-weight: 700; }
+.blachyEdit { width: 1%; }
+.blachyUzas summary { cursor: pointer; font-size: 12px; color: var(--accent, #5b9dff); }
+.blachyUzas p { margin: 4px 0 0; white-space: pre-line; }
+.blachyForm { display: grid; gap: 10px; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 12px; }
+.blachyGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.blachyField { display: grid; gap: 4px; }
+.blachyCheck { display: flex; align-items: center; gap: 8px; }
+.blachyActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 10px; }
+.blachyProc { margin-bottom: 14px; }
+.blachyProc > p { margin: 4px 0 8px; }
+.blachyObszary { border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; display: grid; gap: 6px; }
+.blachyObszary legend { font-size: 12px; color: var(--text-muted); font-weight: 650; padding: 0 4px; }
+.blachyKand { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.blachyNom { border-left: 3px solid var(--border); padding: 4px 0 4px 10px; margin: 8px 0; }
+.blachyNom p { margin: 4px 0; white-space: pre-line; }
+.blachyActions select { width: auto; padding: 6px 10px; font-size: 13px; }
 .klubMail { margin-left: 6px; color: var(--accent, #5b9dff); text-decoration: none; font-weight: 700; }
 .klubMail:hover { text-decoration: underline; }
 .klubList { margin: 0; padding-left: 18px; text-align: left; }

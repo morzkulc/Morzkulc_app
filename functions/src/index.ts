@@ -71,6 +71,8 @@ import {handleGetKlubInfo} from "./api/getKlubInfoHandler";
 import {handleGetPublicSite} from "./api/getPublicSiteHandler";
 import {handleKursZgloszenie} from "./api/kursZgloszenieHandler";
 import {handleAdminKursZgloszenia, handleAdminKursZgloszenieAction} from "./api/adminKursZgloszeniaHandler";
+import {handleAdminBlachy} from "./api/adminBlachyHandler";
+import {handleBlachyApi} from "./api/blachyApiHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
 import {handleEventInterestToggle} from "./api/eventInterestToggleHandler";
@@ -1796,6 +1798,24 @@ export const adminKursZgloszenieAction = onRequest({invoker: "private"}, async (
   });
 });
 
+/**
+ * POST /api/admin/blachy (authenticated, role: zarzad/kr)
+ * Rejestr Blach: dodanie / poprawka / usunięcie błędnego wpisu.
+ */
+export const adminBlachy = onRequest({invoker: "private"}, async (req, res) => {
+  return handleAdminBlachy(req, res, {
+    db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
+  });
+});
+
+/**
+ * /api/blachy/* — procedura nadawania Blach (nominacje, Kapituła, Zarząd, potwierdzenie przyjęcia).
+ * Trasa „przyjecie" działa bez logowania (token z maila); pozostałe wymagają ID tokenu.
+ */
+export const blachyApi = onRequest({invoker: "private"}, async (req, res) => {
+  return handleBlachyApi(req, res, {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken});
+});
+
 export const userWeight = onRequest({invoker: "private"}, async (req, res) => {
   return handleUserWeight(req, res, {
     db,
@@ -1984,6 +2004,18 @@ export const eventsSyncCalendarDaily = onSchedule(
  * Liczba dni przed startem imprezy jest parametrem z arkusza SETUP
  * (setup/vars_members.vars.powiadomienie_imprezy) — patrz events_vars.ts.
  */
+/**
+ * SCHEDULER: Procedura Blach — maile na listę w terminach z SETUP, zestawienie dla Kapituły,
+ * sprzątanie 14 dni po ogłoszeniu. Codziennie 06:15. Wyłączona, gdy blachy_procedura ≠ TRUE.
+ */
+export const blachyDaily = onSchedule(
+  {schedule: "15 6 * * *", timeZone: "Europe/Warsaw"},
+  async () => {
+    const result = await (await loadRunTaskById())("blachy.daily", {});
+    logger.info("blachyDaily: done", result as unknown as Record<string, unknown>);
+  }
+);
+
 export const eventsNotifyUpcomingDaily = onSchedule(
   {schedule: "10 5 * * *", timeZone: "Europe/Warsaw"},
   async () => {

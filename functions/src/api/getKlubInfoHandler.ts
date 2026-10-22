@@ -4,6 +4,9 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import {fullNameFromUser, resolveZarzad} from "../modules/setup/function_roles_service";
+import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blachy_registry";
+import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";
+import {todayWarsawIso} from "../modules/shared/date_range_utils";
 
 type TokenCheck =
   | {error: string}
@@ -49,11 +52,12 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
       const uid = tokenCheck.decoded.uid;
 
       // Jeden odczyt stanu funkcyjnego + zmiennych setup + KR + dok. użytkownika (rola).
-      const [stateSnap, varsSnap, krSnap, userSnap] = await Promise.all([
+      const [stateSnap, varsSnap, krSnap, userSnap, blachySnap] = await Promise.all([
         db.collection("service_state").doc("function_roles").get(),
         db.collection("setup").doc("vars_members").get(),
         db.collection("users_active").where("role_key", "==", "rola_kr").get(),
         db.collection("users_active").doc(uid).get(),
+        db.collection(BLACHY_COLLECTION).get(),
       ]);
 
       // Dane finansowe (stan konta/gotówki) widzą WYŁĄCZNIE KR i Zarząd —
@@ -173,6 +177,10 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
         adresy,
         linki,
         ...(kluczeOsoby ? {kluczeOsoby} : {}),
+        // Rejestr Blach — jawny dla zalogowanych (regulamin § 6 pkt 2), bez e-maili.
+        blachy: sortRegistry(blachySnap.docs.map((d) => toPublic(d.id, d.data()))),
+        canEditBlachy: canEditRegistry(parseBlachyConfig(vars, todayWarsawIso()),
+          String((userSnap.data() as any)?.email || tokenCheck.decoded.email || ""), canSeeFinance),
       });
     } catch (err: any) {
       logger.error("getKlubInfo failed", {message: err?.message, stack: err?.stack});
