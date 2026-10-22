@@ -77,16 +77,22 @@ h3 { font-size: 21px; }
 /* ---------- hero ---------- */
 .hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .hero { background: radial-gradient(ellipse 60% 70% at 15% 35%, rgba(47, 211, 255, .10), transparent 70%), var(--bg); }
-/* Zdjęcia w prawym skośnym panelu: morze u góry, góry na dole; tekst po lewej nie zasłania postaci. */
-.hero-media { position: absolute; top: 0; right: 0; bottom: 0; width: 60%; clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%); }
-.hero-img { position: absolute; left: 0; width: 100%; object-fit: cover; animation: zoom 18s ease-out both; }
-.hero-sea { top: 0; height: 56%; object-position: 50% 62%; }
-.hero-mtn { bottom: 0; height: 56%; object-position: 72% 40%; clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 100%); }
-.hero-media::after { content: ""; position: absolute; left: 0; right: 0; top: 44%; height: 12%; background: linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(255, 255, 255, .55) 50%, transparent calc(50% + 1px)); pointer-events: none; }
+/* Kolaż zdjęć w tle (przyciemniony), tekst na wierzchu. */
+/* Prawy skośny panel: lampki i tory u góry (rozdzielone skosem), ekipa na wodzie u dołu na całą szerokość. */
+.hero-media { position: absolute; top: 0; right: 0; bottom: 0; width: 62%; clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%); }
+.hero-pics { position: absolute; inset: 0; animation: zoom 18s ease-out both; }
+.hero-img { position: absolute; object-fit: cover; }
+.hi-lamp { top: 0; left: 0; width: 64%; height: 58%; object-position: 40% 60%; clip-path: polygon(0 0, 96.9% 0, 76.5% 100%, 0 100%); }
+.hi-tory { top: 0; right: 0; width: 52%; height: 58%; object-position: 50% 35%; clip-path: polygon(26.9% 0, 100% 0, 100% 100%, 0 100%); }
+.hi-ekipa { bottom: 0; left: 0; width: 100%; height: 56%; object-position: 50% 62%; clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 100%); }
+.hero-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero-lines line { stroke: rgba(255, 255, 255, .6); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 20, 31, .55) 0%, transparent 35%), linear-gradient(180deg, transparent 60%, rgba(6, 20, 31, .9) 100%); }
 @keyframes zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
 .hero-inner { position: relative; max-width: var(--wrap); width: 100%; margin: 0 auto; padding: 96px 20px 20px; }
 .hero h1 { font-size: clamp(38px, 5vw, 72px); max-width: 12ch; text-shadow: 0 4px 40px rgba(0, 0, 0, .35); }
+.lead { max-width: 34ch; }
+.hero h1 { font-size: clamp(38px, 5vw, 72px); max-width: 14ch; text-shadow: 0 4px 40px rgba(0, 0, 0, .35); }
 .lead { font-size: clamp(17px, 1.8vw, 21px); max-width: 30ch; color: #dbe8ef; margin: 0 0 24px; }
 .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
 
@@ -156,6 +162,8 @@ ul.check li::before { content: ""; position: absolute; left: 4px; top: 15px; wid
 ul.dash li { color: var(--muted); }
 ul.dash li::before { content: "—"; position: absolute; left: 4px; }
 
+.price-note { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+
 /* ---------- gallery ---------- */
 .film { margin-bottom: 28px; }
 .film-frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #000; }
@@ -170,7 +178,6 @@ ul.dash li::before { content: "—"; position: absolute; left: 4px; }
 .lb-fig img { max-height: 84vh; max-width: 100%; border-radius: 10px; user-select: none; -webkit-user-drag: none; }
 .lb-fig img.lb-swap { animation: lbIn .25s ease; }
 @keyframes lbIn { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
-.lb-cap { color: var(--muted); font-size: 15px; text-align: center; }
 .lb-count { position: absolute; top: 20px; left: 22px; color: var(--muted); font: 600 15px "Space Grotesk", sans-serif; }
 .lb-btn { position: absolute; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .15); color: #fff; cursor: pointer; border-radius: 50%; width: 52px; height: 52px; font-size: 34px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: background .2s; }
 .lb-btn:hover { background: rgba(255, 255, 255, .2); }
@@ -219,8 +226,16 @@ ul.dash li::before { content: "—"; position: absolute; left: 4px; }
 .more { font-weight: 600; }
 .story-media { position: relative; min-height: 520px; }
 .story-media img { position: absolute; object-fit: cover; border-radius: var(--radius); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6); }
-.sm-a { top: 0; right: 0; width: 78%; height: 70%; }
-.sm-b { bottom: 0; left: 0; width: 58%; height: 48%; border: 4px solid var(--bg); }
+.sm-a { top: 0; right: 0; width: 84%; height: 64%; }
+.sm-b { bottom: 0; left: 0; width: 44%; height: 60%; border: 4px solid var(--bg); object-position: 50% 30%; }
+
+/* ---------- mozaika ekipy (sekcja „Więcej niż kurs”) ---------- */
+.mosaic { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 230px; grid-template-areas: "a a b c" "d e b f"; gap: 12px; margin: 0 0 40px; }
+.mosaic figure { position: relative; margin: 0; border-radius: 14px; overflow: hidden; }
+.mosaic img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s; }
+.mosaic figure:hover img { transform: scale(1.04); }
+.mo-a { grid-area: a; } .mo-b { grid-area: b; } .mo-c { grid-area: c; } .mo-d { grid-area: d; } .mo-e { grid-area: e; } .mo-f { grid-area: f; }
+.mo-c img { object-position: 50% 20%; }
 
 /* ---------- club ---------- */
 .club { background: radial-gradient(ellipse 70% 60% at 85% 20%, rgba(255, 122, 47, .10), transparent 70%), var(--bg); }
@@ -322,7 +337,7 @@ body.has-demo-bar { padding-bottom: 72px; }
 .reveal.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
-  .hero-img { animation: none; }
+  .hero-pics { animation: none; }
   html { scroll-behavior: auto; }
 }
 
@@ -342,9 +357,10 @@ body.has-demo-bar { padding-bottom: 72px; }
   .worlds { grid-template-columns: 1fr; }
   .world { min-height: 380px; }
   .hero { justify-content: flex-start; }
-  .hero-media { position: relative; width: 100%; height: 50svh; clip-path: none; flex: none; }
+  .hero-media { position: relative; width: 100%; height: 56svh; clip-path: none; flex: none; }
   .hero-inner { padding-top: 8px; }
-  .hero-shade { background: linear-gradient(180deg, transparent 70%, var(--bg) 100%); }
+  .mosaic { grid-template-columns: 1fr 1fr; grid-auto-rows: 180px; grid-template-areas: "a a" "b c" "b d" "e f"; }
+  .hero-shade { background: linear-gradient(180deg, rgba(6, 20, 31, .4) 0%, transparent 18%, transparent 72%, var(--bg) 100%); }
   .fact { flex-basis: 45%; padding: 14px 16px; border-top: 1px solid var(--line); }
   .fact-v { font-size: 22px; }
   .timeline::before { left: 74px; }

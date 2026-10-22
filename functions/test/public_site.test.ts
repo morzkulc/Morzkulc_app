@@ -7,7 +7,7 @@
 import {describe, it, expect} from "vitest";
 import {FakeFirestore} from "./helpers/fake_firestore";
 import {handleGetPublicSite} from "../src/api/getPublicSiteHandler";
-import {parseHarmonogram, kursDate} from "../src/modules/kurs/kurs_public";
+import {parseHarmonogram, kursDate, buildPublicKurs} from "../src/modules/kurs/kurs_public";
 
 function seed() {
   return new FakeFirestore({
@@ -28,7 +28,7 @@ function seed() {
       cena_kursu: {value: 2300},
       kurs_edycja: {value: 2027},
       kurs_zadatek: {value: "950"},
-      kurs_cena_student: {value: ""},
+      kurs_cena_mlodzi: {value: ""},
       kurs_zapisy_status: {value: "Otwarte"},
       kurs_zapisy_do: {value: "28.02.2027"},
       kurs_link_zapisu: {value: "javascript:alert(1)"},
@@ -121,11 +121,27 @@ describe("publicSite", () => {
       zapisyStatus: "otwarte",
       zapisyDo: "2027-02-28",
       kontaktEmail: "szkoleniowiec@morzkulc.pl",
+      start: "2027-03-04",
       harmonogram: [
         {from: "2027-03-04", to: "", type: "spotkanie", name: "Spotkanie organizacyjne", place: ""},
         {from: "2027-04-24", to: "2027-04-25", type: "wyjazd", name: "Wyjazd I", place: "Ostrzyce"},
       ],
     });
+  });
+});
+
+describe("kurs_public start + zniżka wiekowa", () => {
+  const h = {harmonogram_01: {value: "2027-03-04 | spotkanie | Spotkanie"}};
+  it("kurs_start ma pierwszeństwo przed harmonogramem", () => {
+    expect(buildPublicKurs({...h, kurs_start: {value: "01.04.2027"}}).start).toBe("2027-04-01");
+    expect(buildPublicKurs(h).start).toBe("2027-03-04");
+  });
+  it("cena dla młodych tylko w parze z wiekiem", () => {
+    const both = buildPublicKurs({kurs_cena_mlodzi: {value: "2200"}, kurs_mlodzi_wiek: {value: "26"}});
+    expect([both.cenaMlodzi, both.mlodziWiek]).toEqual([2200, 26]);
+    const one = buildPublicKurs({kurs_cena_mlodzi: {value: "2200"}});
+    expect(one.cenaMlodzi).toBeUndefined();
+    expect(one.mlodziWiek).toBeUndefined();
   });
 });
 

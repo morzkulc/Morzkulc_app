@@ -45,7 +45,6 @@ function kursPublic(cfg: KursSignupConfig) {
     demo: demoActive(cfg, new Date().toISOString().slice(0, 10)),
     demoDo: k.zapisyDemoDo ?? "",
     cena: k.cena ?? null,
-    cenaStudent: k.cenaStudent ?? null,
     zadatek: k.zadatek ?? null,
     terminDoplaty: k.terminDoplaty ?? "",
   };

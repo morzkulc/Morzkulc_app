@@ -26,7 +26,9 @@ type Kind = "num" | "text" | "date" | "url" | "email" | "status";
 const KURS_VARS: Array<{key: string; out: string; kind: Kind}> = [
   {key: "kurs_edycja", out: "edycja", kind: "text"},
   {key: "cena_kursu", out: "cena", kind: "num"},
-  {key: "kurs_cena_student", out: "cenaStudent", kind: "num"},
+  {key: "kurs_cena_mlodzi", out: "cenaMlodzi", kind: "num"},
+  {key: "kurs_mlodzi_wiek", out: "mlodziWiek", kind: "num"},
+  {key: "kurs_start", out: "start", kind: "date"},
   {key: "kurs_zadatek", out: "zadatek", kind: "num"},
   {key: "kurs_termin_doplaty", out: "terminDoplaty", kind: "date"},
   {key: "kurs_limit_miejsc", out: "limitMiejsc", kind: "num"},
@@ -97,5 +99,12 @@ export function buildPublicKurs(vars: VarsMap | null | undefined): PublicKurs {
     .filter((x): x is KursHarmonogramItem => x !== null)
     .sort((a, b) => a.from.localeCompare(b.from));
   if (harmonogram.length) out.harmonogram = harmonogram;
+  // Start kursu: kurs_start, a bez niej pierwsza pozycja harmonogramu.
+  if (!out.start && harmonogram.length) out.start = harmonogram[0].from;
+  // Zniżka wiekowa ma sens tylko jako para (cena + wiek) — inaczej żadnej z nich.
+  if (!out.cenaMlodzi || !out.mlodziWiek) {
+    delete out.cenaMlodzi;
+    delete out.mlodziWiek;
+  }
   return out;
 }

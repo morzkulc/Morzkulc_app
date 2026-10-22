@@ -229,9 +229,25 @@ export function przelewTitle(edycja: string, imie: string, nazwisko: string): st
   return `Kurs ${edycja} – ${imie} ${nazwisko}`.trim();
 }
 
-/** Kwota do zapłaty: cena studencka, jeśli zgłaszający jest studentem i jest ustawiona. */
-export function cenaFor(student: boolean, cena: number | null, cenaStudent: number | null): number | null {
-  return student && cenaStudent ? cenaStudent : cena;
+/** Czy w dniu `refIso` osoba urodzona `birthIso` nie ukończyła jeszcze `age` lat. */
+export function isYoungerThan(birthIso: string, age: number, refIso: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthIso || "");
+  if (!m) return false;
+  return `${Number(m[1]) + age}-${m[2]}-${m[3]}` > refIso;
+}
+
+export type KursCeny = {
+  cena: number | null;
+  cenaMlodzi: number | null;
+  mlodziWiek: number | null;
+  /** Dzień, na który liczy się wiek (start kursu). */
+  refIso: string;
+};
+
+/** Kwota do zapłaty: cena ulgowa, jeśli w dniu startu kursu zgłaszający nie skończył `mlodziWiek` lat; inaczej pełna. */
+export function cenaFor(o: {dataUrodzenia?: string}, c: KursCeny): number | null {
+  if (c.cenaMlodzi && c.mlodziWiek && isYoungerThan(o.dataUrodzenia || "", c.mlodziWiek, c.refIso)) return c.cenaMlodzi;
+  return c.cena;
 }
 
 export type ListaItem = {

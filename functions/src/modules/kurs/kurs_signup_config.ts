@@ -55,14 +55,19 @@ export type PrzelewInfo = {
 };
 
 /** Dane do przelewu dla konkretnego zgłoszenia (strona, mail, panel). */
-export function przelewInfo(cfg: KursSignupConfig, z: {edycja: string; form: {imie: string; nazwisko: string; student: boolean}}): PrzelewInfo {
+export function przelewInfo(cfg: KursSignupConfig, z: {edycja: string; form: {imie: string; nazwisko: string; dataUrodzenia?: string}}): PrzelewInfo {
   const n = (v: any) => (typeof v === "number" ? v : null);
   return {
     konto: cfg.konto,
     bank: cfg.bank,
     tytul: przelewTitle(z.edycja, z.form.imie, z.form.nazwisko),
     zadatek: n(cfg.kurs.zadatek),
-    cena: cenaFor(z.form.student, n(cfg.kurs.cena), n(cfg.kurs.cenaStudent)),
+    cena: cenaFor(z.form, {
+      cena: n(cfg.kurs.cena),
+      cenaMlodzi: n(cfg.kurs.cenaMlodzi),
+      mlodziWiek: n(cfg.kurs.mlodziWiek),
+      refIso: typeof cfg.kurs.start === "string" && cfg.kurs.start ? cfg.kurs.start : new Date().toISOString().slice(0, 10),
+    }),
     terminDoplaty: typeof cfg.kurs.terminDoplaty === "string" ? cfg.kurs.terminDoplaty : "",
   };
 }

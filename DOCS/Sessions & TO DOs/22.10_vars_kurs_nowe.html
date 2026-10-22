@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><title>Vars_KURS — nowe zmienne 22.10</title>
+<style>body{font:15px system-ui,sans-serif;margin:24px;color:#111}table{border-collapse:collapse;margin-top:12px}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left;vertical-align:top}th{background:#eee}button{padding:8px 14px;margin-right:8px;cursor:pointer}#ok{color:green;margin-left:8px}.note{max-width:900px}</style></head>
+<body>
+<h2>Vars_KURS — 3 nowe wiersze (22.10)</h2>
+<p class="note">Wklej na końcu zakładki Vars_KURS w kolumny <b>Zmienna_nazwa | Wartość_zmiennej | Grupa zmiennych | Opis</b>. <b>kurs_cena_mlodzi</b> uzupełnij kwotą (pusta = zniżka niewidoczna i nienaliczana). Potem sync.<br>
+Cena: zmień istniejący wiersz <b>cena_kursu</b> na 2600. <b>Usuń wiersz kurs_cena_student</b> — ulgę daje teraz tylko wiek (kurs_cena_mlodzi).</p>
+<button id="all">Kopiuj wiersze</button><span id="ok"></span>
+<textarea id="fb" style="display:none;width:100%;height:120px;margin-top:12px"></textarea>
+<table id="t"><thead><tr><th>Zmienna_nazwa</th><th>Wartość_zmiennej</th><th>Grupa zmiennych</th><th>Opis</th></tr></thead><tbody>
+<tr><td>kurs_start</td><td>2027-04-01</td><td>Strona kursu</td><td>Dzień startu kursu (rrrr-mm-dd). Strona: „start kursu” i licznik dni; od tego dnia liczony jest wiek do zniżki. Puste = pierwsza pozycja harmonogramu.</td></tr>
+<tr><td>kurs_cena_mlodzi</td><td>2050</td><td>Strona kursu</td><td>Cena ulgowa w zł dla osób, które w dniu startu kursu (kurs_start) nie skończyły kurs_mlodzi_wiek lat. Liczona automatycznie z daty urodzenia przy zapisie. Strona kursu: cena i FAQ. Puste = brak ulgi.</td></tr>
+<tr><td>kurs_mlodzi_wiek</td><td>26</td><td>Strona kursu</td><td>Granica wieku zniżki z kurs_cena_mlodzi: zniżka dla osób, które w dniu startu kursu nie skończyły tylu lat. Strona: „dla osób do 26 roku życia”.</td></tr>
+</tbody></table>
+<script>
+var NL = String.fromCharCode(10), TAB = String.fromCharCode(9);
+document.getElementById("all").onclick = function () {
+  var rows = Array.prototype.map.call(document.querySelectorAll("#t tbody tr"), function (tr) {
+    return Array.prototype.map.call(tr.cells, function (td) { return td.textContent; }).join(TAB);
+  }).join(NL);
+  var ok = document.getElementById("ok");
+  navigator.clipboard.writeText(rows).then(function () { ok.textContent = "Skopiowane"; }, function () {
+    var fb = document.getElementById("fb"); fb.style.display = "block"; fb.value = rows; fb.select();
+    ok.textContent = "Zaznacz i skopiuj z pola poniżej (Ctrl+C)";
+  });
+};
+</script>
+</body></html>

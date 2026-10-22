@@ -29,7 +29,7 @@
   function derive(k) {
     var h = k.harmonogram || [];
     if (h.length) {
-      k.start = h[0].from;
+      if (!has(k.start)) k.start = h[0].from;
       var w = h.filter(function (x) { return x.type === "wyjazd"; }).length;
       if (w) k.wyjazdy = w;
     }
@@ -210,7 +210,6 @@
   var lb = document.getElementById("lightbox");
   if (lb) {
     var lbImg = lb.querySelector("img");
-    var lbCap = lb.querySelector(".lb-cap");
     var lbCount = lb.querySelector(".lb-count");
     var items = $$(".js-gallery a");
     var cur = 0;
@@ -220,7 +219,6 @@
       lbImg.classList.remove("lb-swap"); void lbImg.offsetWidth; lbImg.classList.add("lb-swap");
       lbImg.src = a.href;
       lbImg.alt = a.querySelector("img").alt;
-      lbCap.textContent = lbImg.alt;
       lbCount.textContent = (cur + 1) + " / " + items.length;
       [cur - 1, cur + 1].forEach(function (n) { new Image().src = items[(n + items.length) % items.length].href; });
     }

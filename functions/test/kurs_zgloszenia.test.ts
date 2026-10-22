@@ -35,7 +35,7 @@ vi.mock("../src/service/providers/googleSheetsProvider", () => ({
 }));
 
 import {
-  isValidPesel, validateZgloszenie, computeListy, resolveSheetHeaders, przelewTitle, cenaFor, isAdult,
+  isValidPesel, validateZgloszenie, computeListy, resolveSheetHeaders, przelewTitle, cenaFor, isAdult, isYoungerThan,
 } from "../src/modules/kurs/kurs_zgloszenia";
 import {handleKursZgloszenie} from "../src/api/kursZgloszenieHandler";
 import {buildApplicantMail, buildPaymentMail} from "../src/modules/kurs/kurs_zgloszenia_mail";
@@ -107,11 +107,20 @@ describe("walidacja formularza", () => {
     expect(v.ok && v.data.schorzenia).toEqual(["Astma"]);
   });
 
-  it("tytuł przelewu i cena studencka", () => {
+  it("tytuł przelewu", () => {
     expect(przelewTitle("2027", "Ala", "Kot")).toBe("Kurs 2027 – Ala Kot");
-    expect(cenaFor(true, 2300, 2000)).toBe(2000);
-    expect(cenaFor(true, 2300, null)).toBe(2300);
-    expect(cenaFor(false, 2300, 2000)).toBe(2300);
+  });
+
+  it("cena ulgowa tylko dla osób przed N urodzinami w dniu startu (status studenta bez znaczenia)", () => {
+    expect(isYoungerThan("2001-04-02", 26, "2027-04-01")).toBe(true); // 26 lat kończy dzień po starcie
+    expect(isYoungerThan("2001-04-01", 26, "2027-04-01")).toBe(false); // 26 lat w dniu startu
+    expect(isYoungerThan("", 26, "2027-04-01")).toBe(false);
+    const c = {cena: 2600, cenaMlodzi: 2050, mlodziWiek: 26, refIso: "2027-04-01"};
+    expect(cenaFor({dataUrodzenia: "2005-01-01"}, c)).toBe(2050);
+    expect(cenaFor({dataUrodzenia: "1990-01-01"}, c)).toBe(2600);
+    expect(cenaFor({dataUrodzenia: ""}, c)).toBe(2600);
+    expect(cenaFor({dataUrodzenia: "2005-01-01"}, {...c, mlodziWiek: null})).toBe(2600);
+    expect(cenaFor({dataUrodzenia: "2005-01-01"}, {...c, cena: null, cenaMlodzi: null})).toBeNull();
   });
 });
 
