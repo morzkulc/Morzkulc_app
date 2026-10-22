@@ -163,6 +163,14 @@ ul.dash li { color: var(--muted); }
 ul.dash li::before { content: "—"; position: absolute; left: 4px; }
 
 .price-note { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.price-young { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 18px; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--accent); background: rgba(255, 122, 47, .12); }
+.py-l { font-weight: 600; }
+.py-v { font: 700 34px "Space Grotesk", sans-serif; color: var(--accent); line-height: 1; }
+/* Cena ulgowa w nagłówku — widoczna od razu, nad przyciskami. */
+.hero-young { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 24px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: rgba(255, 122, 47, .16); }
+.hy-l { font-weight: 600; }
+.hy-v { font: 700 26px "Space Grotesk", sans-serif; color: var(--accent); line-height: 1; }
+.hy-old { color: var(--muted); font-size: 14px; }
 
 /* ---------- gallery ---------- */
 .film { margin-bottom: 28px; }

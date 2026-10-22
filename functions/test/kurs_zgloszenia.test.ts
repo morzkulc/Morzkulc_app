@@ -454,6 +454,29 @@ describe("taski: przeniesienie i rezygnacja", () => {
     }
   });
 
+  it("maile: osoba przed 26 urodzinami w dniu startu dostaje cenę ulgową (z opisem), starsza pełną", () => {
+    const cfg: any = {konto: "12 3456", bank: "mBank", appUrl: "https://app.morzkulc.pl/", kursUrl: "https://kurs.morzkulc.pl",
+      kurs: {edycja: "2027", cena: 2600, cenaMlodzi: 2050, mlodziWiek: 26, start: "2027-04-01", zadatek: 950,
+        terminDoplaty: "2027-05-01", harmonogram: []}};
+    const young = zgl("zadatek");
+    young.form = {...young.form, dataUrodzenia: "2001-04-02"};
+    const old = zgl("zadatek");
+    old.form = {...old.form, dataUrodzenia: "2001-04-01"};
+    const nb = (s: string) => s.replace(/\u00a0/g, " ");
+
+    const a = nb(buildApplicantMail(young, cfg).text);
+    expect(a).toContain("pełnej ceny kursu (2050 zł — cena dla osób do 26 roku życia)");
+    const z = nb(buildPaymentMail(young, cfg, "zadatek", false).text);
+    expect(z).toContain("Cena kursu dla Ciebie: 2050 zł (cena dla osób do 26 roku życia).");
+    expect(z).toContain("Pozostało do zapłaty: 1100 zł");
+    expect(nb(buildPaymentMail(young, cfg, "oplacony", false).text)).toContain("(2050 zł — cena dla osób do 26 roku życia)");
+
+    const b = nb(buildApplicantMail(old, cfg).text);
+    expect(b).toContain("pełnej ceny kursu (2600 zł)");
+    expect(b).not.toContain("roku życia");
+    expect(nb(buildPaymentMail(old, cfg, "zadatek", false).text)).toContain("Pozostało do zapłaty: 1650 zł");
+  });
+
   it("mail zgłoszeniowy: do zgłaszającego i kontaktu kursu, tylko raz", async () => {
     const db = seedDb({kurs_zgloszenia: [zgl("nowe")]});
     const {c, mails} = ctx(db);

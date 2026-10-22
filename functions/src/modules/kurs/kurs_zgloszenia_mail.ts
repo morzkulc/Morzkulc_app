@@ -84,10 +84,11 @@ export function buildApplicantMail(z: any, cfg: KursSignupConfig): {subject: str
   const p = przelewInfo(cfg, z);
   const harmonogram = Array.isArray(cfg.kurs.harmonogram) ? cfg.kurs.harmonogram : [];
   const baseny = basenyLine(cfg, harmonogram);
+  const cenaTxt = p.cena ? `${pln(p.cena)}${p.ulga ? ` — ${p.ulga}` : ""}` : "";
   const doplata = p.cena ?
     (p.terminDoplaty ?
-      `Pozostałą kwotę do pełnej ceny kursu (${pln(p.cena)}) wpłać do ${dateLong(p.terminDoplaty)} — tym samym tytułem przelewu. To także ostatni dzień na rezygnację z kursu (regulamin).` :
-      `Pozostałą kwotę do pełnej ceny kursu (${pln(p.cena)}) wpłacisz w terminie, który podamy.`) :
+      `Pozostałą kwotę do pełnej ceny kursu (${cenaTxt}) wpłać do ${dateLong(p.terminDoplaty)} — tym samym tytułem przelewu. To także ostatni dzień na rezygnację z kursu (regulamin).` :
+      `Pozostałą kwotę do pełnej ceny kursu (${cenaTxt}) wpłacisz w terminie, który podamy.`) :
     "";
   const contact = typeof cfg.kurs.kontaktEmail === "string" ? cfg.kurs.kontaktEmail : "";
 
@@ -170,6 +171,7 @@ export function buildPaymentMail(z: any, cfg: KursSignupConfig, kind: "zadatek" 
 
   if (kind === "zadatek") {
     para(`Potwierdzamy wpłatę zadatku${p.zadatek ? ` (${pln(p.zadatek)})` : ""} — Twoje miejsce na Kursie ${z.edycja} jest zarezerwowane.`);
+    if (p.cena) para(`Cena kursu dla Ciebie: ${pln(p.cena)}${p.ulga ? ` (${p.ulga})` : ""}.`);
     const reszta = p.cena != null && p.zadatek != null ? p.cena - p.zadatek : null;
     if (reszta && reszta > 0) {
       const termin = p.terminDoplaty ? ` do ${dateLong(p.terminDoplaty)}` : "";
@@ -179,7 +181,7 @@ export function buildPaymentMail(z: any, cfg: KursSignupConfig, kind: "zadatek" 
       });
     }
   } else {
-    para(`Potwierdzamy wpłatę pełnej kwoty za kurs${p.cena ? ` (${pln(p.cena)})` : ""} — Kurs ${z.edycja} jest opłacony.`);
+    para(`Potwierdzamy wpłatę pełnej kwoty za kurs${p.cena ? ` (${pln(p.cena)}${p.ulga ? ` — ${p.ulga}` : ""})` : ""} — Kurs ${z.edycja} jest opłacony.`);
   }
 
   if (hasAccount) {

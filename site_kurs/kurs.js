@@ -247,7 +247,8 @@
     });
   }
 
-  fetch(API, {mode: "cors", credentials: "omit"})
+  // Parametr zmienia się co 5 min: CDN nie poda odpowiedzi starszej niż 5 min po syncu Vars_KURS.
+  fetch(API + "?b=" + Math.floor(Date.now() / 300000), {mode: "cors", credentials: "omit"})
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(apply)
     .catch(function () { apply(null); });

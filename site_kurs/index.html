@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/img/ekipa-rzeka.webp">
 <link rel="preload" as="image" href="/img/wieczor-swiatla.webp">
-<link rel="stylesheet" href="/kurs.css?v=18">
+<link rel="stylesheet" href="/kurs.css?v=20">
 </head>
 <body>
 
@@ -48,6 +48,7 @@
       <p class="eyebrow reveal">Kurs Kajakarstwa Górskiego i Morskiego <span data-k="edycja"></span></p>
       <h1 class="reveal">Morze i góry.<br><span class="grad">Dwa światy, jedna przygoda.</span></h1>
       <p class="lead reveal">Za rok możesz oglądać zdjęcia z cudzych wypraw. Albo być na nich razem z nami.</p>
+      <p class="hero-young reveal" data-need="cenaMlodzi"><span class="hy-l">Do <span data-k="mlodziWiek"></span> roku życia</span><strong class="hy-v" data-k="cenaMlodzi" data-fmt="pln"></strong><span class="hy-old">zamiast <s data-k="cena" data-fmt="pln"></s></span></p>
       <div class="hero-cta reveal">
         <a class="btn btn-accent js-cta" href="#zapisy">Zapisz się</a>
         <a class="btn btn-ghost" href="#harmonogram">Zobacz harmonogram</a>
@@ -176,7 +177,7 @@
       <div class="price-card reveal">
         <p class="eyebrow">Cena kursu</p>
         <p class="price"><span data-k="cena" data-fmt="pln"></span></p>
-        <p class="price-row" data-need="cenaMlodzi">dla osób do <span data-k="mlodziWiek"></span> roku życia: <strong data-k="cenaMlodzi" data-fmt="pln"></strong></p>
+        <div class="price-young" data-need="cenaMlodzi"><span class="py-l">Do <span data-k="mlodziWiek"></span> roku życia</span><span class="py-v" data-k="cenaMlodzi" data-fmt="pln"></span></div>
         <p class="price-note" data-need="cenaMlodzi">Wiek liczymy w dniu startu kursu. Cenę wyliczamy automatycznie przy zapisie.</p>
         <p class="price-row" data-need="zadatek">zadatek przy zapisie: <strong data-k="zadatek" data-fmt="pln"></strong></p>
         <p class="price-row" data-need="terminDoplaty">dopłata do: <strong data-k="terminDoplaty" data-fmt="date"></strong></p>
@@ -276,7 +277,7 @@
         <details><summary>Jaką odzież zabrać na wodę?</summary><p>Buty do wody (neoprenowe lub stare adidasy), kurtka sportowa, dwa polary, pianka. Jeśli ich nie masz, na pierwszym spotkaniu podpowiemy, gdzie niedrogo kupić używane.</p></details>
         <details><summary>Co zabrać na wyjazd?</summary><p>Ubrania na pogodę, śpiwór, karimatę lub materac, namiot, menażkę, sztućce i rzeczy osobiste.</p></details>
         <details><summary>Czy noclegi i wyżywienie są w cenie?</summary><p>Tak, wraz z transportem na wyjazdach w północnej Polsce. Wyżywienie i transport na wyjeździe na tor kajakowy nie są w cenie. Na tym etapie kursanci wspólnie organizują przejazd samochodami.</p></details>
-        <details><summary>Ile kosztuje kurs?</summary><p><span data-need="cena">Cena kursu to <span data-k="cena" data-fmt="pln"></span>.</span><span data-need="zadatek"> Warunkiem przyjęcia jest wpłata zadatku <span data-k="zadatek" data-fmt="pln"></span>.</span></p></details>
+        <details><summary>Ile kosztuje kurs?</summary><p><span data-need="cena">Cena kursu to <span data-k="cena" data-fmt="pln"></span>.</span><span data-need="cenaMlodzi"> Osoby, które w dniu startu kursu nie skończyły <span data-k="mlodziWiek"></span> lat, płacą <span data-k="cenaMlodzi" data-fmt="pln"></span>.</span><span data-need="zadatek"> Warunkiem przyjęcia jest wpłata zadatku <span data-k="zadatek" data-fmt="pln"></span>.</span></p></details>
         <details><summary>Czy będę musiał biwakować?</summary><p>Tak, część wyjazdów to noclegi pod namiotem na własnym sprzęcie biwakowym. Bez namiotu możesz go wypożyczyć albo, po uzgodnieniu, dołączyć do kogoś z wolnym miejscem.</p></details>
         <details><summary>Nie jestem bardzo wysportowany. Czy to problem?</summary><p>Nie oczekujemy przygotowania zawodniczego. Ważniejsze są zaangażowanie i chęć nauki, a stan zdrowia powinien pozwalać na bezpieczny udział w zajęciach.</p></details>
         <details><summary>Co jeśli nie mogę pojechać na jeden z wyjazdów?</summary><p>Nic się nie stanie. Harmonogram jest napięty i wiele osób opuszcza jeden lub dwa wyjazdy.<span data-need="minBasenow"> Warunkiem ukończenia kursu jest udział w co najmniej <span data-k="minBasenow"></span> zajęciach basenowych<span data-need="minWyjazdow"> i <span data-k="minWyjazdow"></span> wyjazdach</span>.</span> Polecamy udział w przynajmniej jednym z dwóch pierwszych wyjazdów.</p></details>
@@ -341,6 +342,6 @@
   <span class="lb-count"></span>
 </div>
 
-<script src="/kurs.js?v=9" defer></script>
+<script src="/kurs.js?v=10" defer></script>
 </body>
 </html>

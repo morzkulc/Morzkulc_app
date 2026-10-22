@@ -190,7 +190,7 @@ function renderDone(z) {
   $$(".js-cena-row").forEach((el) => {
     el.hidden = !p.cena;
   });
-  $(".js-cena").textContent = pln(p.cena);
+  $(".js-cena").textContent = pln(p.cena) + (p.ulga ? ` (${p.ulga})` : "");
   $(".js-doplata").textContent = p.terminDoplaty ? ` — pozostałą kwotę wpłać do ${datePL(p.terminDoplaty)}` : "";
   $$(".z-copy").forEach((b) => {
     b.onclick = () => {
