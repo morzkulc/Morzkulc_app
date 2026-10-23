@@ -12,6 +12,9 @@
         ],
         "kurs": [
           "morzkulc-kurs"
+        ],
+        "www": [
+          "morzkulc-klub"
         ]
       }
     },

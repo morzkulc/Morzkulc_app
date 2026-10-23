@@ -79,3 +79,6 @@ _claude_context/
 
 # Zdjęcia źródłowe wizytówki (do repo idą tylko zoptymalizowane w site_pg/img)
 site_pg/_oryginaly/
+
+# Wynik prerenderu stron publicznych (scripts/prerender-site.js, predeploy Hosting)
+.build/

@@ -611,8 +611,22 @@
   },
   {
     "target": "kurs",
-    "public": "site_kurs",
-    "ignore": ["README.md", "**/.*", "**/node_modules/**"],
+    "predeploy": ["node --use-system-ca scripts/prerender-site.js kurs"],
+    "postdeploy": ["node --use-system-ca scripts/indexnow-ping.js kurs"],
+    "public": ".build/site_kurs",
+    "ignore": ["README.md", "**/node_modules/**"],
+    "cleanUrls": true,
+    "headers": [
+      { "source": "**/*.@(html|js|css)", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },
+      { "source": "/img/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    ]
+  },
+  {
+    "target": "www",
+    "predeploy": ["node --use-system-ca scripts/prerender-site.js www"],
+    "postdeploy": ["node --use-system-ca scripts/indexnow-ping.js www"],
+    "public": ".build/site_www",
+    "ignore": ["README.md", "**/node_modules/**"],
     "cleanUrls": true,
     "headers": [
       { "source": "**/*.@(html|js|css)", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },

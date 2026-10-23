@@ -1,0 +1,21 @@
+# kurs.morzkulc.pl — indeksowanie dozwolone dla wyszukiwarek i botów AI.
+# /zapis i /zgoda-wizerunek mają meta noindex (celowo bez Disallow, żeby boty ten noindex widziały).
+User-agent: *
+Allow: /
+
+User-agent: Googlebot
+User-agent: Google-Extended
+User-agent: Bingbot
+User-agent: OAI-SearchBot
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://kurs.morzkulc.pl/sitemap.xml

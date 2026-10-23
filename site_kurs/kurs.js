@@ -1,7 +1,10 @@
 // Strona kursu: wszystkie liczby/daty/kontakty z GET /api/public/site (pole `kurs`,
 // źródło: arkusz 1_App_SETUP → Vars_KURS). Brak wartości = element z data-need ukryty.
+// Przy deployu scripts/prerender-site.js wykonuje ten plik w Node (window.__PRERENDER__)
+// i zapisuje wypełniony HTML, żeby boty bez JS widziały ceny, daty i harmonogram.
 (function () {
   "use strict";
+  var PRERENDER = !!window.__PRERENDER__;
   var API = "https://app.morzkulc.pl/api/public/site";
   var MONTHS = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
   var MONTHS_SHORT = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
@@ -49,14 +52,14 @@
     $$("[data-need]").forEach(function (el) {
       var key = el.getAttribute("data-need");
       var v = k[key];
-      if (!has(v) || (Array.isArray(v) && !v.length)) el.classList.add("is-missing");
+      el.classList.toggle("is-missing", !has(v) || (Array.isArray(v) && !v.length));
     });
   }
 
   // Tryb demo zapisów (kurs_zapisy_demo_do): formularz działa testowo niezależnie od
   // statusu — strona mówi to wprost (pasek na każdej podstronie + przyciski „(test)”).
   function demoActive(k) {
-    if (!k.zapisyDemoDo) return false;
+    if (PRERENDER || !k.zapisyDemoDo) return false;
     var t = today(), d = parseIso(k.zapisyDemoDo);
     return t <= d;
   }
@@ -134,7 +137,7 @@
     var cd = document.querySelector(".js-cd");
     // Do startu kursu (kurs_start); bez niej — do pierwszej pozycji harmonogramu.
     var days = Math.round((parseIso(k.start || h[0].from) - t0) / 86400000);
-    if (cd) {
+    if (cd && !PRERENDER) {
       if (days > 0) cd.textContent = days;
       else cd.closest(".countdown").classList.add("is-missing");
     }
@@ -158,7 +161,7 @@
 
   function film(k) {
     var box = document.querySelector(".js-film");
-    if (!box || !k.filmUrl) return;
+    if (!box || !k.filmUrl || box.firstElementChild) return;
     var yt = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/.exec(k.filmUrl);
     if (yt) {
       var f = document.createElement("iframe");
@@ -179,6 +182,7 @@
     $$(".js-adres").forEach(function (p) { p.textContent = data.adres || ""; });
     var soc = data.social || {};
     $$(".js-social").forEach(function (p) {
+      p.textContent = "";
       [["facebook", "Facebook"], ["instagram", "Instagram"]].forEach(function (s) {
         if (!soc[s[0]]) return;
         var a = document.createElement("a"); a.href = soc[s[0]]; a.textContent = s[1]; a.target = "_blank"; a.rel = "noopener";
@@ -192,6 +196,9 @@
     var k = derive((data && data.kurs) || {});
     fill(k); status(k); demoBar(k); timeline(k); film(k); contact(data || {}, k);
   }
+
+  if (PRERENDER) { window.__kursApply = apply; return; }
+  var prerendered = document.documentElement.hasAttribute("data-prerendered");
 
   // ---------- UI ----------
   var nav = document.getElementById("nav");
@@ -251,6 +258,6 @@
   // Parametr zmienia się co 5 min: CDN nie poda odpowiedzi starszej niż 5 min po syncu Vars_KURS.
   fetch(API + "?b=" + Math.floor(Date.now() / 300000), {mode: "cors", credentials: "omit"})
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(apply)
-    .catch(function () { apply(null); });
+    .then(function (data) { if (data || !prerendered) apply(data); })
+    .catch(function () { if (!prerendered) apply(null); });
 })();

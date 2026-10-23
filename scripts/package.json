@@ -1,0 +1,8 @@
+{
+  "name": "morzkulc-scripts",
+  "private": true,
+  "description": "Skrypty deployu Hosting (prerender stron publicznych, IndexNow).",
+  "dependencies": {
+    "linkedom": "0.18.12"
+  }
+}
