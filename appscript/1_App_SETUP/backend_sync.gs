@@ -34,8 +34,20 @@ function callBackendSync_(taskId, payload) {
   return parsed || {};
 }
 
+// Częściowa zgoda OAuth (Google pozwala odznaczyć pojedyncze uprawnienia): bez
+// script.external_request UrlFetchApp rzuca „Nie masz uprawnień do wywołania funkcji
+// UrlFetchApp.fetch". requireScopes przerywa wykonanie i pokazuje okno zgody na brakujące.
+// Wołać PRZED try/catch, żeby błędu nie przechwycił alert.
+function requireSyncScopes_() {
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+  ]);
+}
+
 // Uruchamia sync przez backend i pokazuje przyjazny komunikat.
 function runSync_(taskId, payload) {
+  requireSyncScopes_();
   var ui = SpreadsheetApp.getUi();
   try {
     var r = callBackendSync_(taskId, payload || {});

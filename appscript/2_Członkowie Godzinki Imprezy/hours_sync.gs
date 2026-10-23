@@ -64,6 +64,7 @@ function reconcileOpeningBalanceByEmailPrompt() {
     return;
   }
 
+  requireSyncScopes_();
   try {
     var r = callBackendSync_("opening.reconcile", { email: email });
     ui.alert("✅ Gotowe!\n\n" + (r && r.summary ? r.summary : "Operacja zakończona."));
