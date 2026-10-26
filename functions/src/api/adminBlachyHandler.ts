@@ -2,7 +2,7 @@
 import type {Request, Response} from "express";
 import {logger} from "firebase-functions/v2";
 import * as admin from "firebase-admin";
-import {BLACHY_COLLECTION, toPublic, validateBlachaInput} from "../modules/blachy/blachy_registry";
+import {BLACHY_COLLECTION, isArchiwum, toPublic, validateBlachaInput} from "../modules/blachy/blachy_registry";
 import {norm} from "../modules/shared/text_utils";
 import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
@@ -26,6 +26,7 @@ export type AdminBlachyDeps = {
  *  {action: "add", data}       — nowa blacha (także osoba spoza klubu),
  *  {action: "update", id, data} — poprawka wpisu (rok, numer, uzasadnienie, klub…),
  *  {action: "delete", id}      — usunięcie BŁĘDNEGO wpisu (np. pomyłka w arkuszu).
+ * Wpisy z oficjalnego archiwum klubowego (zrodlo archiwum_2025) są nieedytowalne.
  * E-mail / ID członka / źródło wpisu nie są edytowalne — służą dopasowaniu przy syncu arkusza.
  */
 export async function handleAdminBlachy(req: Request, res: Response, deps: AdminBlachyDeps) {
@@ -64,8 +65,13 @@ export async function handleAdminBlachy(req: Request, res: Response, deps: Admin
       if (action === "delete" || action === "update") {
         const id = norm(req.body?.id);
         const ref = id ? col.doc(id) : null;
-        if (!ref || !(await ref.get()).exists) {
+        const snap = ref ? await ref.get() : null;
+        if (!ref || !snap?.exists) {
           res.status(404).json({error: "Nie ma takiego wpisu"});
+          return;
+        }
+        if (isArchiwum(snap.data())) {
+          res.status(409).json({error: "Wpis z archiwum klubowego — bez edycji"});
           return;
         }
         if (action === "delete") {
@@ -91,7 +97,7 @@ export async function handleAdminBlachy(req: Request, res: Response, deps: Admin
           return;
         }
         const ref = col.doc();
-        await ref.set({...v.data, email: "", memberId: null, zrodlo: "aplikacja", createdAt: ts, updatedAt: ts, updatedBy: by});
+        await ref.set({...v.data, honorowa: false, email: "", memberId: null, zrodlo: "aplikacja", createdAt: ts, updatedAt: ts, updatedBy: by});
         logger.info("adminBlachy: add", {id: ref.id, by});
         res.status(200).json({ok: true, blacha: toPublic(ref.id, v.data)});
         return;

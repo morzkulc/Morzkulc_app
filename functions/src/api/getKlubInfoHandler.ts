@@ -6,6 +6,7 @@ import {logger} from "firebase-functions/v2";
 import {fullNameFromUser, resolveZarzad} from "../modules/setup/function_roles_service";
 import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blachy_registry";
 import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";
+import {ARCHIWUM_DO_ROKU, ARCHIWUM_UWAGA} from "../modules/blachy/blachy_archiwum_2025";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
 
 type TokenCheck =
@@ -179,6 +180,7 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
         ...(kluczeOsoby ? {kluczeOsoby} : {}),
         // Rejestr Blach — jawny dla zalogowanych (regulamin § 6 pkt 2), bez e-maili.
         blachy: sortRegistry(blachySnap.docs.map((d) => toPublic(d.id, d.data()))),
+        blachyArchiwum: {doRoku: ARCHIWUM_DO_ROKU, uwaga: ARCHIWUM_UWAGA},
         canEditBlachy: canEditRegistry(parseBlachyConfig(vars, todayWarsawIso()),
           String((userSnap.data() as any)?.email || tokenCheck.decoded.email || ""), canSeeFinance),
       });

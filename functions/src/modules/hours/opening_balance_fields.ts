@@ -70,7 +70,7 @@ export function buildOpeningBalanceAdminPatch(obData: any): Record<string, any> 
   const schoolYear = obValueExact(obData, "Szkoleniówka");
   if (schoolYear != null && String(schoolYear).trim() !== "") adminPatch.schoolYear = String(schoolYear).trim();
 
-  // „blacha" nie trafia do users_active: Rejestr Blach (kolekcja blachy) jest osobny — import blachy.importOpeningBalance.
+  // „blacha" nie trafia do users_active: Rejestr Blach (kolekcja blachy) jest osobny — archiwum klubowe blachy_archiwum_2025.ts.
 
   const legNr = obValueExact(obData, "Nr leg.", "Nr leg");
   if (legNr != null && String(legNr).trim() !== "") adminPatch.legNr = String(legNr).trim();

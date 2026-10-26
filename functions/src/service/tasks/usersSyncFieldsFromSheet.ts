@@ -6,6 +6,7 @@ import {parseSchoolYear} from "../../modules/equipment/bundle/gear_bundle_servic
 import {normNullish} from "../../modules/shared/text_utils";
 import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zgloszenia";
 import {BLACHY_COLLECTION, BlachaDoc, findInRegistry, parseBlacha} from "../../modules/blachy/blachy_registry";
+import {ARCHIWUM_DO_ROKU} from "../../modules/blachy/blachy_archiwum_2025";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -347,13 +348,15 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       // Rejestr Blach: kolumna „blacha" DOPISUJE osobę do rejestru (niezależnie od tego, czy ma konto).
       // Nigdy nie usuwa ani nie zmienia istniejącego wpisu — blacha jest trwała (regulamin § 1 pkt 5),
       // a pusta komórka nie może jej skasować (błąd z 11.08: admin.badge nadpisywane pustką).
+      // Blachy do ARCHIWUM_DO_ROKU (i bez roku) są wyłącznie w archiwum klubowym — arkusz ich nie dopisuje.
       const blacha = parseBlacha(g(row, "blacha"));
-      if (blacha.has) {
+      if (blacha.has && blacha.rok != null && blacha.rok > ARCHIWUM_DO_ROKU) {
         const who = {email: rowEmail, memberId, imie: g(row, "imie"), nazwisko: g(row, "nazwisko")};
         if (!findInRegistry(registry, who)) {
           const id = `m_${memberId}`;
           const doc = {
             imie: who.imie, nazwisko: who.nazwisko, ksywa: g(row, "ksywa"), rok: blacha.rok, nr: null,
+            honorowa: false, data: null, miejsce: "", okazja: "",
             uzasadnienie: "", klub: "", zalozycielska: "", sp: false, email: rowEmail, memberId,
             zrodlo: "arkusz_czlonkow" as const,
           };

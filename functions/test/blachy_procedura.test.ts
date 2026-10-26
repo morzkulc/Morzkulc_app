@@ -111,11 +111,12 @@ describe("konfiguracja i reguły", () => {
     expect(s.map((x) => x.email)).toEqual([K[0], Z[1], Z[2], null, K[4]]);
   });
 
-  it("klucz kandydata, walidacja, numeracja od 42", () => {
+  it("klucz kandydata, walidacja, numeracja po archiwum (od 40)", () => {
     expect(candidateKey({uid: "abc"})).toBe("u_abc");
     expect(candidateKey({imie: "Łukasz", nazwisko: "Opałka"})).toBe("n_lukasz_opalka");
     expect(validateNominacja({kandydat: {}, zaslugi: "krótko", uzasadnienie: ""}).ok).toBe(false);
-    expect(nextNumer([null, undefined])).toBe(42);
+    expect(nextNumer([null, undefined])).toBe(40);
+    expect(nextNumer([0, 39, null])).toBe(40);
     expect(nextNumer([42, 50, null])).toBe(51);
   });
 });
@@ -213,7 +214,7 @@ async function votedYes(db: FakeFirestore, id: string) {
 }
 
 describe("Zarząd, przyjęcie, ogłoszenie, sprzątanie", () => {
-  it("pełny przebieg: zatwierdzenie → link przyjęcia → ogłoszenie (Rejestr nr 42, lista, zgłaszający)", async () => {
+  it("pełny przebieg: zatwierdzenie → link przyjęcia → ogłoszenie (Rejestr nr 40, lista, zgłaszający)", async () => {
     const db = await closedWithTwoCandidates();
     await api(db, "k1", "GET", "kapitula", {}, "2026-10-01");
     await votedYes(db, "2026_u_bob");
@@ -240,7 +241,7 @@ describe("Zarząd, przyjęcie, ogłoszenie, sprzątanie", () => {
     const res = await blachyAnnounceTask.run({rok: 2026}, c);
     expect(res.ok).toBe(true);
     const reg = (db.dump("blachy") as any[]).find((b) => b.zrodlo === "procedura");
-    expect(reg).toMatchObject({imie: "Bob", nazwisko: "Kowal", rok: 2026, nr: 42, uzasadnienie: "Wieloletni organizator wypraw."});
+    expect(reg).toMatchObject({imie: "Bob", nazwisko: "Kowal", rok: 2026, nr: 40, uzasadnienie: "Wieloletni organizator wypraw."});
     const lista = mails.find((m) => m.to === "lista@morzkulc.pl");
     expect(lista?.text).toMatch(/Rozpatrzone kandydatury: 1/);
     expect(lista?.text).not.toMatch(/K2/);

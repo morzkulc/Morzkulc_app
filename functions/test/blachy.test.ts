@@ -1,6 +1,6 @@
 /**
- * Rejestr Blach: parsowanie kolumny „blacha", import z bilansu otwarcia, sync arkusza członków
- * (tylko dopisuje, nigdy nie kasuje), endpoint zarządu i lista w /api/klub (bez e-maili).
+ * Rejestr Blach: parsowanie kolumny „blacha", archiwum klubowe do 2025 (bez edycji), sync arkusza członków
+ * (tylko dopisuje, nigdy nie kasuje, nic do 2025), endpoint zarządu i lista w /api/klub (bez e-maili).
  */
 import {describe, it, expect, vi, beforeEach} from "vitest";
 import {FakeFirestore} from "./helpers/fake_firestore";
@@ -21,7 +21,7 @@ vi.mock("../src/service/providers/googleSheetsProvider", async (orig) => {
 import {
   parseBlacha, splitSp, personKey, findInRegistry, sortRegistry, toPublic, validateBlachaInput,
 } from "../src/modules/blachy/blachy_registry";
-import {blachyImportOpeningBalanceTask} from "../src/service/tasks/blachyImportOpeningBalance";
+import {ARCHIWUM_2025, ARCHIWUM_MAX_NR} from "../src/modules/blachy/blachy_archiwum_2025";
 import {usersSyncFieldsFromSheetTask} from "../src/service/tasks/usersSyncFieldsFromSheet";
 import {handleAdminBlachy} from "../src/api/adminBlachyHandler";
 import {handleGetKlubInfo} from "../src/api/getKlubInfoHandler";
@@ -94,47 +94,36 @@ describe("parsowanie i porównywanie", () => {
     expect(findInRegistry(reg, {email: "inny@x.pl", memberId: 9, imie: "Ola", nazwisko: "Nowak"})).toBeNull();
   });
 
-  it("kolejność: rok nieznany na początku, potem rok, numer, nazwisko; walidacja formularza", () => {
+  it("kolejność: archiwum wg pozycji, potem nowsze po roku, numerze, nazwisku; walidacja formularza", () => {
     const l = sortRegistry([
-      toPublic("a", {nazwisko: "Zet", rok: 2000}),
-      toPublic("b", {nazwisko: "Bet", rok: 2000}),
-      toPublic("c", {nazwisko: "Cet"}),
-      toPublic("d", {nazwisko: "Det", rok: 1996}),
+      toPublic("a", {nazwisko: "Zet", rok: 2027}),
+      toPublic("b", {nazwisko: "Bet", rok: 2027}),
+      toPublic("h", {nazwisko: "Hon", rok: 1997, honorowa: true, zrodlo: "archiwum_2025", poz: 8}),
+      toPublic("x", {nazwisko: "Skarbek", zrodlo: "archiwum_2025", poz: 1}),
+      toPublic("n", {nazwisko: "Nowy", rok: 2026, nr: 40}),
     ]);
-    expect(l.map((x) => x.id)).toEqual(["c", "d", "b", "a"]);
+    expect(l.map((x) => x.id)).toEqual(["x", "h", "n", "b", "a"]);
     expect(validateBlachaInput({imie: "Ala", nazwisko: "Kot", rok: "2027"}, 2026).ok).toBe(false);
-    expect(validateBlachaInput({ksywa: "Macias", rok: ""}, 2026).ok).toBe(true);
+    expect(validateBlachaInput({imie: "Ala", nazwisko: "Kot", rok: "2025"}, 2026).ok).toBe(false);
+    expect(validateBlachaInput({ksywa: "Macias", rok: ""}, 2026).ok).toBe(false);
+    expect(validateBlachaInput({ksywa: "Macias", rok: "2026", nr: "39"}, 2026).ok).toBe(false);
+    expect(validateBlachaInput({ksywa: "Macias", rok: "2026", data: "2025-12-06"}, 2026).ok).toBe(false);
+    const ok = validateBlachaInput({ksywa: "Macias", rok: "2026", nr: "40", data: "2026-12-05", miejsce: "Bartel Wielki", okazja: "LI urodziny"}, 2026);
+    expect(ok).toMatchObject({ok: true, data: {nr: 40, data: "2026-12-05", miejsce: "Bartel Wielki", okazja: "LI urodziny"}});
     expect(validateBlachaInput({imie: "Ala"}, 2026).ok).toBe(false);
   });
 });
 
-describe("import z bilansu otwarcia", () => {
-  beforeEach(() => {
-    sheet.headers = ["ID", "Imię", "Nazwisko", "Ksywa", "e-mail", "blacha"];
-    sheet.rows = [
-      {"ID": "21", "Imię": "Maciej", "Nazwisko": "Skarbek", "Ksywa": "Macias", "e-mail": "M@x.pl", "blacha": "TRUE"},
-      {"ID": "110", "Imię": "ś.p.Agnieszka", "Nazwisko": "Kozak (Gałka)", "Ksywa": "Gałka", "e-mail": "", "blacha": "2006"},
-      {"ID": "26", "Imię": "Jarosław", "Nazwisko": "Wrzesień", "Ksywa": "", "e-mail": "", "blacha": ""},
-    ];
-  });
-
-  it("dry nic nie zapisuje; import tworzy bo_<ID>, ponowny nie nadpisuje poprawek", async () => {
-    const db = seedDb({});
-    const p = {spreadsheetId: "S", tabName: "bilans otwarcia 26"};
-    const dry = await blachyImportOpeningBalanceTask.run({...p, dry: true}, ctx(db));
-    expect((dry.details as any).items).toHaveLength(2);
-    expect(db.dump("blachy")).toHaveLength(0);
-
-    await blachyImportOpeningBalanceTask.run(p, ctx(db));
-    const docs = db.dump("blachy") as any[];
-    expect(docs).toHaveLength(2);
-    const ag = docs.find((d) => d.boId === "110");
-    expect([ag.imie, ag.sp, ag.rok, ag.zrodlo]).toEqual(["Agnieszka", true, 2006, "bilans_otwarcia"]);
-    expect(docs.find((d) => d.boId === "21")).toMatchObject({rok: null, email: "m@x.pl"});
-
-    await (db as any).collection("blachy").doc("bo_21").update({nr: 1});
-    await blachyImportOpeningBalanceTask.run(p, ctx(db));
-    expect((db.dump("blachy") as any[]).find((d) => d.boId === "21").nr).toBe(1);
+describe("archiwum klubowe 2025", () => {
+  it("45 wpisów: 2 nienumerowane, numery 00–39 bez luk i powtórzeń, 3 honorowe, daty do 2025", () => {
+    expect(ARCHIWUM_2025).toHaveLength(45);
+    const nrs = ARCHIWUM_2025.map((b) => b.nr).filter((n): n is number => n != null);
+    expect(nrs).toEqual(Array.from({length: 40}, (_, i) => i));
+    expect(ARCHIWUM_MAX_NR).toBe(39);
+    expect(ARCHIWUM_2025.filter((b) => b.honorowa).map((b) => b.nazwisko)).toEqual(["Darkowski", "Sośnicki", "Powroźnik"]);
+    expect(ARCHIWUM_2025.filter((b) => b.nr == null && !b.honorowa).map((b) => b.data)).toEqual([null, null]);
+    expect(ARCHIWUM_2025.every((b) => !b.data || b.data <= "2025-12-31")).toBe(true);
+    expect(new Set(ARCHIWUM_2025.map((b) => b.poz)).size).toBe(45);
   });
 });
 
@@ -151,6 +140,9 @@ describe("sync arkusza członków", () => {
     sheet.rows = [
       row({"ID": "21", "ksywa": "Bralczyk", "imię": "Marcin", "nazwisko": "Korbas", "e-mail": "fgk@x.pl", "blacha": "2022"}),
       row({"ID": "95", "imię": "Ola", "nazwisko": "Nowak", "e-mail": "ola@x.pl", "blacha": "2026"}),
+      // Blachy do 2025 (i bez roku) są wyłącznie w archiwum — arkusz ich nie dopisuje.
+      row({"ID": "96", "imię": "Jan", "nazwisko": "Spoza", "e-mail": "jan@x.pl", "blacha": "2024"}),
+      row({"ID": "97", "imię": "Ewa", "nazwisko": "Bezroku", "e-mail": "ewa@x.pl", "blacha": "TRUE"}),
       row({"ID": "70", "imię": "Monika", "nazwisko": "Milewczyk", "e-mail": "monika@x.pl", "blacha": ""}),
     ];
     const db = seedDb({
@@ -182,12 +174,12 @@ describe("endpointy", () => {
   it("zarząd: dodaje osobę spoza klubu, poprawia, usuwa; członek → 403; błędny rok → 400", async () => {
     const db = seedDb({users_active: admins});
     const add = await callHandler(handleAdminBlachy, db, "POST",
-      {action: "add", data: {imie: "Jan", nazwisko: "Obcy", klub: "KK Wiking", rok: "2025", uzasadnienie: "Wspólne wyprawy"}});
+      {action: "add", data: {imie: "Jan", nazwisko: "Obcy", klub: "KK Wiking", rok: "2026", uzasadnienie: "Wspólne wyprawy"}});
     expect(add.status).toBe(200);
     const id = add.body.blacha.id;
-    expect((db.dump("blachy") as any[])[0]).toMatchObject({zrodlo: "aplikacja", klub: "KK Wiking", rok: 2025});
+    expect((db.dump("blachy") as any[])[0]).toMatchObject({zrodlo: "aplikacja", klub: "KK Wiking", rok: 2026, honorowa: false});
 
-    expect((await callHandler(handleAdminBlachy, db, "POST", {action: "update", id, data: {imie: "Jan", nazwisko: "Obcy", nr: "42"}})).status).toBe(200);
+    expect((await callHandler(handleAdminBlachy, db, "POST", {action: "update", id, data: {imie: "Jan", nazwisko: "Obcy", rok: "2026", nr: "42"}})).status).toBe(200);
     expect((db.dump("blachy") as any[])[0].nr).toBe(42);
     expect((await callHandler(handleAdminBlachy, db, "POST", {action: "add", data: {imie: "A", nazwisko: "B", rok: "1800"}})).status).toBe(400);
     expect((await callHandler(handleAdminBlachy, db, "POST", {action: "delete", id}, "usr")).status).toBe(403);
@@ -195,15 +187,27 @@ describe("endpointy", () => {
     expect(db.dump("blachy")).toHaveLength(0);
   });
 
+  it("wpis z archiwum klubowego: bez poprawek i usuwania (409)", async () => {
+    const db = seedDb({users_active: admins,
+      blachy: [{_docId: "archiwum_03", imie: "Artur", nazwisko: "Roman", ksywa: "Melon", rok: 1996, nr: 0, zrodlo: "archiwum_2025", poz: 3}]});
+    const upd = await callHandler(handleAdminBlachy, db, "POST", {action: "update", id: "archiwum_03", data: {imie: "Artur", nazwisko: "X", rok: "2026"}});
+    expect(upd.status).toBe(409);
+    expect((await callHandler(handleAdminBlachy, db, "POST", {action: "delete", id: "archiwum_03"})).status).toBe(409);
+    expect((db.dump("blachy") as any[])[0].nazwisko).toBe("Roman");
+  });
+
   it("/api/klub: rejestr dla każdego zalogowanego, bez e-maili; edycja tylko dla zarządu/KR", async () => {
     const db = seedDb({
       users_active: admins,
-      blachy: [{_docId: "bo_21", imie: "Maciej", nazwisko: "Skarbek", ksywa: "Macias", rok: null, email: "m@x.pl", sp: false}],
+      blachy: [{_docId: "archiwum_03", imie: "Artur", nazwisko: "Roman", ksywa: "Melon", rok: 1996, nr: 0, honorowa: false,
+        data: "1996-12-14", miejsce: "Borkowo", okazja: "XXI urodziny", email: "m@x.pl", sp: false, zrodlo: "archiwum_2025", poz: 3}],
     });
     const user = await callHandler(handleGetKlubInfo, db, "GET", null, "usr");
     expect(user.status).toBe(200);
-    expect(user.body.blachy).toEqual([{id: "bo_21", imie: "Maciej", nazwisko: "Skarbek", ksywa: "Macias", rok: null, nr: null,
-      uzasadnienie: "", klub: "", zalozycielska: "", sp: false}]);
+    expect(user.body.blachy).toEqual([{id: "archiwum_03", imie: "Artur", nazwisko: "Roman", ksywa: "Melon", rok: 1996, nr: 0,
+      honorowa: false, data: "1996-12-14", miejsce: "Borkowo", okazja: "XXI urodziny",
+      uzasadnienie: "", klub: "", zalozycielska: "", sp: false, archiwum: true, poz: 3}]);
+    expect(user.body.blachyArchiwum.doRoku).toBe(2025);
     expect(JSON.stringify(user.body)).not.toContain("m@x.pl");
     expect(user.body.canEditBlachy).toBe(false);
     expect((await callHandler(handleGetKlubInfo, db, "GET", null, "adm")).body.canEditBlachy).toBe(true);

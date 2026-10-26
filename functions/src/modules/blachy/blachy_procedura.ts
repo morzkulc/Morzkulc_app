@@ -10,6 +10,7 @@
  */
 import {minusDays} from "../shared/date_range_utils";
 import {personKey} from "./blachy_registry";
+import {ARCHIWUM_MAX_NR} from "./blachy_archiwum_2025";
 
 export const PROCEDURA_COLLECTION = "blachy_procedura";
 export const NOMINACJE_COLLECTION = "blachy_nominacje";
@@ -27,8 +28,8 @@ export const OBSZARY = [
 /** Role, które mogą zgłaszać kandydatów (decyzja D1: aktualni członkowie). */
 export const NOMINUJACE_ROLE = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
-/** Numeracja nowych blach (decyzja D4): kolejne numery, najniższy 42. */
-export const PIERWSZY_NUMER = 42;
+/** Numeracja nowych blach: kolejne po archiwum klubowym (00–39 → od 40). */
+export const PIERWSZY_NUMER = ARCHIWUM_MAX_NR + 1;
 
 /** Treść nominacji i sumy głosów usuwane po tylu dniach od ogłoszenia (decyzja D8, §6 pkt 5). */
 export const DNI_DO_USUNIECIA = 14;
@@ -179,7 +180,7 @@ export function kandydatLabel(k: Partial<Kandydat>): string {
   return str(k.klub) ? `${base} (${str(k.klub)})` : base;
 }
 
-/** Następny numer Blachy (D4): max(41, największy numer w Rejestrze) + 1. */
+/** Następny numer Blachy: max(numer ostatniej z archiwum, największy numer w Rejestrze) + 1. */
 export function nextNumer(nrs: Array<number | null | undefined>): number {
   const max = Math.max(PIERWSZY_NUMER - 1, ...nrs.filter((n): n is number => typeof n === "number"));
   return max + 1;

@@ -63,8 +63,9 @@ const LINK_TILES = [
 ];
 
 // ── Blachy klubowe (Rejestr Blach, regulamin § 6 pkt 7) ──────────────────────
-// Lista jawna dla zalogowanych; zarząd/KR (canEditBlachy) dodaje, poprawia i usuwa
-// błędne wpisy. Nowe blachy dopisuje też kolumna „blacha" w arkuszu członków (sync).
+// Lista jawna dla zalogowanych. Do 2025 r. wyłącznie oficjalne archiwum klubowe (bez edycji);
+// zarząd/KR (canEditBlachy) dodaje, poprawia i usuwa błędne wpisy późniejsze. Nowe blachy
+// dopisują też procedura i kolumna „blacha" w arkuszu członków (sync, rok po archiwum).
 const BLACHY_ADMIN_URL = "/api/admin/blachy";
 
 function blachaName(b) {
@@ -73,32 +74,49 @@ function blachaName(b) {
   return `${b.sp ? "ś.p. " : ""}${full || b.ksywa}${full ? ks : ""}`;
 }
 
+function blachaNr(b) {
+  if (b.honorowa) return `<span class="blachyHonor" title="Blacha Honorowa">H</span>`;
+  return b.nr != null ? escapeHtml(String(b.nr).padStart(2, "0")) : `<span class="hint">—</span>`;
+}
+
+function blachaKiedy(b) {
+  const kiedy = b.data ? b.data.split("-").reverse().join(".") : (b.rok != null ? String(b.rok) : "");
+  return [kiedy, b.miejsce].filter(Boolean).join(" · ");
+}
+
 function renderBlachyTab(data, editId) {
   const list = Array.isArray(data?.blachy) ? data.blachy : [];
   const canEdit = data?.canEditBlachy === true;
-  const head = `<p class="hint blachyIntro">Osoby wyróżnione Blachą Klubową: <strong>${list.length}</strong>. Blachy nadane przed aplikacją zachowują ważność; brakujące dane historyczne oznaczamy jako nieznane.</p>`;
+  const arch = data?.blachyArchiwum || {};
+  const honor = list.filter((b) => b.honorowa).length;
+  const head = `<p class="hint blachyIntro">Blachy Klubowe: <strong>${list.length}</strong>${honor ? ` (w tym honorowe: ${honor})` : ""}.
+    Do ${escapeHtml(String(arch.doRoku || 2025))} r. — oficjalne archiwum klubowe.${arch.uwaga ? ` ${escapeHtml(arch.uwaga)}` : ""}</p>`;
   const addBtn = canEdit && editId !== "new"
     ? `<div class="blachyActions"><button type="button" class="primary" data-blacha-add>Dodaj blachę</button></div>` : "";
   const form = canEdit && editId === "new" ? renderBlachaForm(null) : "";
   if (!list.length) return `${head}${addBtn}${form}<p class="hint">Rejestr jest pusty.</p>`;
 
+  const editCol = canEdit && list.some((b) => !b.archiwum);
   const rows = list.map((b) => {
-    if (canEdit && editId === b.id) return `<tr><td colspan="${canEdit ? 3 : 2}">${renderBlachaForm(b)}</td></tr>`;
+    if (canEdit && !b.archiwum && editId === b.id) return `<tr><td colspan="${editCol ? 4 : 3}">${renderBlachaForm(b)}</td></tr>`;
     const extra = [
-      b.nr != null ? `Blacha nr ${b.nr}` : "",
+      b.honorowa ? "Blacha Honorowa" : "",
       b.klub ? `klub: ${b.klub}` : "",
       b.zalozycielska ? `Blacha Założycielska: ${b.zalozycielska}` : "",
     ].filter(Boolean).join(" · ");
+    const kiedy = blachaKiedy(b);
     return `<tr>
-      <td class="blachyRok">${b.rok != null ? escapeHtml(String(b.rok)) : `<span class="hint">nieznany</span>`}</td>
+      <td class="blachyNr">${blachaNr(b)}</td>
       <td><div class="blachyOsoba">${escapeHtml(blachaName(b))}</div>${
         extra ? `<div class="hint">${escapeHtml(extra)}</div>` : ""}${
         b.uzasadnienie ? `<details class="blachyUzas"><summary>Uzasadnienie</summary><p>${escapeHtml(b.uzasadnienie)}</p></details>` : ""}</td>
-      ${canEdit ? `<td class="blachyEdit"><button type="button" class="ghost" data-blacha-edit="${escapeAttr(b.id)}">Edytuj</button></td>` : ""}
+      <td class="blachyKiedy">${kiedy ? escapeHtml(kiedy) : `<span class="hint">—</span>`}${
+        b.okazja ? `<div class="hint">${escapeHtml(b.okazja)}</div>` : ""}</td>
+      ${editCol ? `<td class="blachyEdit">${b.archiwum ? "" : `<button type="button" class="ghost" data-blacha-edit="${escapeAttr(b.id)}">Edytuj</button>`}</td>` : ""}
     </tr>`;
   }).join("");
-  return `${head}${addBtn}${form}<div class="tableWrapper"><table class="reportTable blachyTable"><thead><tr><th>Rok</th><th>Osoba</th>${
-    canEdit ? "<th></th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `${head}${addBtn}${form}<div class="tableWrapper"><table class="reportTable blachyTable"><thead><tr><th>Nr</th><th>Osoba</th><th>Nadanie</th>${
+    editCol ? "<th></th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderBlachaForm(b) {
@@ -110,8 +128,11 @@ function renderBlachaForm(b) {
       ${field("imie", "Imię")}
       ${field("nazwisko", "Nazwisko")}
       ${field("ksywa", "Ksywa")}
-      ${field("rok", "Rok nadania (puste = nieznany)", 'inputmode="numeric"')}
+      ${field("rok", "Rok nadania", 'inputmode="numeric"')}
       ${field("nr", "Numer blachy (opcjonalnie)", 'inputmode="numeric"')}
+      ${field("data", "Data nadania (opcjonalnie)", 'type="date"')}
+      ${field("miejsce", "Miejsce (opcjonalnie)")}
+      ${field("okazja", "Okazja, np. LI urodziny (opcjonalnie)")}
       ${field("klub", "Klub (osoba spoza Morzkulca)")}
       ${field("zalozycielska", "Blacha Założycielska w klubie")}
     </div>
@@ -421,7 +442,7 @@ export function createKlubModule({ id, type, label, defaultRoute, order, enabled
         const id = form.getAttribute("data-blacha-form");
         const fd = new FormData(form);
         const dataIn = {};
-        for (const k of ["imie", "nazwisko", "ksywa", "rok", "nr", "klub", "zalozycielska", "uzasadnienie"]) dataIn[k] = String(fd.get(k) || "").trim();
+        for (const k of ["imie", "nazwisko", "ksywa", "rok", "nr", "data", "miejsce", "okazja", "klub", "zalozycielska", "uzasadnienie"]) dataIn[k] = String(fd.get(k) || "").trim();
         dataIn.sp = form.querySelector("[name=sp]")?.checked === true;
         blachaPost(id === "new" ? { action: "add", data: dataIn } : { action: "update", id, data: dataIn }, form.querySelector("[data-blacha-err]"));
       });

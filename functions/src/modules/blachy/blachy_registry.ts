@@ -3,15 +3,19 @@
  *
  * Blacha jest niezależna od członkostwa, składek i godzinek — wpis w rejestrze
  * jest trwały. Źródła wpisów:
- *  - „bilans_otwarcia" — jednorazowy import blach sprzed aplikacji (task blachy.importOpeningBalance),
- *  - „arkusz_czlonkow" — kolumna „blacha" w arkuszu członków (users.syncFieldsFromSheet DOPISUJE,
- *    nigdy nie usuwa ani nie zmienia istniejącego wpisu),
- *  - „aplikacja" — zarząd/KR w module Klub (dodaj / popraw / usuń błędny wpis).
+ *  - „archiwum_2025" — oficjalne archiwum klubowe do 2025 r. (blachy_archiwum_2025.ts, skrypt
+ *    importBlachyArchiwum2025.js); jedyne źródło blach do ARCHIWUM_DO_ROKU, wpisy bez edycji,
+ *  - „procedura" — blachy nadane procedurą w aplikacji (task blachy.announce),
+ *  - „arkusz_czlonkow" — kolumna „blacha" w arkuszu członków z rokiem po archiwum (users.syncFieldsFromSheet
+ *    DOPISUJE, nigdy nie usuwa ani nie zmienia istniejącego wpisu),
+ *  - „aplikacja" — zarząd/KR w module Klub (dodaj / popraw / usuń błędny wpis spoza archiwum).
  */
+
+import {ARCHIWUM_DO_ROKU, ARCHIWUM_MAX_NR} from "./blachy_archiwum_2025";
 
 export const BLACHY_COLLECTION = "blachy";
 
-export type BlachaZrodlo = "bilans_otwarcia" | "arkusz_czlonkow" | "aplikacja";
+export type BlachaZrodlo = "archiwum_2025" | "procedura" | "arkusz_czlonkow" | "aplikacja";
 
 export type BlachaDoc = {
   imie: string;
@@ -19,8 +23,14 @@ export type BlachaDoc = {
   ksywa: string;
   /** Rok nadania; null = nieznany (regulamin § 6 pkt 8: nie zgadujemy). */
   rok: number | null;
-  /** Numer Blachy; null = nienadany / nieznany. */
+  /** Numer Blachy (archiwum zaczyna od 00); null = nienumerowana / honorowa. */
   nr: number | null;
+  honorowa: boolean;
+  /** Data nadania YYYY-MM-DD (archiwum); null = znany tylko rok. */
+  data: string | null;
+  miejsce: string;
+  /** Urodziny / jubileusz klubu, na których nadano blachę. */
+  okazja: string;
   uzasadnienie: string;
   /** Klub osoby spoza Morzkulca (jeśli dotyczy). */
   klub: string;
@@ -32,7 +42,14 @@ export type BlachaDoc = {
   email: string;
   memberId: number | null;
   zrodlo: BlachaZrodlo;
+  /** Pozycja w archiwum (kolejność wyświetlania); tylko wpisy archiwum_2025. */
+  poz?: number;
 };
+
+/** Wpis z oficjalnego archiwum klubowego — bez edycji i usuwania. */
+export function isArchiwum(d: any): boolean {
+  return str(d?.zrodlo) === "archiwum_2025";
+}
 
 const str = (v: any) => String(v == null ? "" : v).trim();
 
@@ -80,10 +97,16 @@ export type BlachaPublic = {
   ksywa: string;
   rok: number | null;
   nr: number | null;
+  honorowa: boolean;
+  data: string | null;
+  miejsce: string;
+  okazja: string;
   uzasadnienie: string;
   klub: string;
   zalozycielska: string;
   sp: boolean;
+  archiwum: boolean;
+  poz: number | null;
 };
 
 /** Pola widoczne dla zalogowanych (regulamin § 6 pkt 2: lista wyróżnionych + uzasadnienia). Bez e-maila. */
@@ -95,23 +118,35 @@ export function toPublic(id: string, d: any): BlachaPublic {
     ksywa: str(d?.ksywa),
     rok: typeof d?.rok === "number" ? d.rok : null,
     nr: typeof d?.nr === "number" ? d.nr : null,
+    honorowa: d?.honorowa === true,
+    data: /^\d{4}-\d{2}-\d{2}$/.test(str(d?.data)) ? str(d.data) : null,
+    miejsce: str(d?.miejsce),
+    okazja: str(d?.okazja),
     uzasadnienie: str(d?.uzasadnienie),
     klub: str(d?.klub),
     zalozycielska: str(d?.zalozycielska),
     sp: d?.sp === true,
+    archiwum: isArchiwum(d),
+    poz: isArchiwum(d) && typeof d?.poz === "number" ? d.poz : null,
   };
 }
 
-/** Kolejność rejestru: rok nieznany na początku (najstarsze wpisy), potem rosnąco po roku, numerze i nazwisku. */
+/** Kolejność rejestru: najpierw archiwum w kolejności zestawienia, potem nowsze wpisy po roku, dacie, numerze i nazwisku. */
 export function sortRegistry(list: BlachaPublic[]): BlachaPublic[] {
+  const p = (x: BlachaPublic) => (x.poz == null ? Number.MAX_SAFE_INTEGER : x.poz);
   const r = (x: BlachaPublic) => (x.rok == null ? -1 : x.rok);
   const nr = (x: BlachaPublic) => (x.nr == null ? Number.MAX_SAFE_INTEGER : x.nr);
-  return [...list].sort((a, b) => r(a) - r(b) || nr(a) - nr(b) || a.nazwisko.localeCompare(b.nazwisko, "pl"));
+  return [...list].sort((a, b) => p(a) - p(b) || r(a) - r(b) || (a.data || "").localeCompare(b.data || "") ||
+    nr(a) - nr(b) || a.nazwisko.localeCompare(b.nazwisko, "pl"));
 }
 
-export type BlachaInput = Pick<BlachaDoc, "imie" | "nazwisko" | "ksywa" | "rok" | "nr" | "uzasadnienie" | "klub" | "zalozycielska" | "sp">;
+export type BlachaInput = Pick<BlachaDoc,
+  "imie" | "nazwisko" | "ksywa" | "rok" | "nr" | "data" | "miejsce" | "okazja" | "uzasadnienie" | "klub" | "zalozycielska" | "sp">;
 
-/** Walidacja formularza zarządu (dodanie / poprawka wpisu). */
+/**
+ * Walidacja formularza zarządu (dodanie / poprawka wpisu spoza archiwum). Blachy do ARCHIWUM_DO_ROKU
+ * są wyłącznie w archiwum, więc rok jest wymagany i późniejszy; numer — po numerach archiwum.
+ */
 export function validateBlachaInput(body: any, thisYear: number):
   {ok: true; data: BlachaInput} | {ok: false; fields: Record<string, string>} {
   const f: Record<string, string> = {};
@@ -122,14 +157,21 @@ export function validateBlachaInput(body: any, thisYear: number):
   if (!nazwisko && !ksywa) f.nazwisko = "Podaj nazwisko albo ksywę";
   const num = (v: any) => (str(v) === "" ? null : Number(str(v)));
   const rok = num(body?.rok);
-  if (rok !== null && (!Number.isInteger(rok) || rok < 1950 || rok > thisYear)) f.rok = `Rok 1950–${thisYear} albo puste (nieznany)`;
+  if (rok === null || !Number.isInteger(rok) || rok <= ARCHIWUM_DO_ROKU || rok > thisYear) {
+    f.rok = `Rok ${ARCHIWUM_DO_ROKU + 1}–${thisYear} (blachy do ${ARCHIWUM_DO_ROKU} r. są w archiwum klubowym)`;
+  }
   const nr = num(body?.nr);
-  if (nr !== null && (!Number.isInteger(nr) || nr < 1)) f.nr = "Numer to liczba od 1 albo puste";
+  if (nr !== null && (!Number.isInteger(nr) || nr <= ARCHIWUM_MAX_NR)) f.nr = `Numer od ${ARCHIWUM_MAX_NR + 1} albo puste`;
+  const data = str(body?.data);
+  if (data && (!/^\d{4}-\d{2}-\d{2}$/.test(data) || Number(data.slice(0, 4)) !== rok)) f.data = "Data RRRR-MM-DD z roku nadania albo puste";
   if (Object.keys(f).length) return {ok: false, fields: f};
   return {
     ok: true,
     data: {
       imie, nazwisko, ksywa, rok, nr,
+      data: data || null,
+      miejsce: str(body?.miejsce).slice(0, 120),
+      okazja: str(body?.okazja).slice(0, 120),
       uzasadnienie: str(body?.uzasadnienie).slice(0, 4000),
       klub: str(body?.klub).slice(0, 120),
       zalozycielska: str(body?.zalozycielska).slice(0, 120),

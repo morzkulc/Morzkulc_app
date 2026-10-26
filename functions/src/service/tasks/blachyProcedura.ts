@@ -146,7 +146,7 @@ export const blachyAnnounceTask: ServiceTask<{rok: number}> = {
       nrs.push(nr);
       const kd = k.kandydat || {};
       await db.collection(BLACHY_COLLECTION).doc(`p${rok}_${k.key}`).set({
-        imie: str(kd.imie), nazwisko: str(kd.nazwisko), ksywa: str(kd.ksywa), rok, nr,
+        imie: str(kd.imie), nazwisko: str(kd.nazwisko), ksywa: str(kd.ksywa), rok, nr, honorowa: false, data: null, miejsce: "", okazja: "",
         uzasadnienie: str(k.uzasadnienieKapituly), klub: str(kd.klub), zalozycielska: "", sp: false,
         email: str(kd.email), memberId: null, zrodlo: "procedura", createdAt: ts(), updatedAt: ts(), updatedBy: "blachy.announce",
       });

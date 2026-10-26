@@ -187,7 +187,9 @@
 /* ── Box „Klub" w karcie profilu (zarząd, KR, konto, dokumenty) ── */
 /* Rejestr Blach (moduł Klub, zakładka „Blachy") */
 .blachyIntro { margin: 4px 0 10px; }
-.blachyRok { white-space: nowrap; font-weight: 800; width: 1%; }
+.blachyNr { white-space: nowrap; font-weight: 800; width: 1%; text-align: center; font-variant-numeric: tabular-nums; }
+.blachyHonor { display: inline-block; min-width: 1.6em; padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; color: var(--accent, #5b9dff); }
+.blachyKiedy { min-width: 9em; }
 .blachyOsoba { font-weight: 700; }
 .blachyEdit { width: 1%; }
 .blachyUzas summary { cursor: pointer; font-size: 12px; color: var(--accent, #5b9dff); }
