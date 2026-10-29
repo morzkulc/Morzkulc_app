@@ -2,10 +2,9 @@ import type {Request, Response} from "express";
 import {resolveBasenAdminGrant, getBasenVars} from "../modules/basen/basen_service";
 import {adminAddBasenGodziny, getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 import {BasenProduct} from "../modules/basen/basen_finance";
-import {getBalance as getGodzinkiBalance} from "../modules/hours/godzinki_service";
+import {getKarnetEligibility} from "../modules/basen/basen_orders";
 
 const PRODUCTS: BasenProduct[] = ["jednorazowe", "karnet5", "karnet10"];
-const MEMBER_ROLES = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -21,7 +20,7 @@ type Deps = {
  * POST /api/basen/admin/godziny/add
  * Admin dopisuje wejścia po potwierdzeniu przelewu (regulamin basenu § 3).
  * Body: { userUid, product: "jednorazowe"|"karnet5"|"karnet10", count?: number (jednorazowe), reason? }
- * Karnet: tylko członek z saldem godzinek ≥ basen_karnet_prog_godzinek (§ 2).
+ * Karnet: tylko członek z opłaconymi składkami i dodatnim saldem godzinek (basen_orders.ts).
  */
 export async function handleBasenAdminAddGodziny(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -67,11 +66,11 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
         return;
       }
       if (!PRODUCTS.includes(product)) {
-        res.status(400).json({error: "Wybierz produkt: wejścia jednorazowe, karnet 5 albo karnet 10."});
+        res.status(400).json({error: "Wybierz produkt: godziny basenowe pojedyncze, karnet 5 albo karnet 10."});
         return;
       }
       if (product === "jednorazowe" && (!Number.isInteger(count) || count <= 0)) {
-        res.status(400).json({error: "Liczba wejść musi być większa od 0."});
+        res.status(400).json({error: "Liczba godzin basenowych musi być większa od 0."});
         return;
       }
 
@@ -83,14 +82,10 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
 
       const vars = await getBasenVars(deps.db);
       if (product !== "jednorazowe") {
-        const targetRole = String((targetSnap.data() as any)?.role_key || "");
-        if (!MEMBER_ROLES.includes(targetRole)) {
-          res.status(400).json({error: "Karnet mogą kupić tylko członkowie klubu."});
-          return;
-        }
-        const godzinki = await getGodzinkiBalance(deps.db, targetUid);
-        if (godzinki < vars.basen_karnet_prog_godzinek) {
-          res.status(400).json({error: `Karnet wymaga co najmniej ${vars.basen_karnet_prog_godzinek} godzinek (saldo: ${godzinki}).`});
+        // Karnet = dofinansowanie klubu: pełny członek z opłaconymi składkami i dodatnim saldem godzinek.
+        const karnet = await getKarnetEligibility(deps.db, targetUid, targetSnap.data() || {});
+        if (!karnet.eligible) {
+          res.status(400).json({error: `Karnet niedostępny: ${karnet.reasons.join(" ")}`});
           return;
         }
       }

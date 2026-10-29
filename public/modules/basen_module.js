@@ -24,6 +24,7 @@ const GODZINY_USERS_URL = "/api/basen/admin/godziny/users";
 const GODZINY_ADD_URL = "/api/basen/admin/godziny/add";
 const GODZINY_HISTORY_URL = "/api/basen/admin/godziny/history";
 const GODZINY_MY_URL = "/api/basen/godziny/my";
+const ORDER_URL = "/api/basen/order";
 
 const SLOT_ORDER = ["H1", "H2", "SAUNA"];
 const SLOT_LABELS = { H1: "I godzina", H2: "II godzina", SAUNA: "Sauna" };
@@ -208,7 +209,7 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
         <span class="basenWaitlistBadge">Lista rezerwowa — miejsce ${esc(slot.userWaitlistPosition)}</span>
         <button type="button" class="ghost basenWaitlistLeaveBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Wypisz z listy</button>
       </div>
-      <div class="basenHint">Gdy zwolni się miejsce, zapiszemy Cię automatycznie (pobierze jedno wejście) i wyślemy maila.</div>
+      <div class="basenHint">Gdy zwolni się miejsce, zapiszemy Cię automatycznie (pobierze jedną godzinę basenową) i wyślemy maila.</div>
     `;
   } else if (isFull && !isSauna && !slot.viaReservedPool) {
     const waitingHtml = slot.waitlistCount ? ` <span class="basenHint">Na liście: ${esc(slot.waitlistCount)}</span>` : "";
@@ -379,7 +380,7 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
     // więc brak wyświetlania salda nie otwiera żadnej luki — po prostu tego nie widzi.
     const isKursant = ctx?.session?.role_key === "rola_kursant";
     const balanceHtml = canEnroll && !isKursant
-      ? `<div class="basenHint" style="margin-top:8px;">Dostępne godziny basenowe: <strong>${balance}</strong>${balance <= 0 ? " — zapisz się dopiero po dopisaniu godzin przez opiekuna basenu." : ""}</div>`
+      ? `<div class="basenHint" style="margin-top:8px;">Dostępne godziny basenowe: <strong>${balance}</strong>${balance <= 0 ? " — kup godziny basenowe w zakładce „Moje konto”." : ""}</div>`
       : "";
 
     const headHtml = renderSeasonStripHtml(season) + balanceHtml;
@@ -567,8 +568,8 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
 
       const withinWindow = cancelBtn.getAttribute("data-within-window") === "1";
       const confirmMsg = withinWindow
-        ? "Termin darmowej rezygnacji minął — wejście przepada, chyba że Twoje miejsce zajmie osoba z listy rezerwowej (wtedy wejście wróci). Zrezygnować?"
-        : "Anulować ten zapis? Wejście wróci na saldo.";
+        ? "Termin darmowej rezygnacji minął — godzina basenowa przepada, chyba że Twoje miejsce zajmie osoba z listy rezerwowej (wtedy wróci na saldo). Zrezygnować?"
+        : "Anulować ten zapis? Godzina basenowa wróci na saldo.";
       if (!confirm(confirmMsg)) return;
 
       cancelBtn.disabled = true;
@@ -1251,7 +1252,7 @@ function openDayDetailModal(innerEl, ctx, session, onChanged) {
 
   const cancelDayBtn = modal.querySelector("#ddCancelDayBtn");
   cancelDayBtn.onclick = async () => {
-    if (!confirm(`Anulować basen ${formatDate(session.date)}? Wszyscy uczestnicy zostaną wypisani, a zablokowane godziny wrócą na ich saldo.`)) return;
+    if (!confirm(`Anulować basen ${formatDate(session.date)}? Wszyscy uczestnicy zostaną wypisani, a pobrane godziny basenowe wrócą na ich saldo.`)) return;
     cancelDayBtn.disabled = true;
     try {
       await apiPostJson({ url: CANCEL_SESSION_URL, idToken: ctx.idToken, body: { sessionId: session.id, reason: reasonEl.value.trim() || undefined } });
@@ -1291,13 +1292,13 @@ function renderAddGodzinyModalHtml() {
           <div class="row">
             <label for="agProduct">Co opłacono</label>
             <select id="agProduct">
-              <option value="jednorazowe">Wejścia jednorazowe</option>
-              <option value="karnet5">Karnet 5 wejść</option>
-              <option value="karnet10">Karnet 10 wejść</option>
+              <option value="jednorazowe">Godziny basenowe pojedyncze</option>
+              <option value="karnet5">Karnet 5 godzin basenowych</option>
+              <option value="karnet10">Karnet 10 godzin basenowych</option>
             </select>
           </div>
           <div class="row" data-ag-count-row>
-            <label for="agAmount">Liczba wejść</label>
+            <label for="agAmount">Liczba godzin basenowych</label>
             <input type="number" id="agAmount" min="1" step="1" placeholder="np. 2" />
           </div>
           <div class="basenHint" data-ag-price></div>
@@ -1320,7 +1321,7 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
   const modal = innerEl.querySelector("#basenAddGodzinyModal");
   if (!modal) return;
 
-  modal.querySelector("[data-add-godziny-title]").textContent = `Dopisz wejścia — ${user.userName || user.userNick || user.userEmail}`;
+  modal.querySelector("[data-add-godziny-title]").textContent = `Dopisz godziny basenowe — ${user.userName || user.userNick || user.userEmail}`;
   const productEl = modal.querySelector("#agProduct");
   const amountEl = modal.querySelector("#agAmount");
   const countRow = modal.querySelector("[data-ag-count-row]");
@@ -1344,10 +1345,10 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
     const p = pricing || {};
     if (product === "jednorazowe") {
       const n = Number(amountEl.value) || 0;
-      priceEl.textContent = p.jednorazowe ? `Kwota przelewu: ${n * p.jednorazowe} zł (${p.jednorazowe} zł za wejście)` : "";
+      priceEl.textContent = p.jednorazowe ? `Kwota wpłaty: ${n * p.jednorazowe} zł (${p.jednorazowe} zł za godzinę basenową)` : "";
     } else {
       const price = product === "karnet5" ? p.karnet5 : p.karnet10;
-      priceEl.textContent = price ? `Kwota przelewu: ${price} zł · tylko członek z min. ${p.progGodzinek} godzinkami` : "";
+      priceEl.textContent = price ? `Kwota wpłaty: ${price} zł · tylko członek z opłaconymi składkami i dodatnim saldem godzinek` : "";
     }
   };
   productEl.onchange = syncPrice;
@@ -1358,7 +1359,7 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
     const product = productEl.value;
     const count = Number(amountEl.value);
     if (product === "jednorazowe" && (!count || count <= 0)) {
-      errEl.textContent = "Podaj liczbę wejść większą od 0.";
+      errEl.textContent = "Podaj liczbę godzin basenowych większą od 0.";
       errEl.classList.remove("hidden");
       return;
     }
@@ -1375,7 +1376,7 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
       document.body.style.overflow = "";
       await onSaved(res?.newBalance);
     } catch (e) {
-      errEl.textContent = e?.message || "Nie udało się dopisać wejść.";
+      errEl.textContent = e?.message || "Nie udało się dopisać godzin basenowych.";
       errEl.classList.remove("hidden");
       submitBtn.disabled = false;
       submitBtn.textContent = "Dopisz";
@@ -1393,7 +1394,7 @@ function renderGodzinyHistoryModalHtml() {
       <div class="basenModalBackdrop" data-basen-modal-close="history"></div>
       <div class="basenModalCard" role="dialog" aria-modal="true" aria-label="Historia godzin basenowych">
         <div class="basenModalTop">
-          <div class="basenModalTitle" data-history-title>Historia godzin</div>
+          <div class="basenModalTitle" data-history-title>Historia godzin basenowych</div>
           <button type="button" class="basenModalClose" data-basen-modal-close="history" aria-label="Zamknij">✕</button>
         </div>
         <div class="basenModalBody">
@@ -1413,7 +1414,7 @@ function openGodzinyHistoryModal(innerEl, ctx, user) {
   const modal = innerEl.querySelector("#basenGodzinyHistoryModal");
   if (!modal) return;
 
-  modal.querySelector("[data-history-title]").textContent = `Historia godzin — ${user.userName || user.userNick || user.userEmail}`;
+  modal.querySelector("[data-history-title]").textContent = `Historia godzin basenowych — ${user.userName || user.userNick || user.userEmail}`;
   const body = modal.querySelector("#basenGodzinyHistoryBody");
   body.innerHTML = spinnerHtml("Ładowanie…");
 
@@ -1463,11 +1464,81 @@ function renderGodzinyRow(u) {
       </div>
       <div class="${balCls}">${u.balance} h</div>
       <div class="basenGodzinyRowActions">
-        <button type="button" class="ghost small basenAddGodzinyBtn" data-uid="${esc(u.userUid)}">Dopisz wejścia</button>
+        <button type="button" class="ghost small basenAddGodzinyBtn" data-uid="${esc(u.userUid)}">Dopisz godziny basenowe</button>
         <button type="button" class="ghost small basenShowHistoryBtn" data-uid="${esc(u.userUid)}">Pokaż historię</button>
       </div>
     </div>
   `;
+}
+
+// Zamówienia „Kup" czekające na potwierdzenie wpłaty: opiekun sprawdza wpływ na konto
+// (albo gotówkę) i zatwierdza — dopiero wtedy godziny basenowe trafiają na saldo.
+function renderPendingOrdersHtml(orders) {
+  const rows = orders.map((o) => `
+    <div class="basenGodzinyRow" data-order-row="${esc(o.id)}">
+      <div class="basenGodzinyRowInfo">
+        <div>${esc(o.userName || o.userEmail)}</div>
+        <div class="basenHint">${esc(o.userEmail || "")}</div>
+        <div>${esc(o.label)} · <strong>${esc(formatZl(o.amountPln))}</strong></div>
+        <div class="basenHint">Tytuł: ${esc(o.transferTitle)} · ${esc(formatGodzinyDate(o.createdAt))}</div>
+      </div>
+      <div class="basenGodzinyRowActions">
+        <button type="button" class="primary small" data-order-approve="${esc(o.id)}">Wpłata jest — zatwierdź</button>
+        <button type="button" class="ghost small" data-order-reject-open="${esc(o.id)}">Odrzuć</button>
+      </div>
+      <div class="basenShopRejectRow hidden" data-order-reject-box="${esc(o.id)}">
+        <input type="text" maxlength="300" placeholder="Powód odrzucenia (trafi do użytkownika mailem)" data-order-reject-reason="${esc(o.id)}" />
+        <button type="button" class="ghost small" data-order-reject="${esc(o.id)}">Odrzuć zamówienie</button>
+      </div>
+    </div>`).join("");
+  return `
+    <div class="basenAttendeesGroupTitle" style="margin-top:12px;">Do zatwierdzenia (${orders.length})</div>
+    <div class="basenGodzinyList">${orders.length ? rows : `<div class="basenHint">Brak zamówień czekających na potwierdzenie wpłaty.</div>`}</div>
+    <div id="ordersErr" class="err hidden"></div>`;
+}
+
+function bindPendingOrders(innerEl, ctx, reload) {
+  const errEl = innerEl.querySelector("#ordersErr");
+  const fail = (btn, e) => {
+    btn.disabled = false;
+    if (errEl) {
+      errEl.textContent = e?.message || "Nie udało się zapisać decyzji.";
+      errEl.classList.remove("hidden");
+    }
+  };
+  innerEl.querySelectorAll("[data-order-approve]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await apiPostJson({ url: ORDER_URL, idToken: ctx.idToken, body: { action: "approve", orderId: btn.getAttribute("data-order-approve") } });
+        await reload();
+      } catch (e) {
+        fail(btn, e);
+      }
+    });
+  });
+  innerEl.querySelectorAll("[data-order-reject-open]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      innerEl.querySelector(`[data-order-reject-box="${btn.getAttribute("data-order-reject-open")}"]`)?.classList.toggle("hidden");
+    });
+  });
+  innerEl.querySelectorAll("[data-order-reject]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-order-reject");
+      const reason = String(innerEl.querySelector(`[data-order-reject-reason="${id}"]`)?.value || "").trim();
+      if (!reason) {
+        fail(btn, { message: "Podaj powód odrzucenia." });
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await apiPostJson({ url: ORDER_URL, idToken: ctx.idToken, body: { action: "reject", orderId: id, reason } });
+        await reload();
+      } catch (e) {
+        fail(btn, e);
+      }
+    });
+  });
 }
 
 async function renderPaymentsTab(innerEl, ctx) {
@@ -1475,10 +1546,12 @@ async function renderPaymentsTab(innerEl, ctx) {
 
   let rows;
   let pricing = null;
+  let pendingOrders = [];
   try {
     const data = await apiGetJson({ url: GODZINY_USERS_URL, idToken: ctx.idToken });
     rows = Array.isArray(data?.rows) ? data.rows : [];
     pricing = data?.pricing || null;
+    pendingOrders = Array.isArray(data?.pendingOrders) ? data.pendingOrders : [];
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać listy użytkowników.")}</div>`;
     return;
@@ -1488,16 +1561,19 @@ async function renderPaymentsTab(innerEl, ctx) {
 
   const draw = () => {
     innerEl.innerHTML = `
+      ${renderPendingOrdersHtml(pendingOrders)}
       <div class="row" style="margin-top:12px;">
         <label for="paymentsSearch">Szukaj (mail / nazwisko / ksywka)</label>
         <input type="text" id="paymentsSearch" placeholder="np. jan.kowalski albo Kowalski albo ksywka" autocomplete="off" />
       </div>
-      <div class="basenHint">Lista pokazuje tylko osoby aktywne w basenie (zapis albo ruch na koncie godzin) w ostatnich 4 miesiącach.</div>
+      <div class="basenHint">Lista pokazuje tylko osoby aktywne w basenie (zapis albo ruch na koncie godzin basenowych) w ostatnich 4 miesiącach.</div>
       <div id="paymentsSummary" class="hint" style="margin:8px 0;"></div>
       <div id="paymentsContent"></div>
       ${renderAddGodzinyModalHtml()}
       ${renderGodzinyHistoryModalHtml()}
     `;
+
+    bindPendingOrders(innerEl, ctx, () => renderPaymentsTab(innerEl, ctx));
 
     const searchEl = innerEl.querySelector("#paymentsSearch");
     const summaryEl = innerEl.querySelector("#paymentsSummary");
@@ -1515,12 +1591,12 @@ async function renderPaymentsTab(innerEl, ctx) {
       const withHours = filtered.filter((u) => u.balance > 0);
       const withoutHours = filtered.filter((u) => u.balance <= 0);
 
-      summaryEl.textContent = `Razem: ${filtered.length} · Mają godziny: ${withHours.length} · Brak godzin: ${withoutHours.length}`;
+      summaryEl.textContent = `Razem: ${filtered.length} · Mają godziny basenowe: ${withHours.length} · Brak godzin basenowych: ${withoutHours.length}`;
 
       let html = "";
-      html += `<div class="basenAttendeesGroupTitle">Mają godziny</div>`;
+      html += `<div class="basenAttendeesGroupTitle">Mają godziny basenowe</div>`;
       html += `<div class="basenGodzinyList">${withHours.length ? withHours.map(renderGodzinyRow).join("") : `<div class="basenHint">Brak.</div>`}</div>`;
-      html += `<div class="basenAttendeesGroupTitle" style="margin-top:14px;">Brak godzin</div>`;
+      html += `<div class="basenAttendeesGroupTitle" style="margin-top:14px;">Brak godzin basenowych</div>`;
       html += `<div class="basenGodzinyList">${withoutHours.length ? withoutHours.map(renderGodzinyRow).join("") : `<div class="basenHint">Brak.</div>`}</div>`;
       contentEl.innerHTML = html;
 
@@ -1652,7 +1728,7 @@ async function renderFinanceTab(innerEl, ctx) {
       <tr>
         <td>${esc(shortDate(r.date))}${r.kurs ? ` <span class="basenHint">kurs</span>` : ""}</td>
         <td>${esc(r.zapisyH1)} / ${esc(r.zapisyH2)}${r.sauna ? ` <span class="basenHint">+${esc(r.sauna)} sauna</span>` : ""}</td>
-        <td class="${r.resultPln >= 0 ? "bfPos" : "bfNeg"}">${esc(formatPln(r.resultPln))}${missing ? `<div class="basenHint">do zera ok. ${esc(missing)} wejść</div>` : ""}</td>
+        <td class="${r.resultPln >= 0 ? "bfPos" : "bfNeg"}">${esc(formatPln(r.resultPln))}${missing ? `<div class="basenHint">do zera ok. ${esc(missing)} godz. basenowych</div>` : ""}</td>
         <td>${esc(forecast)}${r.outcome === "planned" ? `<div class="basenHint">decyzja ${esc(formatDecisionAt(r.decisionAtMs))}</div>` : ""}</td>
       </tr>`;
   }).join("");
@@ -1660,7 +1736,7 @@ async function renderFinanceTab(innerEl, ctx) {
   const pastRows = past.slice().reverse().map((r) => `
       <tr class="${r.outcome === "cancelled" ? "bfRowCancelled" : ""}">
         <td>${esc(shortDate(r.date))}${r.kurs ? ` <span class="basenHint">kurs</span>` : ""}</td>
-        <td>${r.outcome === "cancelled" ? (r.cancelReason === "frekwencja" ? `odwołany (${esc(r.zapisy)} zapisów)` : "odwołany") : `${esc(r.zapisy)} zapisów · ${esc(r.entries)} wejść`}</td>
+        <td>${r.outcome === "cancelled" ? (r.cancelReason === "frekwencja" ? `odwołany (${esc(r.zapisy)} zapisów)` : "odwołany") : `${esc(r.zapisy)} zapisów · ${esc(r.entries)} godz. basenowych`}</td>
         <td class="${r.resultPln >= 0 ? "bfPos" : "bfNeg"}">${r.outcome === "cancelled" ? "—" : esc(formatPln(r.resultPln))}</td>
       </tr>`).join("");
 
@@ -1685,7 +1761,7 @@ async function renderFinanceTab(innerEl, ctx) {
       <div class="basenFinanceTile">
         <div class="basenFinanceTileLabel">Sprzedaż w sezonie</div>
         <div class="basenFinanceTileValue">${esc(Math.round(sales.totalPln || 0).toLocaleString("pl-PL"))} zł</div>
-        <div class="basenHint">jednorazowe ${esc(sales.jednorazowe?.entries || 0)} wejść · karnety 5: ${esc(sales.karnet5?.count || 0)} · karnety 10: ${esc(sales.karnet10?.count || 0)}</div>
+        <div class="basenHint">pojedyncze ${esc(sales.jednorazowe?.entries || 0)} godz. basenowych · karnety 5: ${esc(sales.karnet5?.count || 0)} · karnety 10: ${esc(sales.karnet10?.count || 0)}</div>
       </div>
     </div>
 
@@ -1709,8 +1785,8 @@ async function renderFinanceTab(innerEl, ctx) {
 
     <div class="basenHint" style="margin-top:14px;">
       Zasada: termin rusza, gdy wynik ≥ 0 zł albo strata ≤ ${esc(rules.maxStrataTerminu)} zł i wynik sezonu po niej ≥ −${esc(rules.budzetSezonu)} zł.
-      Koszt terminu ${esc(rules.kosztTerminu)} zł. Decyzja automatyczna ${esc(rules.oknoH)} h przed basenem; odwołanie zwraca wejścia i wysyła maila.
-      Wejście wyceniane po cenie zakupu, w kolejności zakupów (karnet taniej, nagroda instruktora 0 zł); „do zera” liczone po ${esc(rules.cenaWejscia)} zł. Terminy kursowe poza wynikiem.
+      Koszt terminu ${esc(rules.kosztTerminu)} zł. Decyzja automatyczna ${esc(rules.oknoH)} h przed basenem; odwołanie zwraca godziny basenowe i wysyła maila.
+      Godzina basenowa wyceniana po cenie zakupu, w kolejności zakupów (karnet taniej, nagroda instruktora 0 zł); „do zera” liczone po ${esc(rules.cenaWejscia)} zł. Terminy kursowe poza wynikiem.
     </div>
   `;
 }
@@ -1756,29 +1832,164 @@ function renderGodzinyLedgerRow(r) {
   `;
 }
 
-async function renderAccountTab(innerEl, ctx) {
+const ORDER_STATUS_LABELS = {
+  pending: "czeka na potwierdzenie wpłaty",
+  approved: "zatwierdzone — godziny basenowe na saldzie",
+  rejected: "odrzucone",
+  cancelled: "anulowane",
+};
+
+function formatZl(n) {
+  const v = Number(n || 0);
+  return `${Number.isInteger(v) ? v : v.toFixed(2).replace(".", ",")} zł`;
+}
+
+// Kafelki „Kup": pojedyncze godziny basenowe dla każdego; karnety tylko dla członka
+// klubu — nieaktywne (z powodem), gdy brak opłaconych składek albo dodatniego salda godzinek.
+function renderShopHtml(shop) {
+  const p = shop?.pricing || {};
+  const karnet = shop?.karnet || {};
+  const karnetTile = (product, n, price) => {
+    if (!karnet.member) return "";
+    const disabled = !karnet.eligible;
+    return `
+      <div class="basenShopTile${disabled ? " disabled" : ""}">
+        <div class="basenShopTitle">Karnet ${n}</div>
+        <div class="basenShopPrice">${esc(formatZl(price))}</div>
+        <div class="basenHint">${n} godzin basenowych · ${esc(formatZl(price / n))} za godzinę</div>
+        <button type="button" class="primary small" data-shop-buy="${product}" ${disabled ? "disabled" : ""}>Kup</button>
+      </div>`;
+  };
+  const reasons = karnet.member && !karnet.eligible && Array.isArray(karnet.reasons) && karnet.reasons.length
+    ? `<div class="basenShopReasons">Karnety nieaktywne: ${karnet.reasons.map(esc).join(" ")}</div>`
+    : "";
+  return `
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Kup godziny basenowe</div>
+    <div class="basenShopGrid">
+      <div class="basenShopTile">
+        <div class="basenShopTitle">Pojedyncze</div>
+        <div class="basenShopPrice">${esc(formatZl(p.jednorazowe))}</div>
+        <div class="basenHint">za godzinę basenową</div>
+        <div class="basenShopCount">
+          <label for="shopCount">Ile</label>
+          <input type="number" id="shopCount" min="1" max="${esc(shop?.maxSingleCount || 20)}" step="1" value="1" />
+        </div>
+        <button type="button" class="primary small" data-shop-buy="jednorazowe">Kup</button>
+      </div>
+      ${karnetTile("karnet5", 5, p.karnet5)}
+      ${karnetTile("karnet10", 10, p.karnet10)}
+    </div>
+    ${reasons}
+    ${karnet.member ? `<div class="basenHint">Godziny basenowe z karnetu wykorzystasz na dowolnych basenach i godzinach do końca sezonu (31 marca).</div>` : ""}
+    <div class="basenHint">Płatność przelewem na konto klubu albo gotówką opiekunowi basenu. Godziny basenowe pojawią się na saldzie po potwierdzeniu wpłaty.</div>
+    <div id="shopResult"></div>
+    <div id="shopErr" class="err hidden"></div>
+  `;
+}
+
+function renderPaymentInfoHtml(shop, order) {
+  const account = shop?.account
+    ? `${esc(shop.account)}${shop.bank ? ` <span class="basenHint">(${esc(shop.bank)})</span>` : ""}`
+    : "— (brak w ustawieniach, zapytaj opiekuna basenu)";
+  return `
+    <div class="basenShopPayInfo">
+      <div><strong>Zamówienie przyjęte:</strong> ${esc(order.label)}</div>
+      <div>Kwota: <strong>${esc(formatZl(order.amountPln))}</strong></div>
+      <div>Konto klubu: <strong>${account}</strong></div>
+      <div>Tytuł przelewu: <strong>${esc(order.transferTitle)}</strong></div>
+      <div class="basenHint">Te same dane wysłaliśmy mailem.</div>
+    </div>`;
+}
+
+function renderOrdersHtml(orders) {
+  if (!orders.length) return "";
+  const rows = orders.map((o) => `
+    <div class="basenLedgerRow">
+      <div class="basenLedgerMain">
+        <div class="basenLedgerType">${esc(o.label)}</div>
+        <div class="basenLedgerReason">${esc(ORDER_STATUS_LABELS[o.status] || o.status)}${o.status === "rejected" && o.rejectReason ? ` — ${esc(o.rejectReason)}` : ""}</div>
+        ${o.status === "pending" ? `<div class="basenHint">Tytuł przelewu: ${esc(o.transferTitle)}</div>` : ""}
+        <div class="basenLedgerDate">${esc(formatGodzinyDate(o.createdAt))}</div>
+      </div>
+      <div class="basenShopOrderSide">
+        <div>${esc(formatZl(o.amountPln))}</div>
+        ${o.status === "pending" ? `<button type="button" class="ghost small" data-order-cancel="${esc(o.id)}">Anuluj</button>` : ""}
+      </div>
+    </div>`).join("");
+  return `
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Twoje zamówienia</div>
+    <div class="basenLedgerList">${rows}</div>`;
+}
+
+async function renderAccountTab(innerEl, ctx, notice = "") {
   innerEl.innerHTML = spinnerHtml("Ładowanie…");
 
+  let data;
   try {
-    const data = await apiGetJson({ url: GODZINY_MY_URL, idToken: ctx.idToken });
-    const balance = Number(data?.balance ?? 0);
-    const records = Array.isArray(data?.records) ? data.records : [];
-
-    const rowsHtml = records.length
-      ? records.map(renderGodzinyLedgerRow).join("")
-      : `<div class="basenHint">Brak historii — nie masz jeszcze żadnych operacji na godzinach basenowych.</div>`;
-
-    innerEl.innerHTML = `
-      <div class="row" style="margin-top:12px;">
-        <div class="basenAttendeesGroupTitle">Saldo godzin basenowych</div>
-        <div class="${balance > 0 ? "basenGodzinyBalance" : "basenGodzinyBalanceZero"}" style="font-size:20px;">${balance} h</div>
-      </div>
-      <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Historia (wyciąg)</div>
-      <div class="basenLedgerList">${rowsHtml}</div>
-    `;
+    data = await apiGetJson({ url: GODZINY_MY_URL, idToken: ctx.idToken });
   } catch (e) {
-    innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać historii godzin.")}</div>`;
+    innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać historii godzin basenowych.")}</div>`;
+    return;
   }
+  const balance = Number(data?.balance ?? 0);
+  const records = Array.isArray(data?.records) ? data.records : [];
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
+  const shop = data?.shop || null;
+
+  const rowsHtml = records.length
+    ? records.map(renderGodzinyLedgerRow).join("")
+    : `<div class="basenHint">Brak historii — nie masz jeszcze żadnych operacji na godzinach basenowych.</div>`;
+
+  innerEl.innerHTML = `
+    <div class="row" style="margin-top:12px;">
+      <div class="basenAttendeesGroupTitle">Saldo godzin basenowych</div>
+      <div class="${balance > 0 ? "basenGodzinyBalance" : "basenGodzinyBalanceZero"}" style="font-size:20px;">${balance} h</div>
+    </div>
+    ${shop ? renderShopHtml(shop) : ""}
+    ${renderOrdersHtml(orders)}
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Historia (wyciąg)</div>
+    <div class="basenLedgerList">${rowsHtml}</div>
+  `;
+  if (notice) innerEl.querySelector("#shopResult").innerHTML = notice;
+
+  const errEl = innerEl.querySelector("#shopErr");
+  const showErr = (msg) => {
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.classList.remove("hidden");
+  };
+
+  innerEl.querySelectorAll("[data-shop-buy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const product = btn.getAttribute("data-shop-buy");
+      const count = product === "jednorazowe" ? Number(innerEl.querySelector("#shopCount")?.value) : undefined;
+      if (product === "jednorazowe" && (!Number.isInteger(count) || count <= 0)) {
+        showErr("Podaj liczbę godzin basenowych większą od 0.");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const res = await apiPostJson({ url: ORDER_URL, idToken: ctx.idToken, body: { action: "create", product, count } });
+        await renderAccountTab(innerEl, ctx, renderPaymentInfoHtml(shop, res.order));
+      } catch (e) {
+        btn.disabled = false;
+        showErr(e?.message || "Nie udało się złożyć zamówienia.");
+      }
+    });
+  });
+
+  innerEl.querySelectorAll("[data-order-cancel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await apiPostJson({ url: ORDER_URL, idToken: ctx.idToken, body: { action: "cancel", orderId: btn.getAttribute("data-order-cancel") } });
+        await renderAccountTab(innerEl, ctx);
+      } catch (e) {
+        btn.disabled = false;
+        showErr(e?.message || "Nie udało się anulować zamówienia.");
+      }
+    });
+  });
 }
 
 // ─── Module ───────────────────────────────────────────────────────────────────

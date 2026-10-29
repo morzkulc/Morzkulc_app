@@ -44,6 +44,7 @@ import {handleSubmitGearDamageReport} from "./api/submitGearDamageReportHandler"
 import {handleResolveGearDamageReport} from "./api/resolveGearDamageReportHandler";
 import {handleSubmitEvent} from "./api/submitEventHandler";
 import {handleGetBasenSessions} from "./api/getBasenSessionsHandler";
+import {handleBasenOrder} from "./api/basenOrderHandler";
 import {handleBasenEnroll} from "./api/basenEnrollHandler";
 import {handleBasenCancelEnrollment} from "./api/basenCancelEnrollmentHandler";
 import {handleBasenCreateSession} from "./api/basenCreateSessionHandler";
@@ -1560,6 +1561,22 @@ export const getBasenAdminGodzinyHistory = onRequest({invoker: "private"}, async
  */
 export const basenAdminAddGodziny = onRequest({invoker: "private"}, async (req, res) => {
   return handleBasenAdminAddGodziny(req, res, {
+    db,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+    adminRoleKeys,
+  });
+});
+
+/**
+ * POST /api/basen/order (authenticated) — zamówienie godzin basenowych: create/cancel
+ * (użytkownik), approve/reject (zarząd/KR/opiekun basenu). Patrz basen_orders.ts.
+ */
+export const basenOrder = onRequest({invoker: "private"}, async (req, res) => {
+  return handleBasenOrder(req, res, {
     db,
     sendPreflight,
     requireAllowedHost,

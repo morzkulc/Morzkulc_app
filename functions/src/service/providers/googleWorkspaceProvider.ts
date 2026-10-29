@@ -2,6 +2,16 @@ import { google } from "googleapis";
 import type { admin_directory_v1, gmail_v1, groupssettings_v1 } from "googleapis";
 import { getDelegatedAuth } from "./googleAuth";
 
+
+/**
+ * Adresy w domenie example.com (zarezerwowanej, RFC 2606) należą wyłącznie do danych
+ * demonstracyjnych (np. scripts/seedBasenDemo.js) — mail jest pomijany, żeby zadania
+ * nie wysyłały w próżnię ani nie wpadały w ponawianie.
+ */
+export function isReservedDemoEmail(email: string): boolean {
+  return /@example\.com$/i.test(String(email || "").trim());
+}
+
 export const WORKSPACE_SCOPES = {
   GROUP_MEMBER: "https://www.googleapis.com/auth/admin.directory.group.member",
   GROUP: "https://www.googleapis.com/auth/admin.directory.group",
@@ -264,6 +274,7 @@ export class GoogleWorkspaceProvider {
     subject: string,
     bodyText: string
   ): Promise<void> {
+    if (isReservedDemoEmail(toEmail)) return;
     const gmail = await this.getGmailClient();
 
     const from = normalizeEmail(this.delegatedUserEmail);
@@ -305,6 +316,7 @@ export class GoogleWorkspaceProvider {
     bodyText: string,
     bodyHtml: string
   ): Promise<void> {
+    if (isReservedDemoEmail(toEmail)) return;
     const gmail = await this.getGmailClient();
 
     const from = normalizeEmail(this.delegatedUserEmail);

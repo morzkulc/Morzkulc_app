@@ -17,6 +17,9 @@ export type AppVars = {
    * sobie rolę w aplikacji; konta nigdy nie trafiają do grup Workspace ani do arkusza członków.
    */
   testAccounts: string[];
+  /** Konto klubowe do przelewów (setup/vars_members.konto_klubowe / bank_klubowy) */
+  clubAccount: string;
+  clubBank: string;
 };
 
 function getVar(doc: AppVarsDoc | null, key: string): any {
@@ -46,6 +49,8 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
       .split(",")
       .map((x) => x.trim().toLowerCase())
       .filter(Boolean),
+    clubAccount: toStr(getVar(raw, "konto_klubowe"), ""),
+    clubBank: toStr(getVar(raw, "bank_klubowy"), ""),
   };
 }
 

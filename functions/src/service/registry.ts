@@ -11,6 +11,7 @@ import { basenNotifySessionCancelledTask } from "./tasks/basenNotifySessionCance
 import { basenGrantInstructorRewardsTask } from "./tasks/basenGrantInstructorRewards";
 import { basenDecideSessionsTask } from "./tasks/basenDecideSessions";
 import { basenNotifyWaitlistPromotedTask } from "./tasks/basenNotifyWaitlistPromoted";
+import { basenNotifyOrderTask } from "./tasks/basenNotifyOrder";
 import { gearPrivateStorageTask } from "./tasks/gearPrivateStorage";
 import { godzinkiMonthlyBalanceReviewTask } from "./tasks/godzinkiMonthlyBalanceReview";
 import { godzinkiArchiveSheetRowsTask } from "./tasks/godzinkiArchiveSheetRows";
@@ -61,6 +62,7 @@ const tasks: ServiceTask[] = [
   basenGrantInstructorRewardsTask,
   basenDecideSessionsTask,
   basenNotifyWaitlistPromotedTask,
+  basenNotifyOrderTask,
   gearPrivateStorageTask,
   godzinkiMonthlyBalanceReviewTask,
   godzinkiArchiveSheetRowsTask,

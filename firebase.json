@@ -454,6 +454,13 @@
         }
       },
       {
+        "source": "/api/basen/order",
+        "function": {
+          "functionId": "basenOrder",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/basen/kayaks",
         "function": {
           "functionId": "getBasenKayaks",

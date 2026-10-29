@@ -3,11 +3,13 @@ import {BasenProduct, seasonOf, warsawTodayIso} from "./basen_finance";
 
 /**
  * Saldo godzin basenowych — osobna "waluta" od klubowych godzinek
- * (godzinki_ledger). Admin dopisuje wejścia po potwierdzeniu wpłaty przelewem
- * (regulamin basenu § 3) — wybiera produkt z cennika, kwota liczy się sama.
+ * (godzinki_ledger). Godzina basenowa = jedna opłacona pieniędzmi godzina na basenie
+ * (pojedyncza albo z karnetu); godzinkami się za basen nie płaci i nie zarabia ich tu.
+ * Opiekun basenu dopisuje godziny basenowe po potwierdzeniu wpłaty (zatwierdzenie
+ * zamówienia z basen_orders albo ręcznie) — produkt z cennika, kwota liczy się sama.
  *
  * Model: prosty ledger (suma amount), bez wygasania/zatwierdzania jak w
- * godzinki_service.ts. Wartość w zł wejść liczona FIFO (basen_finance.ts).
+ * godzinki_service.ts. Wartość godzin basenowych w zł liczona FIFO (basen_finance.ts).
  */
 export type BasenGodzinyOpType = "admin_add" | "booking_block" | "booking_refund" | "instructor_reward";
 
@@ -20,12 +22,13 @@ export interface BasenGodzinyRecord {
   sessionId?: string;
   slot?: string;
   enrollmentId?: string;
-  // Sprzedaż (admin_add): produkt, cena jednego wejścia i kwota wpłaty — finanse sezonu.
+  // Sprzedaż (admin_add): produkt, cena jednej godziny basenowej i kwota wpłaty — finanse sezonu.
+  orderId?: string; // zamówienie z basen_orders, z którego powstał zapis
   product?: BasenProduct;
   unitPricePln?: number;
   amountPln?: number;
   validUntil?: string; // karnet: koniec ważności (regulamin § 3 pkt 3)
-  // Blokada/zwrot: wartość wejścia w zł (FIFO z zakupów).
+  // Blokada/zwrot: wartość godziny basenowej w zł (FIFO z zakupów).
   valuePln?: number;
   performedBy: string;
   createdAt: FirebaseFirestore.Timestamp | FirebaseFirestore.FieldValue;
@@ -57,30 +60,28 @@ export interface ProductPricing {
   basen_cena_karnet_10: number;
 }
 
-/** Liczba wejść, cena wejścia i kwota wpłaty dla produktu z cennika (regulamin § 2). */
+/** Liczba godzin basenowych, cena jednej i kwota wpłaty dla produktu z cennika (regulamin § 2). */
 export function priceProduct(product: BasenProduct, count: number, v: ProductPricing): {entries: number; unitPricePln: number; amountPln: number; label: string} {
   if (product === "karnet5") {
-    return {entries: 5, unitPricePln: v.basen_cena_karnet_5 / 5, amountPln: v.basen_cena_karnet_5, label: `Karnet 5 wejść (${v.basen_cena_karnet_5} zł)`};
+    return {entries: 5, unitPricePln: v.basen_cena_karnet_5 / 5, amountPln: v.basen_cena_karnet_5, label: `Karnet 5 godzin basenowych (${v.basen_cena_karnet_5} zł)`};
   }
   if (product === "karnet10") {
-    return {entries: 10, unitPricePln: v.basen_cena_karnet_10 / 10, amountPln: v.basen_cena_karnet_10, label: `Karnet 10 wejść (${v.basen_cena_karnet_10} zł)`};
+    return {entries: 10, unitPricePln: v.basen_cena_karnet_10 / 10, amountPln: v.basen_cena_karnet_10, label: `Karnet 10 godzin basenowych (${v.basen_cena_karnet_10} zł)`};
   }
   const n = Math.floor(Number(count) || 0);
-  return {entries: n, unitPricePln: v.basen_cena_za_godzine, amountPln: n * v.basen_cena_za_godzine, label: `Wejścia jednorazowe × ${n} (${n * v.basen_cena_za_godzine} zł)`};
+  return {entries: n, unitPricePln: v.basen_cena_za_godzine, amountPln: n * v.basen_cena_za_godzine, label: `Godziny basenowe pojedyncze × ${n} (${n * v.basen_cena_za_godzine} zł)`};
 }
 
-export async function adminAddBasenGodziny(
-  db: FirebaseFirestore.Firestore,
-  args: { uid: string; product: BasenProduct; count: number; reason: string; performedBy: string; pricing: ProductPricing }
-): Promise<string> {
+type AdminAddArgs = { uid: string; product: BasenProduct; count: number; reason: string; performedBy: string; pricing: ProductPricing; orderId?: string };
+
+function adminAddRecord(id: string, args: AdminAddArgs): Record<string, unknown> {
   const priced = priceProduct(args.product, args.count, args.pricing);
   if (!priced.entries || priced.entries <= 0) {
-    throw new Error("Liczba wejść musi być większa od 0.");
+    throw new Error("Liczba godzin basenowych musi być większa od 0.");
   }
   const now = admin.firestore.FieldValue.serverTimestamp();
-  const ref = db.collection(COLLECTION).doc();
-  await ref.set({
-    id: ref.id,
+  return {
+    id,
     uid: args.uid,
     type: "admin_add",
     amount: priced.entries,
@@ -88,12 +89,27 @@ export async function adminAddBasenGodziny(
     unitPricePln: priced.unitPricePln,
     amountPln: priced.amountPln,
     ...(args.product !== "jednorazowe" ? {validUntil: seasonOf(warsawTodayIso()).karnetValidUntil} : {}),
+    ...(args.orderId ? {orderId: args.orderId} : {}),
     reason: args.reason ? `${priced.label} — ${args.reason}` : priced.label,
     performedBy: args.performedBy,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+}
+
+export async function adminAddBasenGodziny(db: FirebaseFirestore.Firestore, args: AdminAddArgs): Promise<string> {
+  const ref = db.collection(COLLECTION).doc();
+  await ref.set(adminAddRecord(ref.id, args));
   return ref.id;
+}
+
+/** To samo co adminAddBasenGodziny, w ramach transakcji (zatwierdzenie zamówienia). */
+export function adminAddBasenGodzinyInTx(
+  tx: FirebaseFirestore.Transaction,
+  ledgerRef: FirebaseFirestore.DocumentReference,
+  args: AdminAddArgs
+): void {
+  tx.set(ledgerRef, adminAddRecord(ledgerRef.id, args));
 }
 
 /**

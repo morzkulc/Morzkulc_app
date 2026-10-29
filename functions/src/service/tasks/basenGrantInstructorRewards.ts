@@ -16,6 +16,11 @@ function todayIso(now: Date): string {
  * jest "cancelled" i w ogóle nie wchodzi do rozpatrzenia). Uruchamiane cyklicznie
  * (basenGrantInstructorRewardsDaily), bezpieczne do wielokrotnego odpalenia — pomija
  * zapisy, które już dostały nagrodę (sprawdzane po enrollmentId w ledgerze).
+ *
+ * Nagroda to godzina basenowa (basen_godziny_ledger), nie godzinki. Dostaje ją tylko osoba,
+ * która W CHWILI naliczania ma uprawnienie instruktora z arkusza członków
+ * (admin.basenInstructor, kolumna „Instruktor (kadra)"). Zapis bez uprawnienia nie jest
+ * oznaczany jako nagrodzony — gdy uprawnienie wróci, nagroda zostanie naliczona.
  */
 export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
   id: "basen.grantInstructorRewards",
@@ -41,6 +46,15 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
 
     let granted = 0;
     let skipped = 0;
+    let notInstructor = 0;
+    const instructorFlag = new Map<string, boolean>();
+    const isInstructor = async (uid: string): Promise<boolean> => {
+      if (!instructorFlag.has(uid)) {
+        const u = await ctx.firestore.collection("users_active").doc(uid).get();
+        instructorFlag.set(uid, (u.data() as any)?.admin?.basenInstructor === true);
+      }
+      return instructorFlag.get(uid) === true;
+    };
     const errors: string[] = [];
 
     for (const sessionDoc of sessionsSnap.docs) {
@@ -60,6 +74,10 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
           const enrollment = enrollDoc.data() as any;
           if (alreadyRewarded.has(enrollDoc.id)) {
             skipped++;
+            continue;
+          }
+          if (!(await isInstructor(String(enrollment.userUid || "")))) {
+            notInstructor++;
             continue;
           }
           if (ctx.dryRun) {
@@ -85,8 +103,8 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
 
     return {
       ok: errors.length === 0,
-      message: `granted=${granted}, skipped=${skipped}, errors=${errors.length}`,
-      details: {granted, skipped, errors},
+      message: `granted=${granted}, skipped=${skipped}, notInstructor=${notInstructor}, errors=${errors.length}`,
+      details: {granted, skipped, notInstructor, errors},
     };
   },
 };

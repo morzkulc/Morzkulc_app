@@ -185,7 +185,7 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
   });
 }
 
-/** Panel „Finanse": wynik każdego terminu, wynik netto sezonu, sprzedaż wejść. */
+/** Panel „Finanse": wynik każdego terminu, wynik netto sezonu, sprzedaż godzin basenowych. */
 async function buildFinance(db: FirebaseFirestore.Firestore) {
   const [sessions, vars, salesSnap] = await Promise.all([
     listSeasonSessions(db),

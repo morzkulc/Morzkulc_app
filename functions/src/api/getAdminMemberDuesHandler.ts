@@ -7,6 +7,7 @@ import {computeBalance, GodzinkiRecord} from "../modules/hours/godzinki_service"
 import {normNullish} from "../modules/shared/text_utils";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
 import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
+import {FULL_MEMBER_ROLE_KEYS, contributionsRaw, isDuesPaid, isInGoodStanding} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -21,20 +22,6 @@ export type GetAdminMemberDuesDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
 };
-
-// Populacja raportu = pełni członkowie (głosujący). Kandydaci/sympatycy/kursanci poza.
-const MEMBER_ROLE_KEYS = ["rola_czlonek", "rola_zarzad", "rola_kr"];
-
-/** Parsuje „składki opłacone do" (YYYY-MM-DD | DD-MM-YYYY | DD.MM.YYYY) → Date (UTC) lub null. */
-function parseContrib(raw: any): Date | null {
-  const s = normNullish(raw);
-  if (!s) return null;
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-  m = s.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
-  if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
-  return null;
-}
 
 export async function handleGetAdminMemberDues(req: Request, res: Response, deps: GetAdminMemberDuesDeps) {
   const {sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, db, adminRoleKeys} = deps;
@@ -66,7 +53,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
 
       // Pełni członkowie (zarejestrowani = w users_active) + cały ledger do salda.
       const [membersSnap, ledgerSnap] = await Promise.all([
-        db.collection("users_active").where("role_key", "in", MEMBER_ROLE_KEYS).get(),
+        db.collection("users_active").where("role_key", "in", FULL_MEMBER_ROLE_KEYS).get(),
         db.collection("godzinki_ledger").get(),
       ]);
 
@@ -84,7 +71,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
       });
 
       const now = new Date();
-      const todayMidnight = new Date(todayWarsawIso() + "T00:00:00.000Z");
+      const today = todayWarsawIso();
 
       type Row = {
         userUid: string;
@@ -103,9 +90,8 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
 
       const rows: Row[] = memberDocs.map((d) => {
         const u = d.data() as any;
-        const contribRaw = normNullish(u?.contributionsPaidUntil ?? u?.admin?.contributions);
-        const contribDate = parseContrib(contribRaw);
-        const paid = Boolean(contribDate && contribDate.getTime() >= todayMidnight.getTime());
+        const contribRaw = contributionsRaw(u);
+        const paid = isDuesPaid(u, today);
         const balance = computeBalance(recsByUid.get(d.id) || [], now);
         return {
           userUid: d.id,
@@ -116,7 +102,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
           contributionsPaidUntil: contribRaw,
           paid,
           balance,
-          votingEligible: paid && balance > 0,
+          votingEligible: isInGoodStanding(paid, balance),
         };
       });
 

@@ -124,7 +124,6 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_cena_za_godzine: 35,
       basen_cena_karnet_5: 140,
       basen_cena_karnet_10: 245,
-      basen_karnet_prog_godzinek: 20,
       basen_koszt_terminu: 350,
       basen_max_strata_terminu: 105,
       basen_budzet_sezonu: 2000,

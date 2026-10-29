@@ -11,7 +11,7 @@ const SLOT_LABELS: Record<string, string> = {H1: "I godzina", H2: "II godzina"};
 
 /**
  * Mail do osoby, która przejęła miejsce z listy rezerwowej (basen_service.ts::cancelEnrollment).
- * Wejście zostało już pobrane — mail informuje, że jest zapisana i jak zrezygnować.
+ * Godzina basenowa została już pobrana — mail informuje, że jest zapisana i jak zrezygnować.
  */
 export const basenNotifyWaitlistPromotedTask: ServiceTask<Payload> = {
   id: "basen.notifyWaitlistPromoted",
@@ -44,8 +44,8 @@ export const basenNotifyWaitlistPromotedTask: ServiceTask<Payload> = {
       "",
       `Termin: ${norm(session?.date)}, ${slotLabel}${time ? ` (${time})` : ""}`,
       "",
-      "Z Twojego salda pobrano jedno wejście. Jeśli nie możesz przyjść, zrezygnuj w aplikacji.",
-      "Rezygnacja przed terminem decyzji (30 h przed basenem) zwraca wejście; później — tylko",
+      "Z Twojego salda pobrano jedną godzinę basenową. Jeśli nie możesz przyjść, zrezygnuj w aplikacji.",
+      "Rezygnacja przed terminem decyzji (30 h przed basenem) zwraca godzinę basenową; później — tylko",
       "gdy Twoje miejsce zajmie kolejna osoba z listy rezerwowej.",
       "",
       "SKK Morzkulc",

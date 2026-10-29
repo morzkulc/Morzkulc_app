@@ -1002,3 +1002,70 @@ button.basenClaimTagBtn:disabled {
 .bfRowCancelled td {
   color: var(--text-muted);
 }
+
+/* ── Kup godziny basenowe (Moje konto) i zamówienia do zatwierdzenia (Płatności) ── */
+.basenShopGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+.basenShopTile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface);
+}
+.basenShopTile.disabled {
+  opacity: 0.55;
+}
+.basenShopTitle {
+  font-weight: 600;
+}
+.basenShopPrice {
+  font-size: 20px;
+  font-weight: 700;
+}
+.basenShopCount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.basenShopCount input {
+  width: 72px;
+}
+.basenShopReasons {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 4px 0;
+}
+.basenShopPayInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.basenShopOrderSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+.basenShopRejectRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.basenShopRejectRow input {
+  flex: 1 1 200px;
+  min-width: 0;
+}

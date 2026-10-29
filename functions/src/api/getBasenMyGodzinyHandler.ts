@@ -1,5 +1,8 @@
 import type {Request, Response} from "express";
 import {getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
+import {getBasenVars} from "../modules/basen/basen_service";
+import {getKarnetEligibility, listUserOrders, MAX_SINGLE_COUNT} from "../modules/basen/basen_orders";
+import {getAppVars} from "../modules/setup/app_vars";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -13,7 +16,9 @@ type Deps = {
 /**
  * GET /api/basen/godziny/my (authenticated)
  * Pełna historia własnych godzin basenowych — "wyciąg bankowy" (dodane, zużyte,
- * zwrócone, nagrody za instruktorowanie), posortowana od najnowszych.
+ * zwrócone, nagrody za instruktorowanie), posortowana od najnowszych. Do tego dane
+ * kafelków „Kup": cennik, uprawnienie do karnetu (z powodami), konto klubowe i
+ * własne zamówienia.
  */
 export async function handleGetBasenMyGodziny(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -34,7 +39,14 @@ export async function handleGetBasenMyGodziny(req: Request, res: Response, deps:
       }
 
       const uid = tokenCheck.decoded.uid;
-      const records = await getBasenGodzinyRecords(deps.db, uid);
+      const [records, userSnap, vars, appVars, orders] = await Promise.all([
+        getBasenGodzinyRecords(deps.db, uid),
+        deps.db.collection("users_active").doc(uid).get(),
+        getBasenVars(deps.db),
+        getAppVars(deps.db),
+        listUserOrders(deps.db, uid),
+      ]);
+      const karnet = await getKarnetEligibility(deps.db, uid, userSnap.data() || {});
       const balance = computeBasenGodzinyBalance(records);
 
       const sorted = [...records].sort((a, b) => {
@@ -55,7 +67,23 @@ export async function handleGetBasenMyGodziny(req: Request, res: Response, deps:
           null,
       }));
 
-      res.status(200).json({ok: true, balance, records: serialized});
+      res.status(200).json({
+        ok: true,
+        balance,
+        records: serialized,
+        shop: {
+          pricing: {
+            jednorazowe: vars.basen_cena_za_godzine,
+            karnet5: vars.basen_cena_karnet_5,
+            karnet10: vars.basen_cena_karnet_10,
+          },
+          maxSingleCount: MAX_SINGLE_COUNT,
+          karnet: {member: karnet.member, eligible: karnet.eligible, reasons: karnet.reasons},
+          account: appVars.clubAccount,
+          bank: appVars.clubBank,
+        },
+        orders,
+      });
     } catch (err) {
       const e = err as {message?: string};
       res.status(500).json({error: "Server error", message: e?.message || String(err)});

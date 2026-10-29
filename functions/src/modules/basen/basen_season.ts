@@ -18,7 +18,7 @@ export interface SeasonSessionRow {
   zapisyH1: number;
   zapisyH2: number;
   sauna: number;
-  entries: number; // płatne wejścia (z sauną i spóźnionymi rezygnacjami bez zwrotu)
+  entries: number; // płatne godziny basenowe (z sauną i spóźnionymi rezygnacjami bez zwrotu)
   valuePln: number;
   costPln: number;
   resultPln: number;

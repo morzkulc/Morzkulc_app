@@ -85,3 +85,34 @@ Porównanie z przebiegiem odniesienia 24.09 08:14 (`../2026-09-24_telefon/SUMMAR
 
 ### Znalezisko z historii telefonu: zimne starty
 W 10 ostatnich przebiegach na tym urządzeniu 5 miało `coldSum` > 0: 3 525, 17 166, 17 727, 17 936, 18 072 ms. `ms:home` w tych przebiegach wynosiło od 6 272 do 49 580 ms. Przebiegi bez zimnego startu: 2 356–3 505 ms. **Zimne instancje Cloud Run są dominującym źródłem „wolnej apki” w realnym użyciu.** Środek zaradczy, czyli `minInstances` dla funkcji ścieżki startowej, kosztuje i wymaga decyzji.
+
+## Boot funkcji (B1+B2), wdrożone 29.10 na wszystkie funkcje
+
+**Zmiany:**
+- **B1:** `logger` z `firebase-functions/logger`, `setGlobalOptions` z `/v2/options`, `HttpsError` z `/v2/https`, zamiast barreli `firebase-functions/v2` (32 pliki) i `firebase-functions` (v1, `service_config.ts`).
+- **B2:** `admin.storage().bucket()` tylko w `submitGearDamageReport`, nie przy starcie modułu.
+
+**Lokalnie (bramka z metody, mediana z 7, 3 funkcje):**
+
+| | przed | po | zmiana |
+|---|---|---|---|
+| czas ładowania | 425–441 ms | 274–287 ms | −35 % |
+| liczba modułów | 740 | 537 | −203 |
+
+**Prod, `boot;dur` (8 funkcji startowych, po 1 próbce na funkcję):**
+
+| funkcja | przed | po (prawdziwy zimny start, ~21 min po deployu) |
+|---|---|---|
+| godzinki | 1 631 | 798 |
+| register | 1 029 | 731 |
+| basen/sessions | 1 722 | 1 378 |
+| setup | 1 493 | 1 379 |
+| events | 924 | 1 047 |
+| events/interests | 886 | 877 |
+| km/stats | 862 | 1 455 |
+| admin/pending | 839 | 446 |
+| **mediana / średnia** | **977 / 1 173** | **962 / 1 014** |
+
+**Wniosek: na prod efekt nierozstrzygnięty.** Średnia −159 ms. Pięć funkcji szybciej, dwie wolniej, mediana bez zmian. Rozrzut między instancjami tej samej funkcji (np. km/stats 862 → 1 455) przewyższa spodziewany efekt (~300 ms), więc do rozstrzygnięcia potrzeba kilkudziesięciu próbek na stronę. Odczyt pomiarów pierwszego dnia po wdrożeniu przez `firebase functions:log` zwraca tylko kilkanaście linii (gcloud nie działa), więc dużej próby nie da się dziś pobrać. Źródło próbek na przyszłość: kolumna `boot` w tabeli API na ekranie `#/home/perf` z telefonu, zbierana przy zwykłym używaniu.
+
+Próbki „po” odczytane zaraz po deployu (boot 900–7 213 ms, `cold` 137–297 s) odrzucone: instancje wstawały w trakcie wdrożenia 81 funkcji naraz.

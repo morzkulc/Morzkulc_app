@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {resolveBasenAdminGrant, getBasenVars} from "../modules/basen/basen_service";
+import {listPendingOrders} from "../modules/basen/basen_orders";
 import {computeBasenGodzinyBalance, BasenGodzinyRecord} from "../modules/basen/basen_godziny_service";
 import {normNullish} from "../modules/shared/text_utils";
 import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
@@ -110,16 +111,17 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
 
       rows.sort((a, b) => a.userName.localeCompare(b.userName, "pl"));
 
-      // Cennik do formularza „Dopisz wejścia" (kwota przelewu do sprawdzenia przez obsługę).
-      const vars = await getBasenVars(deps.db);
+      // Cennik do formularza „Dopisz godziny basenowe" (kwota wpłaty do sprawdzenia przez obsługę)
+      // + zamówienia czekające na potwierdzenie wpłaty.
+      const [vars, pendingOrders] = await Promise.all([getBasenVars(deps.db), listPendingOrders(deps.db)]);
       res.status(200).json({
         ok: true,
         rows,
+        pendingOrders,
         pricing: {
           jednorazowe: vars.basen_cena_za_godzine,
           karnet5: vars.basen_cena_karnet_5,
           karnet10: vars.basen_cena_karnet_10,
-          progGodzinek: vars.basen_karnet_prog_godzinek,
         },
       });
     } catch (err) {

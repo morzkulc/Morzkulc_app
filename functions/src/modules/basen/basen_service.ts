@@ -55,7 +55,6 @@ export interface BasenVars {
   basen_cena_za_godzine: number;
   basen_cena_karnet_5: number;
   basen_cena_karnet_10: number;
-  basen_karnet_prog_godzinek: number;
   // Reguła uruchomienia terminu (regulamin § 5, dokument dla Zarządu).
   basen_koszt_terminu: number;
   basen_max_strata_terminu: number;
@@ -121,7 +120,7 @@ export interface BasenEnrollment {
   // flagi) traktowany jak true w cancelEnrollment — zachowuje dotychczasowe zachowanie
   // zwrotu dla zapisów sprzed wprowadzenia tego pola.
   chargedGodziny?: boolean;
-  valuePln?: number; // wartość pobranego wejścia (FIFO z zakupów) — finanse terminu
+  valuePln?: number; // wartość pobranej godziny basenowej (FIFO z zakupów) — finanse terminu
   status: EnrollmentStatus;
   cancelledAt?: any;
   cancelledLate?: boolean; // true jeśli anulowano w oknie <cancellationWindowHours> — ślad dla rozliczeń
@@ -205,7 +204,6 @@ export async function getBasenVars(db: FirebaseFirestore.Firestore): Promise<Bas
     basen_cena_za_godzine: num(vars["basen_cena_za_godzine"], 35),
     basen_cena_karnet_5: num(vars["basen_cena_karnet_5"], 140),
     basen_cena_karnet_10: num(vars["basen_cena_karnet_10"], 245),
-    basen_karnet_prog_godzinek: num(vars["basen_karnet_prog_godzinek"], 20),
     basen_koszt_terminu: num(vars["basen_koszt_terminu"], 350),
     basen_max_strata_terminu: num(vars["basen_max_strata_terminu"], 105),
     basen_budzet_sezonu: num(vars["basen_budzet_sezonu"], 2000),
@@ -784,7 +782,7 @@ export async function joinWaitlist(
     }
     const balance = computeBasenGodzinyBalance(ledgerSnap.docs.map((d) => d.data() as any));
     if (balance < 1) {
-      throw new ClientError("Brak dostępnych godzin basenowych — przy przejęciu miejsca z listy pobierane jest wejście.");
+      throw new ClientError("Brak dostępnych godzin basenowych — przy przejęciu miejsca z listy pobierana jest godzina basenowa.");
     }
 
     tx.set(waitRef, {
