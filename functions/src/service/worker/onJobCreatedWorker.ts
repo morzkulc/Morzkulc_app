@@ -2,7 +2,8 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { processJobDoc } from "./jobProcessor";
 
 export const onServiceJobCreated = onDocumentWritten(
-  { document: "service_jobs/{jobId}" },
+  // km.rebuildRankings przelicza wszystkich użytkowników inline — domyślne 60 s nie wystarcza
+  { document: "service_jobs/{jobId}", timeoutSeconds: 540, memory: "512MiB" },
   async (event) => {
     const jobId = event.params.jobId as string;
 

@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {cancelEnrollment, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {cancelEnrollment, leaveWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -41,16 +41,23 @@ export async function handleBasenCancelEnrollment(req: Request, res: Response, d
         return;
       }
 
+      if (body.waitlist === true) {
+        await leaveWaitlist(deps.db, {sessionId, slot, uid});
+        res.status(200).json({ok: true, waitlist: true});
+        return;
+      }
+
       const vars = await getBasenVars(deps.db);
 
-      const {wasLate} = await cancelEnrollment(deps.db, {
+      const {wasLate, refunded, promotedUid} = await cancelEnrollment(deps.db, {
         sessionId,
         slot,
         uid,
         cancellationWindowHours: vars.basen_okno_anulowania_h,
+        vars,
       });
 
-      res.status(200).json({ok: true, wasLate});
+      res.status(200).json({ok: true, wasLate, refunded, replacedFromWaitlist: Boolean(promotedUid)});
     } catch (err) {
       const e = err as {message?: string};
       const msg = e?.message || String(err);

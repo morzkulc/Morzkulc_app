@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {normNullish} from "../modules/shared/text_utils";
 import {resolveDateRange} from "../modules/shared/date_range_utils";
 import {fullName, nickname} from "../modules/shared/user_display";

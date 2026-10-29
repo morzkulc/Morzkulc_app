@@ -1,4 +1,4 @@
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 
 /**
  * Checks whether a user's status_key is blocked according to setup/app.statusMappings.

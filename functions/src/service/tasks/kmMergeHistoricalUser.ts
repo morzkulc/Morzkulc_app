@@ -90,8 +90,10 @@ export const kmMergeHistoricalUserTask: ServiceTask<Payload> = {
     // 5. Zapisz marker ukończenia na users_active/{uid}
     await ctx.firestore.collection("users_active").doc(uid).set(
       {
-        "service.kmHistMergedFrom": histUid,
-        "service.kmHistMergedAt": admin.firestore.Timestamp.now(),
+        service: {
+          kmHistMergedFrom: histUid,
+          kmHistMergedAt: admin.firestore.Timestamp.now(),
+        },
       },
       {merge: true}
     );

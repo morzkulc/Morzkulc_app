@@ -125,3 +125,17 @@ wyznaczało moment „ekran gotowy".
 **Przy okazji naprawione:** odznaka liczyła dotąd wyłącznie godzinki — oczekująca
 impreza jej nie zapalała. Teraz obejmuje jedno i drugie. Odznaka nie pokazuje już
 liczby, tylko kropkę (decyzja użytkownika: ma sygnalizować, że jest co kliknąć).
+
+## 10. 29.10: auth bez iframe, register, basen/sessions
+
+Pełne dane: `2026-10-29_auth_register_basen/SUMMARY.md`. Mediany, każda poprawka mierzona własną metryką:
+
+| poprawka | metryka | przed | po | zmiana |
+|---|---|---|---|---|
+| 1. Firebase Auth bez proaktywnego iframe | stan logowania gotowy, UA iPhone | 543 ms | 331 ms | **−212 ms (−39 %)** |
+| 1. (kontrola) | to samo, UA desktop | 333 ms | 331 ms | bez zmian |
+| 2. `/api/register` równolegle | `app;dur` / `ms:register` | 196 / 389 ms | 97 / 292 ms | **−51 % / −97 ms** |
+| 3. `/api/basen/sessions` 4→2 etapy | `app;dur` / czas żądania | 278 / 473 ms | 115 / 316 ms | **−59 % / −157 ms** |
+| razem | `ms:home − ms:redirectWait` (desktop) | 1 088 ms | 970 ms | −118 ms |
+
+Surowe `ms:home` na desktopie nieporównywalne: przy `location.reload()` występuje losowa przerwa 200–850 ms w auth (W23, przed i po). Zysk poprawki 1 na telefonie potwierdzi dopiero pomiar `#/home/perf` z iPhone'a.

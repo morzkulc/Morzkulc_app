@@ -21,7 +21,7 @@ type DailyPayload = {today?: string};
 /**
  * Codziennie (scheduler blachyDaily): maile na listę w terminach z SETUP (otwarcie, przypomnienie,
  * zamknięcie), po zamknięciu nominacji — kandydatury + JEDNO zestawienie do każdego członka Kapituły,
- * 14 dni po ogłoszeniu — usunięcie treści nominacji i sum głosów. Każdy krok raz (znaczniki w blachy_procedura/{rok}).
+ * 14 dni po ogłoszeniu — usunięcie wszystkich danych o zgłoszonych (§6 pkt 2). Każdy krok raz (znaczniki w blachy_procedura/{rok}).
  */
 export const blachyDailyTask: ServiceTask<DailyPayload> = {
   id: "blachy.daily",
@@ -89,7 +89,7 @@ export const blachyNominacjaMailTask: ServiceTask<{id: string}> = {
   },
 };
 
-/** Po zatwierdzeniu przez Zarząd: prośba do wyróżnionych o potwierdzenie przyjęcia (§5 pkt 12). */
+/** Po zatwierdzeniu przez Zarząd: prośba do wyróżnionych o potwierdzenie przyjęcia (§5 pkt 7). */
 export const blachyRequestAcceptanceTask: ServiceTask<{rok: number}> = {
   id: "blachy.requestAcceptance",
   description: "Maile do wyróżnionych z prośbą o potwierdzenie przyjęcia Blachy.",
@@ -100,27 +100,29 @@ export const blachyRequestAcceptanceTask: ServiceTask<{rok: number}> = {
     const bctx = await loadBlachyContext(ctx.firestore, todayWarsawIso());
     const base = `${bctx.appUrl.replace(/\/$/, "")}/api/blachy/przyjecie`;
     const kands = (await listKandydatury(ctx.firestore, Number(payload.rok))).filter((k) => k.decyzja === "wybrany" && !k.przyjecie);
-    const out: string[] = [];
+    // Bez nazwisk w wyniku joba (service_jobs zostaje po sprzątaniu) — osoba może odmówić przyjęcia (§6 pkt 2).
+    let wyslane = 0;
+    let bezMaila = 0;
     for (const k of kands) {
       const mail = str(k.kandydat?.email);
       if (!mail) {
         await k.ref.update({przyjecie: {status: "brak_maila"}});
-        out.push(`${k.label}: brak e-maila — Zarząd potwierdza ręcznie`);
+        bezMaila++;
         continue;
       }
       const token = acceptanceToken();
       await k.ref.update({przyjecie: {status: "oczekuje", token, wyslanoAt: ts()}});
       const m = mailPrzyjecie(payload.rok, str(k.label), `${base}?t=${token}&d=tak`, `${base}?t=${token}&d=nie`);
       await ctx.workspace.sendGenericEmailHtml(mail, m.subject, m.text, m.html);
-      out.push(`${k.label}: wysłano`);
+      wyslane++;
     }
-    return {ok: true, message: `Prośby o przyjęcie: ${out.length}`, details: {out}};
+    return {ok: true, message: `Prośby o przyjęcie: wysłane ${wyslane}, bez e-maila ${bezMaila} (Zarząd potwierdza ręcznie)`};
   },
 };
 
 /**
- * Ogłoszenie (§6 pkt 2, 4): wpis przyjętych do Rejestru (kolejne numery od 42), mail na listę
- * (liczba rozpatrzonych, wyróżnieni, uzasadnienia), mail do każdego zgłaszającego, protokół w stanie roku.
+ * Ogłoszenie (§6 pkt 2–4): wpis przyjętych do Rejestru (kolejne numery od 40), mail na listę
+ * (wyłącznie wyróżnieni i uzasadnienia), mail do każdego zgłaszającego, protokół (tylko wyróżnieni).
  */
 export const blachyAnnounceTask: ServiceTask<{rok: number}> = {
   id: "blachy.announce",
@@ -153,7 +155,7 @@ export const blachyAnnounceTask: ServiceTask<{rok: number}> = {
       laureaci.push({label: str(k.label), uzasadnienie: str(k.uzasadnienieKapituly), nr});
     }
 
-    const m = mailOgloszenie(rok, kands.length, laureaci, bctx.appUrl);
+    const m = mailOgloszenie(rok, laureaci, bctx.appUrl);
     await ctx.workspace.sendGenericEmailHtml(bctx.listaEmail, m.subject, m.text, m.html);
 
     const autorzy = new Map<string, Set<string>>();
@@ -174,13 +176,8 @@ export const blachyAnnounceTask: ServiceTask<{rok: number}> = {
 
     await sRef.set({
       ogloszenieAt: ts(),
-      protokol: {
-        rozpatrzone: kands.length,
-        odroczone: kands.filter((k) => k.status === "odroczone").length,
-        wybrani: kands.filter((k) => k.decyzja === "wybrany").map((k) => ({label: k.label, wynik: k.wynik, uzasadnienie: k.uzasadnienieKapituly, przyjecie: k.przyjecie?.status || null})),
-        uchwala: st.zatwierdzenie?.uchwala || "",
-      },
+      protokol: {laureaci, uchwala: st.zatwierdzenie?.uchwala || ""},
     }, {merge: true});
-    return {ok: true, message: `Ogłoszono: ${laureaci.length} blach, rozpatrzonych ${kands.length}`, details: {laureaci}};
+    return {ok: true, message: `Ogłoszono: ${laureaci.length} blach`, details: {laureaci}};
   },
 };

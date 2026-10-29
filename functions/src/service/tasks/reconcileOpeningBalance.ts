@@ -125,7 +125,8 @@ export const reconcileOpeningBalanceTask: ServiceTask<Payload> = {
         const userPatch: Record<string, any> = {
           "openingBalance": obData,
           "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
-          "service.openingBalanceReconciledAt": admin.firestore.FieldValue.serverTimestamp(),
+          // set(..., {merge}) traktuje kropkę w kluczu dosłownie — znacznik musi być zagnieżdżony.
+          "service": {openingBalanceReconciledAt: admin.firestore.FieldValue.serverTimestamp()},
         };
         if (!u.openingMatch) {
           userPatch.openingMatch = true;
@@ -173,7 +174,7 @@ export const reconcileOpeningBalanceTask: ServiceTask<Payload> = {
           if (obHours !== 0) {
             if (!dryRun) {
               await creditOpeningBalance(ctx.firestore, uid, obHours, OB_HOURS_EXPIRES_AT);
-              await userDoc.ref.set({"service.openingBalanceHoursCredited": true}, {merge: true});
+              await userDoc.ref.set({service: {openingBalanceHoursCredited: true}}, {merge: true});
             }
             hoursCreated++;
             ctx.logger.info("opening.reconcile: created lump-sum earn", {uid, obHours});

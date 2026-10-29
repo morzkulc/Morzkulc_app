@@ -61,7 +61,7 @@ export async function handleBasenCancelSession(req: Request, res: Response, deps
         return;
       }
 
-      const {enrollments} = await cancelSession(deps.db, sessionId, uid);
+      const {enrollments} = await cancelSession(deps.db, sessionId, uid, "admin");
 
       // Fire-and-forget email notification
       deps.enqueueBasenSessionCancelledNotify(sessionId, reason || undefined).catch(() => {

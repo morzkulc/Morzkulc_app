@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {resolveDamageReport} from "../modules/equipment/damage/gear_damage_service";
 import {normNullish} from "../modules/shared/text_utils";
 

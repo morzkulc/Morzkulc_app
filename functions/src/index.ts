@@ -6,7 +6,8 @@
 import {getModuleEvalMs, markModuleEvalDone} from "./service/boot_timer";
 
 import {onRequest} from "firebase-functions/v2/https";
-import {setGlobalOptions, logger} from "firebase-functions/v2";
+import {setGlobalOptions} from "firebase-functions/v2/options";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import type {Request, Response} from "express";
@@ -75,6 +76,7 @@ import {handleAdminBlachy} from "./api/adminBlachyHandler";
 import {handleBlachyApi} from "./api/blachyApiHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
+import {handleTestAccountRole} from "./api/testAccountRoleHandler";
 import {handleEventInterestToggle} from "./api/eventInterestToggleHandler";
 import {handleGetEventInterests} from "./api/getEventInterestsHandler";
 import {getServiceConfig} from "./service/service_config";
@@ -85,7 +87,9 @@ setGlobalOptions({region: "us-central1"});
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ignoreUndefinedProperties: true});
-const gearDamageBucket = admin.storage().bucket();
+// Bucket Storage tworzony dopiero w submitGearDamageReport — admin.storage() na
+// poziomie modułu ładował @google-cloud/storage (147 modułów, ~90 ms lokalnie) przy
+// zimnym starcie KAŻDEJ z funkcji, choć używa go tylko zgłoszenie uszkodzenia.
 
 const svcCfg = getServiceConfig();
 const {adminRoleKeys, memberRoleKeys} = svcCfg;
@@ -727,7 +731,7 @@ export const getGearItemAvailability = onRequest({invoker: "private"}, async (re
 export const submitGearDamageReport = onRequest({invoker: "private"}, async (req, res) => {
   return handleSubmitGearDamageReport(req, res, {
     db,
-    bucket: gearDamageBucket,
+    bucket: admin.storage().bucket(),
     sendPreflight,
     requireAllowedHost,
     setCorsHeaders,
@@ -1377,6 +1381,7 @@ export const getBasenSessions = onRequest({invoker: "private"}, async (req, res)
     setCorsHeaders,
     corsHandler,
     requireIdToken,
+    adminRoleKeys,
   });
 });
 
@@ -1828,6 +1833,21 @@ export const userWeight = onRequest({invoker: "private"}, async (req, res) => {
 });
 
 /**
+ * POST /api/test/role (authenticated, tylko konta z konta_testowe w Vars_MEMBERS)
+ * Konto testowe przełącza sobie rolę — bez arkusza członków i grup Workspace.
+ */
+export const testAccountSetRole = onRequest({invoker: "private"}, async (req, res) => {
+  return handleTestAccountRole(req, res, {
+    db,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+  });
+});
+
+/**
  * GET/POST /api/profile/notifications (authenticated)
  */
 export const notificationPrefs = onRequest({invoker: "private"}, async (req, res) => {
@@ -2013,6 +2033,18 @@ export const blachyDaily = onSchedule(
   async () => {
     const result = await (await loadRunTaskById())("blachy.daily", {});
     logger.info("blachyDaily: done", result as unknown as Record<string, unknown>);
+  }
+);
+
+/**
+ * SCHEDULER: Basen — decyzja o terminie 30 h przed (regulamin basenu § 5). Co godzinę,
+ * bo moment decyzji zależy od godziny H1 (21:00 → 15:00 dnia poprzedniego).
+ */
+export const basenDecideHourly = onSchedule(
+  {schedule: "0 * * * *", timeZone: "Europe/Warsaw"},
+  async () => {
+    const result = await (await loadRunTaskById())("basen.decideSessions", {});
+    logger.info("basenDecideHourly: done", result as unknown as Record<string, unknown>);
   }
 );
 

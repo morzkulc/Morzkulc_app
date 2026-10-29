@@ -12,6 +12,11 @@ export type AppVars = {
   adminNotifyAgeDays: number;
   /** Adresat maili AKCJA dla admina — app password itp. (setup/vars_members.admin_action_email) */
   adminActionEmail: string;
+  /**
+   * Konta testowe (setup/vars_members.konta_testowe, lista po przecinku) — tester przełącza
+   * sobie rolę w aplikacji; konta nigdy nie trafiają do grup Workspace ani do arkusza członków.
+   */
+  testAccounts: string[];
 };
 
 function getVar(doc: AppVarsDoc | null, key: string): any {
@@ -37,5 +42,16 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
     adminNotifyEmail: toStr(getVar(raw, "admin_notify_email"), "zarzad@morzkulc.pl"),
     adminNotifyAgeDays: toNumber(getVar(raw, "admin_notify_dni_progu"), 3),
     adminActionEmail: toStr(getVar(raw, "admin_action_email"), "zarzad@morzkulc.pl"),
+    testAccounts: String(getVar(raw, "konta_testowe") ?? "")
+      .split(",")
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean),
   };
+}
+
+/** Czy e-mail należy do konta testowego (konta_testowe w Vars_MEMBERS). */
+export async function isTestAccount(db: FirebaseFirestore.Firestore, email: string): Promise<boolean> {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return false;
+  return (await getAppVars(db)).testAccounts.includes(e);
 }

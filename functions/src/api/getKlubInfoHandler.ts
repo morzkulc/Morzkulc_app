@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {fullNameFromUser, resolveZarzad} from "../modules/setup/function_roles_service";
 import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blachy_registry";
 import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";

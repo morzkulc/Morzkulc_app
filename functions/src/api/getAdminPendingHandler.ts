@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {getServiceConfig} from "../service/service_config";
 import {parseSchoolYear, getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {computeNegativeBalances, NegativeBalanceEntry} from "../modules/hours/godzinki_service";

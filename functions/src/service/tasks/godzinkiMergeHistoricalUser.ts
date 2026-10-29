@@ -62,8 +62,10 @@ export const godzinkiMergeHistoricalUserTask: ServiceTask<Payload> = {
       // Zapisz marker, aby nie próbować ponownie przy każdym logowaniu.
       await ctx.firestore.collection("users_active").doc(uid).set(
         {
-          "service.godzinkiHistMergedFrom": histUid,
-          "service.godzinkiHistMergedAt": admin.firestore.Timestamp.now(),
+          service: {
+            godzinkiHistMergedFrom: histUid,
+            godzinkiHistMergedAt: admin.firestore.Timestamp.now(),
+          },
         },
         {merge: true}
       );
@@ -98,8 +100,10 @@ export const godzinkiMergeHistoricalUserTask: ServiceTask<Payload> = {
     // 4. Marker ukończenia na users_active/{uid}
     await ctx.firestore.collection("users_active").doc(uid).set(
       {
-        "service.godzinkiHistMergedFrom": histUid,
-        "service.godzinkiHistMergedAt": admin.firestore.Timestamp.now(),
+        service: {
+          godzinkiHistMergedFrom: histUid,
+          godzinkiHistMergedAt: admin.firestore.Timestamp.now(),
+        },
       },
       {merge: true}
     );

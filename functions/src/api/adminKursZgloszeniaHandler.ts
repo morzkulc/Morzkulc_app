@@ -1,6 +1,6 @@
 /* eslint-disable require-jsdoc */
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {computeListy, ZGLOSZENIA_COLLECTION, ZgloszenieStatus} from "../modules/kurs/kurs_zgloszenia";
 import {loadKursSignupConfig, przelewInfo} from "../modules/kurs/kurs_signup_config";

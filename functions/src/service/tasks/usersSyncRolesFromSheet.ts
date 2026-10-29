@@ -5,6 +5,7 @@ import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {getServiceConfig} from "../service_config";
 import {listaRoleForUserRole, syncWorkspaceGroupsForUser, syncListaGroupForUser} from "../workspaceGroupSync";
 import {norm} from "../../modules/shared/text_utils";
+import {getAppVars} from "../../modules/setup/app_vars";
 
 type Payload = {
   dry?: boolean;
@@ -113,10 +114,16 @@ export const usersSyncRolesFromSheetTask: ServiceTask<Payload> = {
     let groupSyncErrors = 0;
 
     const now = admin.firestore.FieldValue.serverTimestamp();
+    const testAccounts = (await getAppVars(firestore)).testAccounts;
 
     for (const row of rows) {
       const email = norm(row["e-mail"]).toLowerCase();
       if (!email || !email.includes("@")) {
+        skipped++;
+        continue;
+      }
+      // Konto testowe — rolę ustawia tester w aplikacji, nie arkusz (i bez grup Workspace).
+      if (testAccounts.includes(email)) {
         skipped++;
         continue;
       }

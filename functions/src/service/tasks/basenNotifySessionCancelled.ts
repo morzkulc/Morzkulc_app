@@ -39,6 +39,13 @@ export const basenNotifySessionCancelledTask: ServiceTask<Payload> = {
       .get();
 
     const enrollments = enrollmentsSnap.docs.map((d) => d.data() as any);
+    // Osoby z listy rezerwowej też dowiadują się o odwołaniu.
+    const waitlistSnap = await ctx.firestore
+      .collection("basen_waitlist")
+      .where("sessionId", "==", payload.sessionId)
+      .where("status", "==", "cancelled")
+      .get();
+    enrollments.push(...waitlistSnap.docs.map((d) => d.data() as any));
 
     const reason = norm(payload.reason);
     const subject = `Anulowanie zajęć basenowych — ${dateStr}`;

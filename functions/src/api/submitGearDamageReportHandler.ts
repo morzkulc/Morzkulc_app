@@ -3,7 +3,7 @@
 
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {createDamageReport, isSupportedDamageCategory} from "../modules/equipment/damage/gear_damage_service";
 import {normNullish} from "../modules/shared/text_utils";
 

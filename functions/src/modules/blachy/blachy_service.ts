@@ -39,7 +39,7 @@ export function userName(u: any): string {
 }
 
 /**
- * Zbiera zgłoszenia roku w kandydatury (jedna na osobę, §3 pkt 5). Idempotentne: dokłada tylko
+ * Zbiera zgłoszenia roku w kandydatury (jedna na osobę, §3 pkt 3). Idempotentne: dokłada tylko
  * zgłoszenia jeszcze nieprzypisane; istniejące kandydatury (po weryfikacji/głosowaniu) zostają.
  */
 export async function compileKandydatury(db: FirebaseFirestore.Firestore, rok: number): Promise<number> {
@@ -93,14 +93,14 @@ export async function buildDossier(db: FirebaseFirestore.Firestore, rok: number)
   return out;
 }
 
-/** Otwarcie głosowania: zamraża uprawnionych na miejscach; brak 5 bezstronnych osób → „odroczone" (§5 pkt 6). */
+/** Otwarcie głosowania: zamraża uprawnionych na miejscach; brak 5 bezstronnych osób → „odroczone" (§5 pkt 3). */
 export async function openVoting(db: FirebaseFirestore.Firestore, cfg: BlachyConfig, kandId: string): Promise<"otwarte" | "odroczone"> {
   const ref = db.collection(KANDYDATURY_COLLECTION).doc(kandId);
   return db.runTransaction(async (tx) => {
     const s = await tx.get(ref);
     const k = s.data() as any;
     if (!s.exists || k.status !== "do_weryfikacji") throw httpError(409, "Głosowanie można otworzyć tylko dla kandydatury w weryfikacji");
-    const seats = seatVoters(cfg, str(k.kandydat?.email), k.wylaczeni || []);
+    const seats = seatVoters(cfg, k.wylaczeni || []);
     if (seats.some((x) => !x.email)) {
       tx.update(ref, {status: "odroczone", updatedAt: ts()});
       return "odroczone";
@@ -114,7 +114,7 @@ export async function openVoting(db: FirebaseFirestore.Firestore, cfg: BlachyCon
 }
 
 /**
- * Tajny głos (§5 pkt 6–7). W jednej transakcji: dopisanie NUMERU MIEJSCA do „oddali" (jawne — kworum)
+ * Tajny głos (§5 pkt 3). W jednej transakcji: dopisanie NUMERU MIEJSCA do „oddali" (jawne — kworum)
  * i zwiększenie sumy TAK/NIE w osobnym dokumencie. Nie powstaje żaden zapis łączący osobę z głosem.
  * Po 5 głosach: decyzja (TAK ≥ 4 → wybrany) i sumy przepisane do kandydatury.
  */
@@ -143,14 +143,14 @@ export async function castVote(db: FirebaseFirestore.Firestore, kandId: string, 
   });
 }
 
-/** Ponowne rozpatrzenie po zwrocie przez Zarząd (§5 pkt 9): czyści głosowanie i decyzję. */
+/** Ponowne rozpatrzenie po zwrocie przez Zarząd (§5 pkt 5): czyści głosowanie i decyzję. */
 export async function resetKandydatura(db: FirebaseFirestore.Firestore, kandId: string) {
   const ref = db.collection(KANDYDATURY_COLLECTION).doc(kandId);
   await ref.collection("tajne").doc("wynik").delete();
   await ref.update({status: "do_weryfikacji", glosujacy: {}, oddali: [], wynik: null, decyzja: null, przyjecie: null, updatedAt: ts()});
 }
 
-/** D8: po 14 dniach od ogłoszenia usuwamy treść nominacji, kandydatury i sumy; zostaje protokół w stanie roku. */
+/** §6 pkt 2: po terminie na zastrzeżenia usuwamy nominacje, kandydatury i sumy; zostają wyróżnieni (Rejestr + protokół). */
 export async function purgeRok(db: FirebaseFirestore.Firestore, rok: number): Promise<{nominacje: number; kandydatury: number}> {
   const noms = await db.collection(NOMINACJE_COLLECTION).where("rok", "==", rok).get();
   for (const d of noms.docs) await d.ref.delete();

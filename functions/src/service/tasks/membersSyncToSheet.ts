@@ -3,6 +3,7 @@ import {ServiceTask} from "../types";
 import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
 import {getServiceConfig} from "../service_config";
 import {norm} from "../../modules/shared/text_utils";
+import {isTestAccount} from "../../modules/setup/app_vars";
 
 export interface MembersSyncToSheetPayload {
   uid: string;
@@ -108,6 +109,12 @@ export const membersSyncToSheetTask: ServiceTask<MembersSyncToSheetPayload> = {
     const profile = data?.profile || {};
     const roleKey = norm(data?.role_key);
     const statusKey = norm(data?.status_key);
+
+    // Konto testowe nie trafia do arkusza członków.
+    if (await isTestAccount(firestore, email)) {
+      logger.info("membersSyncToSheet: test account — skip", {uid, email});
+      return {ok: true, message: "Test account - skipped"};
+    }
 
     const firstName = norm(profile?.firstName);
     const lastName = norm(profile?.lastName);

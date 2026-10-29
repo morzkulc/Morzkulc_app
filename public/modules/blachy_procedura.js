@@ -1,5 +1,5 @@
 // public/modules/blachy_procedura.js
-// Procedura nadawania Blach (regulamin v3.0) w module Klub → Blachy:
+// Procedura nadawania Blach (regulamin v3.2) w module Klub → Blachy:
 // status i terminy, skład Kapituły, zgłaszanie kandydatów, panel Kapituły (weryfikacja,
 // tajne głosowanie, uzasadnienia) i panel Zarządu (zatwierdzenie, przyjęcie, ogłoszenie).
 // Dane: /api/blachy/* (funkcja blachyApi). Nic się nie pokazuje, gdy procedura wyłączona w SETUP.
@@ -134,8 +134,6 @@ function renderKapitula(k) {
 }
 
 function renderZarzad(z) {
-  const l = z.liczby;
-  const ready = l.kandydatury > 0 && l.wGlosowaniu === 0;
   const wybrani = z.wybrani.length ? `<ul class="klubList">${z.wybrani.map((w) => `<li>${escapeHtml(w.label)}
     <div class="hint">${w.uzasadnienie ? escapeHtml(w.uzasadnienie) : "brak uzasadnienia Kapituły"}</div>
     ${z.zatwierdzenie ? `<div class="hint">Przyjęcie: ${escapeHtml(PRZYJECIE[w.przyjecie] || "—")}</div>${
@@ -146,13 +144,13 @@ function renderZarzad(z) {
   else if (z.zatwierdzenie) {
     akcje = `<p>Zatwierdzone uchwałą: ${escapeHtml(z.zatwierdzenie.uchwala)}. Wyróżnieni dostali prośbę o potwierdzenie przyjęcia.</p>
       <div class="blachyActions"><button type="button" class="primary" data-bz="announce">Ogłoś wyniki (lista, Rejestr, zgłaszający)</button></div>`;
-  } else if (ready) {
+  } else if (z.gotowe) {
     akcje = `<label class="blachyField"><span>Uchwała Zarządu (numer / data)</span><input data-bz-uchwala></label>
       <div class="blachyActions"><button type="button" class="primary" data-bz="approve">Zatwierdź</button></div>
       <label class="blachyField"><span>Zwrot do Kapituły — wskaż naruszenie regulaminu</span><textarea data-bz-powod rows="2"></textarea></label>
       <div class="blachyActions"><button type="button" class="dangerBtn" data-bz="return">Zwróć Kapitule</button></div>`;
-  } else akcje = `<p class="hint">Kapituła nie zakończyła jeszcze głosowań (${l.wGlosowaniu} w toku).</p>`;
-  return `<p>Rozpatrywane kandydatury: <strong>${l.kandydatury}</strong> · odroczone: ${l.odroczone} · wybrani: <strong>${l.wybrani}</strong></p>
+  } else akcje = `<p class="hint">Kapituła nie zakończyła jeszcze głosowań.</p>`;
+  return `<p>Wybrani przez Kapitułę: <strong>${z.wybrani.length}</strong></p>
     ${z.zwrot ? `<p class="err">Zwrócono Kapitule: ${escapeHtml(z.zwrot)}</p>` : ""}${wybrani}${akcje}<p class="err" data-bp-err hidden></p>`;
 }
 

@@ -1,5 +1,6 @@
 import { ServiceTask } from "../types";
 import { listaRoleForUserRole } from "../workspaceGroupSync";
+import { isTestAccount } from "../../modules/setup/app_vars";
 
 export interface OnUserRegisteredPayload {
   uid: string;
@@ -50,6 +51,12 @@ export const onUserRegisteredWelcomeTask: ServiceTask<OnUserRegisteredPayload> =
     const data = snap.data() || {};
     const service = (data as any).service || {};
     const roleKey = String((data as any).role_key || "");
+
+    // Konto testowe (konta_testowe w Vars_MEMBERS) — bez maila powitalnego i bez grup Workspace.
+    if (await isTestAccount(firestore, userEmail)) {
+      logger.info("WelcomeTask: test account — skip", { uid, userEmail });
+      return { ok: true, message: "Test account - skipped" };
+    }
 
     const welcomeEmailSentAt = service.welcomeEmailSentAt || null;
     const addedToListaGroupAt = service.addedToListaGroupAt || null;

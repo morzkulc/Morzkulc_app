@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {processApproval} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";

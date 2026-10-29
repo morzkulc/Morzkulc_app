@@ -790,3 +790,215 @@ button.basenClaimTagBtn:disabled {
   color: var(--text-muted);
   margin-top: 2px;
 }
+/* ─── Sezon: status terminu, odwołane i minione (regulamin basenu § 5) ─── */
+
+.basenSessionStatus {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 2px 0 8px;
+}
+
+.basenSessionStatus--ok {
+  color: var(--ok);
+}
+
+.basenSessionStatus--pending {
+  color: #f59e0b;
+}
+
+.basenSessionStatus--cancelled {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.basenDayCard--cancelled {
+  opacity: 0.75;
+}
+
+.basenDayCard--cancelled .basenCardDate {
+  text-decoration: line-through;
+}
+
+.basenSeasonStrip {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 12px 0 4px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.basenPastSeason {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.basenPastSeason summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.basenPastRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.basenPastRow--cancelled span:last-child {
+  color: var(--danger);
+}
+
+.basenWaitlistBadge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+/* Kalendarz obsługi: odbyty i odwołany termin zostają widoczne */
+.basenCalDay--held {
+  opacity: 0.6;
+}
+
+.basenCalDay--cancelled {
+  border-color: var(--danger);
+  background: var(--danger-2);
+}
+
+.basenCalDay--cancelled .basenCalDayNum {
+  text-decoration: line-through;
+}
+
+.basenCalLegendSwatch--planned {
+  border-color: var(--primary);
+}
+
+.basenCalLegendSwatch--held {
+  border-color: var(--primary);
+  opacity: 0.6;
+}
+
+.basenCalLegendSwatch--cancelled {
+  border-color: var(--danger);
+  background: var(--danger-2);
+}
+
+/* ─── Finanse ─── */
+
+.basenFinanceTiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.basenFinanceTile {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.basenFinanceTileLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.basenFinanceTileValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bfPos {
+  color: var(--ok);
+}
+
+.bfNeg {
+  color: var(--danger);
+}
+
+.basenFinanceMeter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ok-2);
+  overflow: hidden;
+}
+
+.basenFinanceMeter span {
+  display: block;
+  height: 100%;
+  background: var(--danger);
+}
+
+.basenFinanceChart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.basenFinanceChart .bfBarPos { fill: var(--ok); }
+.basenFinanceChart .bfBarNeg { fill: var(--danger); }
+.basenFinanceChart .bfLine { fill: none; stroke: var(--primary); stroke-width: 2.5; }
+.basenFinanceChart .bfDot { fill: var(--primary); }
+.basenFinanceChart .bfZero { stroke: var(--border); stroke-width: 1; }
+.basenFinanceChart .bfBudget { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.basenFinanceChart .bfAxis { fill: var(--text-muted); font-size: 11px; }
+
+.basenFinanceLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.bfKey {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.bfKeyBar { background: linear-gradient(90deg, var(--ok) 50%, var(--danger) 50%); border-radius: 2px; }
+.bfKeyLine { height: 3px; background: var(--primary); }
+.bfKeyBudget { height: 0; border-top: 2px dashed var(--danger); }
+
+.basenFinanceTableWrap {
+  overflow-x: auto;
+}
+
+.basenFinanceTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.basenFinanceTable th,
+.basenFinanceTable td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.basenFinanceTable th {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.bfRowCancelled td {
+  color: var(--text-muted);
+}

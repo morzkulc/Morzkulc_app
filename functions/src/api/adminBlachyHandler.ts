@@ -1,6 +1,6 @@
 /* eslint-disable require-jsdoc */
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {BLACHY_COLLECTION, isArchiwum, toPublic, validateBlachaInput} from "../modules/blachy/blachy_registry";
 import {norm} from "../modules/shared/text_utils";

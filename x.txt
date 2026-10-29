@@ -1,0 +1,14 @@
+{
+  'Wełtawa | Wełtawa | runtime | mountains': 5,
+  'Wełtawa | Wełtawa | historical | track': 62,
+  'Radunia | Radunia | historical | lowlands': 18,
+  'Troja (Praga) | Troja (Praga) | historical | track': 4,
+  'Drwęca | Drwęca | historical | lowlands': 5,
+  'Wełtawa | Weltawa | historical | track': 4,
+  'Drwęca | Skarlanka + Drwęca | historical | lowlands': 1,
+  'Wierzyca | Wierzyca | historical | lowlands': 1,
+  'jeź: Kłodno - Brodno | jeź: Kłodno - Brodno | historical | lowlands': 2
+}
+Bu6Jf76yY2w37ZUp2cSb jeź: Kłodno - Brodno [] lowlands
+Zxpn9SYtDkwv60C66AZ3 Troja (Praga) [] track
+iiGiyMvAJyVT2t60ng7J Wełtawa [] track

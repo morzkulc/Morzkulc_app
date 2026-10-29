@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {computeBalance, GodzinkiRecord} from "../modules/hours/godzinki_service";
 import {normNullish} from "../modules/shared/text_utils";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";

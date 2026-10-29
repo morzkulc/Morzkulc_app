@@ -78,11 +78,12 @@ describe("computeSlotAvailability — pula kursancka (restrictedToKursant=true)"
 });
 
 describe("sessionSlotDatetimeMs", () => {
-  it("łączy datę sesji z godziną slotu (czas lokalny), H1 < H2", () => {
+  it("łączy datę sesji z godziną slotu w czasie warszawskim (lato UTC+2, zima UTC+1), H1 < H2", () => {
     const h1 = sessionSlotDatetimeMs({date: "2026-09-10"}, {timeStart: "19:00"});
     const h2 = sessionSlotDatetimeMs({date: "2026-09-10"}, {timeStart: "21:00"});
-    expect(h1).toBe(new Date("2026-09-10T19:00:00").getTime());
+    expect(h1).toBe(Date.parse("2026-09-10T17:00:00Z"));
     expect(h2 - h1).toBe(2 * 3600 * 1000);
+    expect(sessionSlotDatetimeMs({date: "2026-11-10"}, {timeStart: "21:00"})).toBe(Date.parse("2026-11-10T20:00:00Z"));
   });
 
   it("brak slotu / brak timeStart → 0", () => {
@@ -119,10 +120,16 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_2_godzina_domyslna: "21:00",
       basen_sauna: false,
       basen_sauna_cena: 0,
-      basen_okno_anulowania_h: 24,
-      basen_cena_za_godzine: 0,
-      basen_cena_za_karnet: 0,
-      basen_ile_wejsc_na_karnet: 0,
+      basen_okno_anulowania_h: 30,
+      basen_cena_za_godzine: 35,
+      basen_cena_karnet_5: 140,
+      basen_cena_karnet_10: 245,
+      basen_karnet_prog_godzinek: 20,
+      basen_koszt_terminu: 350,
+      basen_max_strata_terminu: 105,
+      basen_budzet_sezonu: 2000,
+      basen_min_zapisow: 12,
+      basen_max_dni_naprzod: 4,
     });
   });
 
@@ -137,8 +144,8 @@ describe("getBasenVars — setup/vars_basen", () => {
         "basen_sauna_cena": {value: 15},
         "basen_rezygnacja_za_darmo": {value: 12},
         "basen_cena_za_godzine": {value: 30},
-        "basen_cena_za_karnet": {value: 250},
-        "basen_ile_wejść_na_karnet": {value: 10},
+        "basen_cena_karnet_10": {value: "250"},
+        "basen_budzet_sezonu": {value: ""},
       },
     }]}).asDb();
     const v = await getBasenVars(db);
@@ -151,8 +158,8 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_sauna_cena: 15,
       basen_okno_anulowania_h: 12,
       basen_cena_za_godzine: 30,
-      basen_cena_za_karnet: 250,
-      basen_ile_wejsc_na_karnet: 10,
+      basen_cena_karnet_10: 250,
+      basen_budzet_sezonu: 2000, // pusta komórka → wartość domyślna
     });
   });
 

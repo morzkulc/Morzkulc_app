@@ -1,5 +1,5 @@
 /**
- * Rejestr Blach Klubowych (regulamin § 6 pkt 7–8): kolekcja `blachy`.
+ * Rejestr Blach Klubowych (regulamin § 6 pkt 4): kolekcja `blachy`.
  *
  * Blacha jest niezależna od członkostwa, składek i godzinek — wpis w rejestrze
  * jest trwały. Źródła wpisów:
@@ -21,7 +21,7 @@ export type BlachaDoc = {
   imie: string;
   nazwisko: string;
   ksywa: string;
-  /** Rok nadania; null = nieznany (regulamin § 6 pkt 8: nie zgadujemy). */
+  /** Rok nadania; null = nieznany (regulamin § 6 pkt 4: nie zgadujemy). */
   rok: number | null;
   /** Numer Blachy (archiwum zaczyna od 00); null = nienumerowana / honorowa. */
   nr: number | null;

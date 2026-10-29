@@ -1,6 +1,6 @@
 /**
  * Treść maili procedury Blach. Każda funkcja zwraca {subject, text, html} dla sendGenericEmailHtml.
- * Poufność (§3 pkt 7, §6 pkt 3): na listę dyskusyjną nigdy nie trafiają nazwiska kandydatów przed ogłoszeniem.
+ * Tajność (§3 pkt 4, §6 pkt 2): na listę dyskusyjną trafiają wyłącznie wyróżnieni — nigdy nazwiska ani liczba kandydatów.
  */
 import {esc} from "../kurs/kurs_zgloszenia_mail";
 import {BlachyConfig, OBSZARY, PROG_WYBORU, SEATS} from "./blachy_procedura";
@@ -25,7 +25,7 @@ export function mailOtwarcie(cfg: BlachyConfig, appUrl: string, regulaminUrl: st
   return build(`Blachy Klubowe ${cfg.rok}: zgłaszanie kandydatów do ${dataPL(cfg.nominacjeDo)}`, [
     `Rozpoczynamy coroczną procedurę nadawania Blach Klubowych. Do ${dataPL(cfg.nominacjeDo)} każdy aktualny członek Klubu może zgłosić kandydata.`,
     "Kandydatem może być obecny lub były członek Morzkulca albo osoba spoza Klubu, która ma zasługi dla Morzkulca. Nie można zgłosić siebie. Osoba spoza Klubu zgłasza kandydata przez członka Klubu.",
-    `Zgłoszenie zawiera opis konkretnych zasług i uzasadnienie. Oceniamy: ${OBSZARY.join(", ").toLowerCase()}. Jedno zgłoszenie wystarcza, liczba zgłoszeń nie wpływa na ocenę. Lista kandydatów jest poufna.`,
+    `Zgłoszenie zawiera opis konkretnych zasług i uzasadnienie. Oceniamy: ${OBSZARY.join(", ").toLowerCase()}. Jedno zgłoszenie wystarcza, liczba zgłoszeń nie wpływa na ocenę. Lista kandydatów jest tajna: ogłaszamy wyłącznie wyróżnionych.`,
     `Formularz: aplikacja klubowa → Klub → Blachy (${appUrl}).`,
     ...(regulaminUrl ? [`Regulamin: ${regulaminUrl}`] : []),
     `Harmonogram: nominacje do ${dataPL(cfg.nominacjeDo)}, weryfikacja do ${dataPL(cfg.weryfikacjaDo)}, głosowanie Kapituły do ${dataPL(cfg.glosowanieDo)}, zatwierdzenie przez Zarząd do ${dataPL(cfg.zatwierdzenieDo)}.`,
@@ -52,13 +52,13 @@ export type DossierItem = {
   nominacje: Array<{autor: string; obszary: string[]; zaslugi: string; uzasadnienie: string}>;
 };
 
-/** Jedno zestawienie dla Kapituły: kandydat = jedna sekcja ze wszystkimi zgłoszeniami (§3 pkt 5 — bez rankingu). */
+/** Jedno zestawienie dla Kapituły: kandydat = jedna sekcja ze wszystkimi zgłoszeniami (§3 pkt 3, §5 pkt 1 — bez rankingu). */
 export function mailDossier(cfg: BlachyConfig, items: DossierItem[], appUrl: string): Mail {
   const subject = `Blachy Klubowe ${cfg.rok}: zestawienie kandydatur dla Kapituły (${items.length})`;
   const intro = [
     `Nominacje zamknięte ${dataPL(cfg.nominacjeDo)}. Kandydatur: ${items.length}. Zgłoszenia tej samej osoby są połączone w jedną kandydaturę.`,
     `Weryfikacja (łączenie, odrzucenie nieprawidłowych) do ${dataPL(cfg.weryfikacjaDo)}, głosowanie do ${dataPL(cfg.glosowanieDo)}. Blacha: co najmniej ${PROG_WYBORU} głosy TAK z ${SEATS}.`,
-    `Panel Kapituły: aplikacja → Klub → Blachy (${appUrl}). Treść jest poufna (§6 pkt 3).`,
+    `Panel Kapituły: aplikacja → Klub → Blachy (${appUrl}). Treść jest tajna (§6 pkt 2).`,
   ];
   const textItems = items.map((it, i) => [
     `${i + 1}. ${it.label}${it.spozaKlubu ? " — osoba spoza listy członków" : ""} (zgłoszeń: ${it.nominacje.length})`,
@@ -85,7 +85,7 @@ export function mailNominacjaPotwierdzenie(rok: number, kandydat: string, nomina
   return build(`Blachy Klubowe ${rok}: przyjęliśmy Twoje zgłoszenie`, [
     `Dziękujemy. Twoje zgłoszenie kandydatury: ${kandydat} zostało zapisane.`,
     `Do ${dataPL(nominacjeDo)} możesz je poprawić albo wycofać w aplikacji (Klub → Blachy). Potem trafi do Kapituły Blach.`,
-    "Zgłoszenie jest poufne. Po zakończeniu procedury dostaniesz informację o jego rozpatrzeniu.",
+    "Zgłoszenie jest tajne. Po zakończeniu procedury dostaniesz informację o jego rozpatrzeniu.",
   ]);
 }
 
@@ -93,7 +93,7 @@ export function mailPrzyjecie(rok: number, kandydat: string, linkTak: string, li
   const subject = `Blacha Klubowa Morzkulca ${rok}`;
   const paras = [
     `${kandydat}, Kapituła Blach wybrała Cię do nadania Blachy Klubowej Morzkulca, a Zarząd zatwierdził tę decyzję.`,
-    "Zanim ogłosimy wyróżnienie, prosimy o potwierdzenie, że je przyjmujesz (regulamin §5 pkt 12).",
+    "Zanim ogłosimy wyróżnienie, prosimy o potwierdzenie, że je przyjmujesz (regulamin §5 pkt 7).",
     `Przyjmuję: ${linkTak}`,
     `Nie przyjmuję: ${linkNie}`,
     "Do czasu ogłoszenia prosimy o zachowanie tej informacji dla siebie.",
@@ -107,12 +107,12 @@ export function mailPrzyjecie(rok: number, kandydat: string, linkTak: string, li
 
 export type Laureat = {label: string; uzasadnienie: string; nr: number | null};
 
-export function mailOgloszenie(rok: number, rozpatrzone: number, laureaci: Laureat[], appUrl: string): Mail {
+export function mailOgloszenie(rok: number, laureaci: Laureat[], appUrl: string): Mail {
   const lista = laureaci.length ?
     laureaci.map((l) => `${l.label}${l.nr != null ? ` — Blacha nr ${l.nr}` : ""}\nUzasadnienie: ${l.uzasadnienie}`) :
-    ["W tym roku Kapituła nie przyznała Blachy (regulamin §5 pkt 10)."];
+    ["W tym roku Blacha nie została przyznana."];
   return build(`Blachy Klubowe ${rok}: wyniki`, [
-    `Procedura nadawania Blach Klubowych ${rok} zakończona. Rozpatrzone kandydatury: ${rozpatrzone}.`,
+    `Procedura nadawania Blach Klubowych ${rok} zakończona.`,
     ...(laureaci.length ? [`Wyróżnieni (${laureaci.length}):`] : []),
     ...lista,
     `Rejestr Blach: aplikacja → Klub → Blachy (${appUrl}). Uroczyste blachowanie ogłosimy osobno.`,
@@ -122,6 +122,6 @@ export function mailOgloszenie(rok: number, rozpatrzone: number, laureaci: Laure
 export function mailRozpatrzona(rok: number, kandydat: string): Mail {
   return build(`Blachy Klubowe ${rok}: Twoje zgłoszenie zostało rozpatrzone`, [
     `Kapituła Blach rozpatrzyła zgłoszoną przez Ciebie kandydaturę: ${kandydat}. Wyniki procedury zostały ogłoszone na liście klubowej.`,
-    "Zastrzeżenia dotyczące przestrzegania procedury możesz zgłosić Komisji Rewizyjnej w ciągu 14 dni (regulamin §6 pkt 5). KR ocenia wyłącznie zgodność procedury z regulaminem.",
+    "Zastrzeżenia dotyczące przestrzegania procedury możesz zgłosić Komisji Rewizyjnej w ciągu 14 dni (regulamin §6 pkt 3). KR ocenia wyłącznie zgodność procedury z regulaminem. Po tym terminie dane zgłoszenia zostaną usunięte.",
   ]);
 }

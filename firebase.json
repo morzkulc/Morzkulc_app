@@ -349,6 +349,13 @@
         }
       },
       {
+        "source": "/api/test/role",
+        "function": {
+          "functionId": "testAccountSetRole",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/basen/sessions",
         "function": {
           "functionId": "getBasenSessions",

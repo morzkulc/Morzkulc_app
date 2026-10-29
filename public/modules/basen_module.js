@@ -76,6 +76,7 @@ function renderTabsHtml(activeTab, isAdmin) {
   const tabs = isAdmin
     ? [
       { id: "calendar", label: "Dodaj / usuń basen" },
+      { id: "finance", label: "Finanse" },
       { id: "payments", label: "Płatności" },
       { id: "account", label: "Moje konto" },
     ]
@@ -201,6 +202,21 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
     `;
   } else if (!canEnroll) {
     footerHtml = `<span class="basenHint">Tylko dla członków klubu.</span>`;
+  } else if (isFull && slot.userWaitlistPosition) {
+    footerHtml = `
+      <div class="basenEnrolledActions">
+        <span class="basenWaitlistBadge">Lista rezerwowa — miejsce ${esc(slot.userWaitlistPosition)}</span>
+        <button type="button" class="ghost basenWaitlistLeaveBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Wypisz z listy</button>
+      </div>
+      <div class="basenHint">Gdy zwolni się miejsce, zapiszemy Cię automatycznie (pobierze jedno wejście) i wyślemy maila.</div>
+    `;
+  } else if (isFull && !isSauna && !slot.viaReservedPool) {
+    const waitingHtml = slot.waitlistCount ? ` <span class="basenHint">Na liście: ${esc(slot.waitlistCount)}</span>` : "";
+    footerHtml = `
+      <div class="basenPrimaryActions">
+        <button type="button" class="ghost basenWaitlistJoinBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Zapisz się na listę rezerwową</button>${waitingHtml}
+      </div>
+    `;
   } else if (isFull) {
     footerHtml = `<span class="basenHint">Slot jest pełny.</span>`;
   } else if (isSauna) {
@@ -270,22 +286,80 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
   `;
 }
 
-function renderSessionCard(s, ctx, canEnroll) {
-  const slotsHtml = SLOT_ORDER
+// "pon 09.11, 15:00" — moment decyzji o terminie (czas przeglądarki = Polska).
+function formatDecisionAt(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+  const days = ["nd", "pon", "wt", "śr", "czw", "pt", "sob"];
+  return `${days[d.getDay()]} ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+// Status terminu dla członków — bez kwot (regulamin § 5: minimum zapisów).
+function renderSessionStatusHtml(s, season) {
+  const min = Number(season?.minZapisow || 0);
+  if (s.outcome === "cancelled") {
+    return s.cancelReason === "frekwencja"
+      ? `<div class="basenSessionStatus basenSessionStatus--cancelled">Odwołany — za mało zapisów (${esc(s.zapisy)} z wymaganych ${esc(min)})</div>`
+      : `<div class="basenSessionStatus basenSessionStatus--cancelled">Odwołany</div>`;
+  }
+  if (s.outcome === "confirmed") {
+    return `<div class="basenSessionStatus basenSessionStatus--ok">Odbędzie się ✓ · zapisy: ${esc(s.zapisy)}</div>`;
+  }
+  const missing = Math.max(0, min - Number(s.zapisy || 0));
+  const decision = s.decisionAtMs ? ` · decyzja: ${esc(formatDecisionAt(s.decisionAtMs))}` : "";
+  return `<div class="basenSessionStatus${missing ? " basenSessionStatus--pending" : " basenSessionStatus--ok"}">
+    Zapisy: <strong>${esc(s.zapisy)}</strong> / min. ${esc(min)}${missing ? ` — brakuje ${esc(missing)}` : " ✓"}${decision}
+  </div>`;
+}
+
+function renderSessionCard(s, ctx, canEnroll, season) {
+  const isCancelled = s.outcome === "cancelled";
+  // Odwołany termin zostaje na liście (widać, że się nie odbył), ale bez slotów i akcji.
+  const slotsHtml = isCancelled ? "" : SLOT_ORDER
     .filter((key) => s.slots?.[key])
     .map((key) => renderSlotCard(s.id, key, s.slots[key], ctx, canEnroll))
     .join("");
 
   return `
-    <div class="basenCard basenDayCard" data-session-id="${esc(s.id)}">
+    <div class="basenCard basenDayCard${isCancelled ? " basenDayCard--cancelled" : ""}" data-session-id="${esc(s.id)}">
       <div class="basenCardHead">
         <div class="basenCardDate">${esc(formatDate(s.date))}</div>
       </div>
-      ${s.notes ? `<div class="basenCardNotes">${esc(s.notes)}</div>` : ""}
-      <div class="basenSlotGrid">
-        ${slotsHtml}
-      </div>
+      ${renderSessionStatusHtml(s, season)}
+      ${s.notes && !isCancelled ? `<div class="basenCardNotes">${esc(s.notes)}</div>` : ""}
+      ${slotsHtml ? `<div class="basenSlotGrid">${slotsHtml}</div>` : ""}
     </div>
+  `;
+}
+
+function renderSeasonStripHtml(season) {
+  if (!season) return "";
+  const parts = [`odbyło się ${season.held}`];
+  if (season.cancelledLow) parts.push(`odwołano z braku chętnych ${season.cancelledLow}`);
+  if (season.cancelledAdmin) parts.push(`odwołano z innych przyczyn ${season.cancelledAdmin}`);
+  parts.push(`przed nami ${season.upcoming}`);
+  return `
+    <div class="basenSeasonStrip">
+      <div><strong>Sezon ${esc(season.key)}:</strong> ${esc(parts.join(" · "))}</div>
+      <div class="basenHint">Termin odbywa się przy co najmniej ${esc(season.minZapisow)} zapisach na obu godzinach. Decyzja o terminie i koniec darmowej rezygnacji: ${esc(season.oknoH)} h przed basenem (godzina przy każdym terminie). Zapisy na najwyżej ${esc(season.maxDniNaprzod)} terminy naprzód.</div>
+    </div>
+  `;
+}
+
+function renderPastSessionsHtml(past, season) {
+  if (!past.length) return "";
+  const min = Number(season?.minZapisow || 0);
+  const rows = past.slice().reverse().map((s) => {
+    const label = s.outcome === "cancelled"
+      ? (s.cancelReason === "frekwencja" ? `odwołany — za mało zapisów (${s.zapisy}/${min})` : "odwołany")
+      : `odbył się · ${s.zapisy} zapisów`;
+    return `<div class="basenPastRow${s.outcome === "cancelled" ? " basenPastRow--cancelled" : ""}"><span>${esc(formatDate(s.date))}</span><span>${esc(label)}</span></div>`;
+  }).join("");
+  return `
+    <details class="basenPastSeason">
+      <summary>Minione w sezonie (${past.length})</summary>
+      ${rows}
+    </details>
   `;
 }
 
@@ -294,7 +368,10 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
 
   try {
     const data = await apiGetJson({ url: SESSIONS_URL, idToken: ctx.idToken });
-    const sessions = Array.isArray(data?.sessions) ? data.sessions : [];
+    const allSessions = Array.isArray(data?.sessions) ? data.sessions : [];
+    const sessions = allSessions.filter((s) => !s.isPast);
+    const past = allSessions.filter((s) => s.isPast);
+    const season = data?.season || null;
     const balance = Number(data?.userGodzinyBalance ?? 0);
     // Kursant z definicji nie ma i nie kupuje godzin basenowych — saldo (zawsze 0)
     // jest dla niego mylące, samo tylko rodzi zbędne pytania. Backend i tak poprawnie
@@ -305,17 +382,19 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
       ? `<div class="basenHint" style="margin-top:8px;">Dostępne godziny basenowe: <strong>${balance}</strong>${balance <= 0 ? " — zapisz się dopiero po dopisaniu godzin przez opiekuna basenu." : ""}</div>`
       : "";
 
+    const headHtml = renderSeasonStripHtml(season) + balanceHtml;
     if (!sessions.length) {
       innerEl._basenSessions = [];
-      innerEl.innerHTML = balanceHtml + `<div class="hint" style="margin-top:16px;">Brak nadchodzących terminów basenowych.</div>`;
+      innerEl.innerHTML = headHtml + `<div class="hint" style="margin-top:16px;">Brak nadchodzących terminów basenowych.</div>` + renderPastSessionsHtml(past, season);
       return;
     }
 
     innerEl.innerHTML = `
-      ${balanceHtml}
+      ${headHtml}
       <div class="basenList">
-        ${sessions.map((s) => renderSessionCard(s, ctx, canEnroll)).join("")}
+        ${sessions.map((s) => renderSessionCard(s, ctx, canEnroll, season)).join("")}
       </div>
+      ${renderPastSessionsHtml(past, season)}
       ${renderModifyModalHtml()}
       ${renderClaimStudentModalHtml()}
     `;
@@ -452,6 +531,32 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
       return;
     }
 
+    // Lista rezerwowa — zapis / wypis (bez pobrania wejścia; pobierane przy przejęciu miejsca)
+    const waitJoinBtn = ev.target.closest(".basenWaitlistJoinBtn");
+    const waitLeaveBtn = ev.target.closest(".basenWaitlistLeaveBtn");
+    if (waitJoinBtn || waitLeaveBtn) {
+      const btn = waitJoinBtn || waitLeaveBtn;
+      const sessionId = btn.getAttribute("data-session-id");
+      const slot = btn.getAttribute("data-slot");
+      const msgEl = btn.closest(".basenSlotCard")?.querySelector("[data-slot-msg]");
+      btn.disabled = true;
+      try {
+        if (waitJoinBtn) {
+          await apiPostJson({ url: ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot, mode: "waitlist" } });
+        } else {
+          await apiPostJson({ url: CANCEL_ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot, waitlist: true } });
+        }
+        await refreshSessionsView(innerEl, ctx, canEnroll);
+      } catch (e) {
+        btn.disabled = false;
+        if (msgEl) {
+          msgEl.textContent = e?.message || "Nie udało się.";
+          msgEl.classList.remove("hidden");
+        }
+      }
+      return;
+    }
+
     // Cancel enrollment (regular/training/instructor)
     const cancelBtn = ev.target.closest(".basenCancelBtn");
     if (cancelBtn) {
@@ -462,8 +567,8 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
 
       const withinWindow = cancelBtn.getAttribute("data-within-window") === "1";
       const confirmMsg = withinWindow
-        ? "Rezygnujesz mniej niż 24h przed zajęciami — mimo anulowania nadal obowiązuje pełna opłata za tę godzinę basenową. Kontynuować?"
-        : "Anulować ten zapis?";
+        ? "Termin darmowej rezygnacji minął — wejście przepada, chyba że Twoje miejsce zajmie osoba z listy rezerwowej (wtedy wejście wróci). Zrezygnować?"
+        : "Anulować ten zapis? Wejście wróci na saldo.";
       if (!confirm(confirmMsg)) return;
 
       cancelBtn.disabled = true;
@@ -806,17 +911,21 @@ function renderCalendarShellHtml(year, month, sessionsByDate) {
   }
   for (let day = 1; day <= daysInMonth; day++) {
     const dateIso = isoFromParts(year, month, day);
-    if (dateIso < today) {
+    const session = sessionsByDate.get(dateIso);
+    if (dateIso < today && !session) {
       cells += `<div class="basenCalDay basenCalDay--past"><span class="basenCalDayNum">${day}</span></div>`;
       continue;
     }
-    const session = sessionsByDate.get(dateIso);
-    const isActiveSlot = (s) => Boolean(s) && s.status !== "cancelled";
-    const hasPool = Boolean(session) && (isActiveSlot(session.slots?.H1) || isActiveSlot(session.slots?.H2));
-    const hasSauna = Boolean(session) && isActiveSlot(session.slots?.SAUNA);
+    // Odwołane i minione terminy zostają w kalendarzu (cały sezon) — tylko do podglądu.
+    const hasPool = Boolean(session) && (Boolean(session.slots?.H1) || Boolean(session.slots?.H2));
+    const hasSauna = Boolean(session) && Boolean(session.slots?.SAUNA);
     const hasSession = hasPool || hasSauna;
+    const stateCls = !hasSession ? "basenCalDay--empty"
+      : session.outcome === "cancelled" ? "basenCalDay--has-session basenCalDay--cancelled"
+      : session.isPast ? "basenCalDay--has-session basenCalDay--held"
+      : "basenCalDay--has-session";
     cells += `
-      <button type="button" class="basenCalDay ${hasSession ? "basenCalDay--has-session" : "basenCalDay--empty"}" data-cal-date="${dateIso}">
+      <button type="button" class="basenCalDay ${stateCls}" data-cal-date="${dateIso}">
         <span class="basenCalDayNum">${day}</span>
         ${hasSession ? `<span class="basenCalDayIcons">${hasPool ? POOL_ICON_SVG : ""}${hasSauna ? SAUNA_ICON_SVG : ""}</span>` : ""}
       </button>
@@ -834,6 +943,11 @@ function renderCalendarShellHtml(year, month, sessionsByDate) {
         ${WEEKDAY_LABELS_PL.map((w) => `<div class="basenCalendarWeekday">${w}</div>`).join("")}
       </div>
       <div class="basenCalendarGrid">${cells}</div>
+      <div class="basenCalLegend" style="margin-top:8px;">
+        <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--planned"></span>zaplanowany</span>
+        <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--held"></span>odbył się</span>
+        <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--cancelled"></span>odwołany</span>
+      </div>
     </div>
   `;
 }
@@ -1097,14 +1211,25 @@ function openDayDetailModal(innerEl, ctx, session, onChanged) {
   modal.querySelector("[data-day-detail-title]").textContent = formatDate(session.date);
   const reasonEl = modal.querySelector("#ddCancelReason");
   reasonEl.value = "";
+  // Minione i odwołane terminy — tylko podgląd (bez anulowania i dodawania sauny).
+  const readOnly = session.isPast || session.outcome === "cancelled";
+  modal.querySelector("#ddCancelDayBtn").classList.toggle("hidden", readOnly);
+  reasonEl.closest(".row")?.classList.toggle("hidden", readOnly);
+  const statusLabel = session.outcome === "cancelled"
+    ? (session.cancelReason === "frekwencja" ? `Odwołany automatycznie — za mało zapisów (${session.zapisy})` : "Odwołany")
+    : session.isPast ? `Odbył się · zapisy: ${session.zapisy}`
+    : session.outcome === "confirmed" ? `Potwierdzony · zapisy: ${session.zapisy}`
+    : `Zapisy: ${session.zapisy} · decyzja: ${formatDecisionAt(session.decisionAtMs)}`;
   const body = modal.querySelector("[data-day-detail-body]");
-  body.innerHTML = SLOT_ORDER
+  body.innerHTML = `<div class="basenSessionStatus${session.outcome === "cancelled" ? " basenSessionStatus--cancelled" : ""}">${esc(statusLabel)}</div>` + SLOT_ORDER
     .filter((key) => session.slots?.[key])
     .map((key) => renderDayDetailSlotHtml(key, session.slots[key]))
     .join("");
 
   const addSaunaWrap = modal.querySelector("[data-add-sauna-wrap]");
-  if (!session.slots?.SAUNA) {
+  if (readOnly) {
+    addSaunaWrap.innerHTML = "";
+  } else if (!session.slots?.SAUNA) {
     addSaunaWrap.innerHTML = `<button type="button" class="ghost" id="ddAddSaunaBtn">Dodaj saunę do tego terminu</button>`;
     const addSaunaBtn = addSaunaWrap.querySelector("#ddAddSaunaBtn");
     addSaunaBtn.addEventListener("click", async () => {
@@ -1164,12 +1289,21 @@ function renderAddGodzinyModalHtml() {
         </div>
         <div class="basenModalBody">
           <div class="row">
-            <label for="agAmount">Liczba godzin</label>
-            <input type="number" id="agAmount" min="1" step="1" placeholder="np. 10" />
+            <label for="agProduct">Co opłacono</label>
+            <select id="agProduct">
+              <option value="jednorazowe">Wejścia jednorazowe</option>
+              <option value="karnet5">Karnet 5 wejść</option>
+              <option value="karnet10">Karnet 10 wejść</option>
+            </select>
           </div>
+          <div class="row" data-ag-count-row>
+            <label for="agAmount">Liczba wejść</label>
+            <input type="number" id="agAmount" min="1" step="1" placeholder="np. 2" />
+          </div>
+          <div class="basenHint" data-ag-price></div>
           <div class="row">
-            <label for="agReason">Powód (opcjonalnie)</label>
-            <input type="text" id="agReason" maxlength="200" placeholder="np. wpłata 10.09" />
+            <label for="agReason">Uwagi (opcjonalnie)</label>
+            <input type="text" id="agReason" maxlength="200" placeholder="np. przelew 10.11" />
           </div>
           <div id="agErr" class="err hidden"></div>
         </div>
@@ -1182,16 +1316,20 @@ function renderAddGodzinyModalHtml() {
   `;
 }
 
-function openAddGodzinyModal(innerEl, ctx, user, onSaved) {
+function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
   const modal = innerEl.querySelector("#basenAddGodzinyModal");
   if (!modal) return;
 
-  modal.querySelector("[data-add-godziny-title]").textContent = `Dopisz godziny — ${user.userName || user.userNick || user.userEmail}`;
+  modal.querySelector("[data-add-godziny-title]").textContent = `Dopisz wejścia — ${user.userName || user.userNick || user.userEmail}`;
+  const productEl = modal.querySelector("#agProduct");
   const amountEl = modal.querySelector("#agAmount");
+  const countRow = modal.querySelector("[data-ag-count-row]");
+  const priceEl = modal.querySelector("[data-ag-price]");
   const reasonEl = modal.querySelector("#agReason");
   const errEl = modal.querySelector("#agErr");
   const submitBtn = modal.querySelector("#agSubmitBtn");
 
+  productEl.value = "jednorazowe";
   amountEl.value = "";
   reasonEl.value = "";
   errEl.textContent = "";
@@ -1199,10 +1337,28 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved) {
   submitBtn.disabled = false;
   submitBtn.textContent = "Dopisz";
 
+  // Kwota przelewu do sprawdzenia przez obsługę — cennik z SETUP (regulamin § 2).
+  const syncPrice = () => {
+    const product = productEl.value;
+    countRow.classList.toggle("hidden", product !== "jednorazowe");
+    const p = pricing || {};
+    if (product === "jednorazowe") {
+      const n = Number(amountEl.value) || 0;
+      priceEl.textContent = p.jednorazowe ? `Kwota przelewu: ${n * p.jednorazowe} zł (${p.jednorazowe} zł za wejście)` : "";
+    } else {
+      const price = product === "karnet5" ? p.karnet5 : p.karnet10;
+      priceEl.textContent = price ? `Kwota przelewu: ${price} zł · tylko członek z min. ${p.progGodzinek} godzinkami` : "";
+    }
+  };
+  productEl.onchange = syncPrice;
+  amountEl.oninput = syncPrice;
+  syncPrice();
+
   submitBtn.onclick = async () => {
-    const amount = Number(amountEl.value);
-    if (!amount || amount <= 0) {
-      errEl.textContent = "Podaj liczbę godzin większą od 0.";
+    const product = productEl.value;
+    const count = Number(amountEl.value);
+    if (product === "jednorazowe" && (!count || count <= 0)) {
+      errEl.textContent = "Podaj liczbę wejść większą od 0.";
       errEl.classList.remove("hidden");
       return;
     }
@@ -1212,14 +1368,14 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved) {
       const res = await apiPostJson({
         url: GODZINY_ADD_URL,
         idToken: ctx.idToken,
-        body: { userUid: user.userUid, amount, reason: reasonEl.value.trim() || undefined },
+        body: { userUid: user.userUid, product, count: product === "jednorazowe" ? count : undefined, reason: reasonEl.value.trim() || undefined },
       });
       modal.classList.add("hidden");
       modal.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
       await onSaved(res?.newBalance);
     } catch (e) {
-      errEl.textContent = e?.message || "Nie udało się dopisać godzin.";
+      errEl.textContent = e?.message || "Nie udało się dopisać wejść.";
       errEl.classList.remove("hidden");
       submitBtn.disabled = false;
       submitBtn.textContent = "Dopisz";
@@ -1307,7 +1463,7 @@ function renderGodzinyRow(u) {
       </div>
       <div class="${balCls}">${u.balance} h</div>
       <div class="basenGodzinyRowActions">
-        <button type="button" class="ghost small basenAddGodzinyBtn" data-uid="${esc(u.userUid)}">Dopisz godziny</button>
+        <button type="button" class="ghost small basenAddGodzinyBtn" data-uid="${esc(u.userUid)}">Dopisz wejścia</button>
         <button type="button" class="ghost small basenShowHistoryBtn" data-uid="${esc(u.userUid)}">Pokaż historię</button>
       </div>
     </div>
@@ -1318,9 +1474,11 @@ async function renderPaymentsTab(innerEl, ctx) {
   innerEl.innerHTML = spinnerHtml("Ładowanie…");
 
   let rows;
+  let pricing = null;
   try {
     const data = await apiGetJson({ url: GODZINY_USERS_URL, idToken: ctx.idToken });
     rows = Array.isArray(data?.rows) ? data.rows : [];
+    pricing = data?.pricing || null;
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać listy użytkowników.")}</div>`;
     return;
@@ -1373,7 +1531,7 @@ async function renderPaymentsTab(innerEl, ctx) {
           openAddGodzinyModal(innerEl, ctx, user, async (newBalance) => {
             if (typeof newBalance === "number") user.balance = newBalance;
             renderList();
-          });
+          }, pricing);
         });
       });
 
@@ -1402,6 +1560,159 @@ async function renderPaymentsTab(innerEl, ctx) {
   };
 
   draw();
+}
+
+// ─── Finanse (obsługa basenu i zarząd) ────────────────────────────────────────
+
+function formatPln(n) {
+  const v = Math.round(Number(n || 0));
+  return `${v > 0 ? "+" : ""}${v.toLocaleString("pl-PL")} zł`;
+}
+
+function shortDate(iso) {
+  const m = String(iso || "").match(/^\d{4}-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}.${m[1]}` : iso;
+}
+
+const LIGHT_LABELS = {
+  green: "🟢 rusza",
+  yellow: "🟡 rusza w ramach budżetu",
+  red: "🔴 zostanie odwołany",
+};
+
+// Wynik terminów (słupki) i narastający wynik sezonu (linia) na tle limitu −budżet.
+function renderFinanceChartSvg(rows, budget) {
+  const counted = rows.filter((r) => !r.kurs && (r.outcome === "held" || r.outcome === "confirmed"));
+  if (!counted.length) return `<div class="basenHint">Wykres pojawi się po pierwszym odbytym terminie.</div>`;
+  const W = 640, H = 230, padL = 52, padR = 12, padT = 14, padB = 30;
+  let cum = 0;
+  const pts = counted.map((r) => ({ r, cum: (cum += r.resultPln) }));
+  const values = [0, -budget, ...pts.map((p) => p.cum), ...counted.map((r) => r.resultPln)];
+  const max = Math.max(...values) * 1.1 || 1;
+  const min = Math.min(...values) * 1.1;
+  const y = (v) => padT + (max - v) / (max - min) * (H - padT - padB);
+  const step = (W - padL - padR) / counted.length;
+  const bw = Math.max(4, Math.min(28, step * 0.6));
+  const x = (i) => padL + step * i + step / 2;
+
+  const bars = pts.map((p, i) => {
+    const v = p.r.resultPln;
+    const top = Math.min(y(v), y(0));
+    const h = Math.max(1, Math.abs(y(v) - y(0)));
+    return `<rect class="${v >= 0 ? "bfBarPos" : "bfBarNeg"}" x="${(x(i) - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${esc(shortDate(p.r.date))}: ${esc(formatPln(v))}</title></rect>`;
+  }).join("");
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.cum).toFixed(1)}`).join(" ");
+  const dots = pts.map((p, i) => `<circle class="bfDot" cx="${x(i).toFixed(1)}" cy="${y(p.cum).toFixed(1)}" r="3"><title>po ${esc(shortDate(p.r.date))}: ${esc(formatPln(p.cum))}</title></circle>`).join("");
+  const labelEvery = Math.ceil(counted.length / 10);
+  const xLabels = pts.map((p, i) => (i % labelEvery === 0 ? `<text class="bfAxis" x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="middle">${esc(shortDate(p.r.date))}</text>` : "")).join("");
+
+  return `
+    <svg class="basenFinanceChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Wynik terminów i narastający wynik sezonu">
+      <line class="bfZero" x1="${padL}" x2="${W - padR}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" />
+      <text class="bfAxis" x="${padL - 6}" y="${(y(0) + 4).toFixed(1)}" text-anchor="end">0</text>
+      <line class="bfBudget" x1="${padL}" x2="${W - padR}" y1="${y(-budget).toFixed(1)}" y2="${y(-budget).toFixed(1)}" />
+      <text class="bfAxis bfBudgetLabel" x="${padL - 6}" y="${(y(-budget) + 4).toFixed(1)}" text-anchor="end">−${esc(budget)}</text>
+      ${bars}
+      <path class="bfLine" d="${line}" />
+      ${dots}
+      ${xLabels}
+    </svg>
+    <div class="basenFinanceLegend">
+      <span><i class="bfKey bfKeyBar"></i>wynik terminu</span>
+      <span><i class="bfKey bfKeyLine"></i>wynik sezonu narastająco</span>
+      <span><i class="bfKey bfKeyBudget"></i>limit straty sezonu</span>
+    </div>
+  `;
+}
+
+async function renderFinanceTab(innerEl, ctx) {
+  innerEl.innerHTML = spinnerHtml("Ładowanie finansów…");
+  let data;
+  try {
+    data = await apiGetJson({ url: `${SESSIONS_URL}?view=finance`, idToken: ctx.idToken });
+  } catch (e) {
+    innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać finansów.")}</div>`;
+    return;
+  }
+
+  const s = data.summary || {};
+  const rules = data.rules || {};
+  const sales = data.sales || {};
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+  const upcoming = rows.filter((r) => r.outcome === "planned" || r.outcome === "confirmed");
+  const past = rows.filter((r) => r.outcome === "held" || (r.outcome === "cancelled" && r.date < todayIso()));
+  const cancelledUpcoming = rows.filter((r) => r.outcome === "cancelled" && r.date >= todayIso());
+  const budget = Number(s.budgetPln || 0);
+  const usedPct = budget ? Math.min(100, Math.max(0, (-Math.min(0, s.netPln)) / budget * 100)) : 0;
+
+  const upcomingRows = upcoming.map((r) => {
+    const missing = r.resultPln < 0 && rules.cenaWejscia ? Math.ceil(-r.resultPln / rules.cenaWejscia) : 0;
+    const forecast = r.outcome === "confirmed" ? "✓ potwierdzony" : (LIGHT_LABELS[r.light] || "");
+    return `
+      <tr>
+        <td>${esc(shortDate(r.date))}${r.kurs ? ` <span class="basenHint">kurs</span>` : ""}</td>
+        <td>${esc(r.zapisyH1)} / ${esc(r.zapisyH2)}${r.sauna ? ` <span class="basenHint">+${esc(r.sauna)} sauna</span>` : ""}</td>
+        <td class="${r.resultPln >= 0 ? "bfPos" : "bfNeg"}">${esc(formatPln(r.resultPln))}${missing ? `<div class="basenHint">do zera ok. ${esc(missing)} wejść</div>` : ""}</td>
+        <td>${esc(forecast)}${r.outcome === "planned" ? `<div class="basenHint">decyzja ${esc(formatDecisionAt(r.decisionAtMs))}</div>` : ""}</td>
+      </tr>`;
+  }).join("");
+
+  const pastRows = past.slice().reverse().map((r) => `
+      <tr class="${r.outcome === "cancelled" ? "bfRowCancelled" : ""}">
+        <td>${esc(shortDate(r.date))}${r.kurs ? ` <span class="basenHint">kurs</span>` : ""}</td>
+        <td>${r.outcome === "cancelled" ? (r.cancelReason === "frekwencja" ? `odwołany (${esc(r.zapisy)} zapisów)` : "odwołany") : `${esc(r.zapisy)} zapisów · ${esc(r.entries)} wejść`}</td>
+        <td class="${r.resultPln >= 0 ? "bfPos" : "bfNeg"}">${r.outcome === "cancelled" ? "—" : esc(formatPln(r.resultPln))}</td>
+      </tr>`).join("");
+
+  innerEl.innerHTML = `
+    <div class="basenFinanceTiles">
+      <div class="basenFinanceTile">
+        <div class="basenFinanceTileLabel">Wynik netto sezonu ${esc(s.key || "")}</div>
+        <div class="basenFinanceTileValue ${s.netPln >= 0 ? "bfPos" : "bfNeg"}">${esc(formatPln(s.netPln))}</div>
+        <div class="basenHint">odbyte i potwierdzone terminy</div>
+      </div>
+      <div class="basenFinanceTile">
+        <div class="basenFinanceTileLabel">Zapas straty sezonu</div>
+        <div class="basenFinanceTileValue">${esc(Math.round(s.budgetLeftPln).toLocaleString("pl-PL"))} zł</div>
+        <div class="basenFinanceMeter" title="Wykorzystano ${usedPct.toFixed(0)}% limitu ${esc(budget)} zł"><span style="width:${usedPct.toFixed(1)}%"></span></div>
+        <div class="basenHint">limit ${esc(budget)} zł · wykorzystano ${usedPct.toFixed(0)}%</div>
+      </div>
+      <div class="basenFinanceTile">
+        <div class="basenFinanceTileLabel">Terminy</div>
+        <div class="basenFinanceTileValue">${esc(s.held)} <span class="basenHint">odbyte</span></div>
+        <div class="basenHint">potwierdzone ${esc(s.confirmed)} · zaplanowane ${esc(s.planned)} · odwołane: frekwencja ${esc(s.cancelledLow)}, inne ${esc(s.cancelledAdmin)}</div>
+      </div>
+      <div class="basenFinanceTile">
+        <div class="basenFinanceTileLabel">Sprzedaż w sezonie</div>
+        <div class="basenFinanceTileValue">${esc(Math.round(sales.totalPln || 0).toLocaleString("pl-PL"))} zł</div>
+        <div class="basenHint">jednorazowe ${esc(sales.jednorazowe?.entries || 0)} wejść · karnety 5: ${esc(sales.karnet5?.count || 0)} · karnety 10: ${esc(sales.karnet10?.count || 0)}</div>
+      </div>
+    </div>
+
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Wynik sezonu</div>
+    ${renderFinanceChartSvg(rows, budget)}
+
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Nadchodzące terminy</div>
+    ${upcoming.length ? `
+      <div class="basenFinanceTableWrap"><table class="basenFinanceTable">
+        <thead><tr><th>Data</th><th>Zapisy H1 / H2</th><th>Wynik teraz</th><th>Prognoza</th></tr></thead>
+        <tbody>${upcomingRows}</tbody>
+      </table></div>` : `<div class="basenHint">Brak nadchodzących terminów.</div>`}
+    ${cancelledUpcoming.length ? `<div class="basenHint" style="margin-top:6px;">Odwołane nadchodzące: ${cancelledUpcoming.map((r) => esc(shortDate(r.date))).join(", ")}</div>` : ""}
+
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Minione terminy</div>
+    ${past.length ? `
+      <div class="basenFinanceTableWrap"><table class="basenFinanceTable">
+        <thead><tr><th>Data</th><th>Przebieg</th><th>Wynik</th></tr></thead>
+        <tbody>${pastRows}</tbody>
+      </table></div>` : `<div class="basenHint">Brak minionych terminów.</div>`}
+
+    <div class="basenHint" style="margin-top:14px;">
+      Zasada: termin rusza, gdy wynik ≥ 0 zł albo strata ≤ ${esc(rules.maxStrataTerminu)} zł i wynik sezonu po niej ≥ −${esc(rules.budzetSezonu)} zł.
+      Koszt terminu ${esc(rules.kosztTerminu)} zł. Decyzja automatyczna ${esc(rules.oknoH)} h przed basenem; odwołanie zwraca wejścia i wysyła maila.
+      Wejście wyceniane po cenie zakupu, w kolejności zakupów (karnet taniej, nagroda instruktora 0 zł); „do zera” liczone po ${esc(rules.cenaWejscia)} zł. Terminy kursowe poza wynikiem.
+    </div>
+  `;
 }
 
 // ─── Moje konto (wyciąg — pełna historia własnych godzin basenowych) ──────────
@@ -1493,7 +1804,7 @@ export function createBasenModule({ id, type, label, defaultRoute, order, enable
       const canEnroll = actions.includes("basen.enroll");
 
       const requestedTab = String(routeId || "").trim();
-      const validTabs = ["sessions", "account", ...(isAdmin ? ["calendar", "payments"] : [])];
+      const validTabs = ["sessions", "account", ...(isAdmin ? ["calendar", "payments", "finance"] : [])];
       const activeTab = validTabs.includes(requestedTab) ? requestedTab : "sessions";
 
       viewEl.innerHTML = `
@@ -1546,6 +1857,8 @@ export function createBasenModule({ id, type, label, defaultRoute, order, enable
         await renderCalendarTab(innerEl, ctx);
       } else if (activeTab === "payments" && isAdmin) {
         await renderPaymentsTab(innerEl, ctx);
+      } else if (activeTab === "finance" && isAdmin) {
+        await renderFinanceTab(innerEl, ctx);
       } else if (activeTab === "account") {
         await renderAccountTab(innerEl, ctx);
       } else {

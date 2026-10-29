@@ -3,7 +3,7 @@
 
 import type {Request, Response} from "express";
 import type * as admin from "firebase-admin";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {
   isSupportedGearCategory,
   listGearItemsByCategory,

@@ -105,9 +105,9 @@ describe("konfiguracja i reguły", () => {
     expect(canEditRegistry(parseBlachyConfig(vars({blachy_edycja_zarzad: "FALSE"}), "2026-09-10"), K[2], false)).toBe(true);
   });
 
-  it("miejsca: kandydat i konflikt interesów → zastępca; obaj wyłączeni → puste", () => {
+  it("miejsca: konflikt interesów → zastępca; obaj wyłączeni → puste", () => {
     const cfg = parseBlachyConfig(vars(), "2026-09-10");
-    const s = seatVoters(cfg, K[1], [K[2], K[3], Z[3]]);
+    const s = seatVoters(cfg, [K[1], K[2], K[3], Z[3]]);
     expect(s.map((x) => x.email)).toEqual([K[0], Z[1], Z[2], null, K[4]]);
   });
 
@@ -168,10 +168,11 @@ describe("Kapituła i tajne głosowanie", () => {
     expect(r.body.kandydatury).toHaveLength(2);
   });
 
-  it("kandydat w Kapitule → głosuje zastępca; 5 głosów → decyzja; brak wyników cząstkowych; brak zapisu osoba↔głos", async () => {
+  it("konflikt interesów → głosuje zastępca; 5 głosów → decyzja; brak wyników cząstkowych; brak zapisu osoba↔głos", async () => {
     const db = await closedWithTwoCandidates();
     await api(db, "k1", "GET", "kapitula", {}, "2026-10-01");
     const id = "2026_u_k2";
+    await api(db, "k2", "POST", "kapitula", {action: "conflict", id}, "2026-10-01");
     expect((await api(db, "k2", "POST", "kapitula", {action: "open", id}, "2026-10-02")).status).toBe(403);
     expect((await api(db, "k1", "POST", "kapitula", {action: "open", id}, "2026-10-02")).body.status).toBe("otwarte");
 
@@ -225,7 +226,8 @@ describe("Zarząd, przyjęcie, ogłoszenie, sprzątanie", () => {
     expect((await api(db, "ala", "POST", "zarzad", {action: "approve", uchwala: "x"}, "2026-11-01")).status).toBe(403);
     const z = await api(db, "zar", "GET", "zarzad", {}, "2026-11-01");
     expect(z.body.wybrani.map((w: any) => w.label)).toEqual(["Bob Kowal"]);
-    expect(z.body.liczby.kandydatury).toBe(1);
+    expect(z.body.gotowe).toBe(true);
+    expect(z.body.liczby).toBeUndefined();
     expect((await api(db, "zar", "POST", "zarzad", {action: "approve", uchwala: "12/2026"}, "2026-11-01")).status).toBe(200);
 
     const {c, mails} = ctx(db);
@@ -243,7 +245,10 @@ describe("Zarząd, przyjęcie, ogłoszenie, sprzątanie", () => {
     const reg = (db.dump("blachy") as any[]).find((b) => b.zrodlo === "procedura");
     expect(reg).toMatchObject({imie: "Bob", nazwisko: "Kowal", rok: 2026, nr: 40, uzasadnienie: "Wieloletni organizator wypraw."});
     const lista = mails.find((m) => m.to === "lista@morzkulc.pl");
-    expect(lista?.text).toMatch(/Rozpatrzone kandydatury: 1/);
+    expect(lista?.text).toMatch(/Bob Kowal/);
+    expect(lista?.text).not.toMatch(/[Rr]ozpatrzon/);
+    const st = db.dump("blachy_procedura") as any[];
+    expect(st[0].protokol).toEqual({laureaci: [{label: "Bob Kowal", uzasadnienie: "Wieloletni organizator wypraw.", nr: 40}], uchwala: "12/2026"});
     expect(lista?.text).not.toMatch(/K2/);
     expect(mails.filter((m) => m.subject.includes("rozpatrzone")).map((m) => m.to).sort()).toEqual(["ala@x.pl", "z1@x.pl"]);
   });

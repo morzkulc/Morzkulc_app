@@ -8,6 +8,7 @@ import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {getObHours, buildOpeningBalanceAdminPatch, obValueExact, obEmailKey} from "../modules/hours/opening_balance_fields";
 import {getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
+import {isTestAccount} from "../modules/setup/app_vars";
 import {findActiveKierownikEvents} from "../modules/calendar/events_service";
 
 type TokenCheck =
@@ -572,7 +573,17 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         return;
       }
 
-      const setupApp = await getSetupApp();
+      const decoded = tokenCheck.decoded;
+      const uid = decoded.uid;
+      const userRef = db.collection("users_active").doc(uid);
+
+      // Trzy niezależne odczyty równolegle (wcześniej jeden po drugim) — /api/register
+      // jest pierwszym żądaniem przy każdym otwarciu aplikacji i blokuje cały ekran.
+      const [setupApp, godzinkiVars, existing] = await Promise.all([
+        getSetupApp(),
+        getGodzinkiVars(db),
+        userRef.get(),
+      ]);
       const setupDefaults = setupApp?.defaults || {};
       const newUserRoleCode = normalizeStr(setupDefaults.newUserRoleCode) || "rola_sympatyk";
       const newUserStatusCode = normalizeStr(setupDefaults.newUserStatusCode) || "status_aktywny";
@@ -580,10 +591,8 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
       const obMemberRoleCode = normalizeStr(setupDefaults.openingBalanceMemberRoleCode) || "rola_czlonek";
       // Godzinki z bilansu otwarcia wygasają wg setup/vars_godzinki.data_wygasniecia_bilansu_otwarcia
       // (wymóg biznesowy, domyślnie 30.06.2029)
-      const OB_HOURS_EXPIRES_AT = (await getGodzinkiVars(db)).obHoursExpiresAt;
+      const OB_HOURS_EXPIRES_AT = godzinkiVars.obHoursExpiresAt;
 
-      const decoded = tokenCheck.decoded;
-      const uid = decoded.uid;
       const email = String(decoded.email || "").trim().toLowerCase();
       const displayName = String(decoded.name || "").trim();
 
@@ -620,9 +629,6 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           return;
         }
       }
-
-      const userRef = db.collection("users_active").doc(uid);
-      const existing = await userRef.get();
 
       // =========================
       // EXISTING USER
@@ -703,7 +709,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
               const obHours = getObHours(nameFound.obData);
               if (obHours !== 0 && !data.service?.openingBalanceHoursCredited) {
                 creditOpeningBalance(db, uid, obHours, OB_HOURS_EXPIRES_AT)
-                  .then(() => userRef.set({"service.openingBalanceHoursCredited": true}, {merge: true}))
+                  .then(() => userRef.set({service: {openingBalanceHoursCredited: true}}, {merge: true}))
                   .catch((e: any) => console.error("creditOpeningBalance (existing user) failed", {uid, message: e?.message}));
               }
               // Rola zmieniła się poza sheet-syncem (dopasowanie do bilansu otwarcia) — zsynchronizuj
@@ -805,14 +811,14 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         // Jednorazowo: scal historyczne km_logs jeśli nie zrobiono jeszcze
         const existingData = data as any;
         if (email && !existingData.service?.kmHistMergedFrom && !existingData.service?.kmHistMergeEnqueued) {
-          userRef.set({"service.kmHistMergeEnqueued": true}, {merge: true}).catch(() => {/* fire-and-forget */});
+          userRef.set({service: {kmHistMergeEnqueued: true}}, {merge: true}).catch(() => {/* fire-and-forget */});
           enqueueKmHistoricalMerge(db, admin, uid, email)
             .catch((e: any) => console.error("enqueueKmHistoricalMerge (existing user) failed", {uid, message: e?.message}));
         }
 
         // Jednorazowo: scal przejściowe godzinki spod hist_{email} jeśli nie zrobiono jeszcze
         if (email && !existingData.service?.godzinkiHistMergedFrom && !existingData.service?.godzinkiHistMergeEnqueued) {
-          userRef.set({"service.godzinkiHistMergeEnqueued": true}, {merge: true}).catch(() => {/* fire-and-forget */});
+          userRef.set({service: {godzinkiHistMergeEnqueued: true}}, {merge: true}).catch(() => {/* fire-and-forget */});
           enqueueGodzinkiHistMerge(db, admin, uid, email)
             .catch((e: any) => console.error("enqueueGodzinkiHistMerge (existing user) failed", {uid, message: e?.message}));
         }
@@ -821,10 +827,11 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         // szkoleniowiec (rozwiązywany tylko dla kandydata — ogranicza odczyty).
         // Trzy niezależne odczyty równolegle — wcześniej czekały jeden na drugi,
         // a /api/register jest pierwszym żądaniem przy każdym otwarciu aplikacji.
-        const [szkoleniowiec, kierownikSummary, isBasenAdmin] = await Promise.all([
+        const [szkoleniowiec, kierownikSummary, isBasenAdmin, testAccount] = await Promise.all([
           roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
           resolveKierownikSummary(db, uid, roleKey, deps.memberRoleKeys),
           resolveBasenAdminGrant(db, email),
+          isTestAccount(db, email),
         ]);
 
         const allowedActions = deps.computeAllowedActions(roleKey);
@@ -856,6 +863,8 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           openingNameMatchPendingConfirm,
           obEmail: obEmailForConfirm,
           openingEmailCollision,
+          // Konto testowe (konta_testowe w Vars_MEMBERS) — przełącznik roli w aplikacji.
+          isTestAccount: testAccount,
         });
         return;
       }
@@ -954,7 +963,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         const obHours = getObHours(found.obData);
         if (obHours !== 0) {
           creditOpeningBalance(db, uid, obHours, OB_HOURS_EXPIRES_AT)
-            .then(() => userRef.set({"service.openingBalanceHoursCredited": true}, {merge: true}))
+            .then(() => userRef.set({service: {openingBalanceHoursCredited: true}}, {merge: true}))
             .catch((e: any) => console.error("creditOpeningBalance (new user) failed", {uid, message: e?.message}));
         }
       }
@@ -981,9 +990,10 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
 
       // Opiekunowie stażu (jak w gałęzi istniejącego usera). Nowy kandydat zwykle nie ma
       // jeszcze admin.mentor (trafia syncem z arkusza) — wtedy null.
-      const [szkoleniowiec, isBasenAdmin] = await Promise.all([
+      const [szkoleniowiec, isBasenAdmin, testAccount] = await Promise.all([
         roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
         resolveBasenAdminGrant(db, email),
+        isTestAccount(db, email),
       ]);
 
       const allowedActions = deps.computeAllowedActions(roleKey);
@@ -1018,6 +1028,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         openingNameMatchPendingConfirm,
         obEmail: obEmailForConfirm,
         openingEmailCollision,
+        isTestAccount: testAccount,
       });
     } catch (err: any) {
       res.status(500).json({error: "Server error", message: err?.message || String(err)});

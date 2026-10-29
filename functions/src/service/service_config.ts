@@ -1,4 +1,4 @@
-import * as functions from "firebase-functions";
+import {HttpsError} from "firebase-functions/v2/https";
 
 export interface ServiceConfig {
   envName: string;
@@ -308,47 +308,47 @@ export function getServiceConfig(): ServiceConfig {
   };
 
   if (!cfg.listaGroupEmail.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid lista group email");
+    throw new HttpsError("failed-precondition", "Invalid lista group email");
   }
   if (!cfg.welcomeFromEmail.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid welcome from email");
+    throw new HttpsError("failed-precondition", "Invalid welcome from email");
   }
   if (!cfg.welcomeReplyToEmail.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid welcome reply-to email");
+    throw new HttpsError("failed-precondition", "Invalid welcome reply-to email");
   }
   if (!cfg.workspace.delegatedSubject.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid delegated subject email");
+    throw new HttpsError("failed-precondition", "Invalid delegated subject email");
   }
 
   if (!cfg.sheets.membersSpreadsheetId) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid members sheet id");
+    throw new HttpsError("failed-precondition", "Invalid members sheet id");
   }
   if (!cfg.sheets.membersTabName) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid members sheet tab");
+    throw new HttpsError("failed-precondition", "Invalid members sheet tab");
   }
 
   if (!cfg.setup.spreadsheetId) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid setup sheet id (SVC_SETUP_SHEET_ID)");
+    throw new HttpsError("failed-precondition", "Invalid setup sheet id (SVC_SETUP_SHEET_ID)");
   }
 
   if (!cfg.gear.kayaksSpreadsheetId) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid gear kayaks sheet id");
+    throw new HttpsError("failed-precondition", "Invalid gear kayaks sheet id");
   }
   if (!cfg.gear.kayaksTabName) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid gear kayaks tab name");
+    throw new HttpsError("failed-precondition", "Invalid gear kayaks tab name");
   }
 
   if (!cfg.functionRoles.sprzetowiec.mailbox.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid sprzetowiec mailbox email");
+    throw new HttpsError("failed-precondition", "Invalid sprzetowiec mailbox email");
   }
   if (!cfg.functionRoles.szkoleniowiec.mailbox.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid szkoleniowiec mailbox email");
+    throw new HttpsError("failed-precondition", "Invalid szkoleniowiec mailbox email");
   }
   if (!cfg.functionRoles.skarbnik.mailbox.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid skarbnik mailbox email");
+    throw new HttpsError("failed-precondition", "Invalid skarbnik mailbox email");
   }
   if (!cfg.functionRoles.prezes.mailbox.includes("@")) {
-    throw new functions.https.HttpsError("failed-precondition", "Invalid prezes mailbox email");
+    throw new HttpsError("failed-precondition", "Invalid prezes mailbox email");
   }
 
   return cfg;

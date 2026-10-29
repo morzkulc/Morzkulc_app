@@ -1,6 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -65,15 +69,71 @@ const firebaseConfig = getFirebaseConfig();
 export const isDev = firebaseConfig.projectId === DEV_BASE.projectId;
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+// Persystencja identyczna z domyślną getAuth() w przeglądarce — sesje zapisane
+// przez dotychczasowe getAuth() są czytane bez zmian.
+const AUTH_PERSISTENCE = [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence];
+const AUTH_USER_KEY = `firebase:authUser:${firebaseConfig.apiKey}:[DEFAULT]`;
+
+// Czy na urządzeniu jest zapisana sesja Firebase (IndexedDB albo localStorage —
+// te same miejsca, które czyta AUTH_PERSISTENCE). Tylko odczyt: gdy bazy nie ma,
+// otwarcie jest przerywane w onupgradeneeded, więc nic nie zostaje utworzone.
+// Błąd/brak wsparcia → false, czyli ścieżka dotychczasowa.
+function hasPersistedUser() {
+  try {
+    if (localStorage.getItem(AUTH_USER_KEY)) return Promise.resolve(true);
+  } catch { /* tryb prywatny */ }
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onupgradeneeded = () => req.transaction.abort();
+      req.onerror = () => resolve(false);
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const get = db.transaction("firebaseLocalStorage", "readonly").objectStore("firebaseLocalStorage").get(AUTH_USER_KEY);
+          get.onsuccess = () => { db.close(); resolve(Boolean(get.result)); };
+          get.onerror = () => { db.close(); resolve(false); };
+        } catch {
+          db.close();
+          resolve(false);
+        }
+      };
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+// getAuth() na telefonach i w Safari (_shouldInitProactively w SDK) PRZED podaniem
+// stanu logowania ładuje apis.google.com/js/api.js + gapi + ukryty iframe
+// /__/auth/iframe — przy KAŻDYM starcie, choć iframe służy wyłącznie samemu
+// logowaniu (popup/redirect). Zmierzone 29.10.2026 (UA iPhone, desktop):
+// stan auth gotowy po 437–800 ms z iframe vs 247 ms bez.
+// Zalogowany użytkownik dostaje więc auth bez resolvera; resolver jest podawany
+// jawnie w każdym wywołaniu logowania/redirectu i ładuje iframe dopiero wtedy.
+// Brak zapisanej sesji (ekran logowania, powrót z redirectu Google — wtedy sesji
+// jeszcze nie ma) → inicjalizacja jak dotąd, z proaktywnym iframe.
+const authPromise = hasPersistedUser().then((hasUser) => initializeAuth(app, {
+  persistence: AUTH_PERSISTENCE,
+  ...(hasUser ? {} : { popupRedirectResolver: browserPopupRedirectResolver }),
+}));
 
 // getRedirectResult jest wywoływane przez app_shell.js w starcie (authHandleRedirectResult),
 // PRZED rejestracją onAuthStateChanged — dzięki temu stan auth jest ustawiony
 // zanim listener po raz pierwszy się odpali.
 
 export function authOnChange(cb) {
-  return onAuthStateChanged(auth, cb);
+  let unsubscribe = null;
+  let cancelled = false;
+  authPromise.then((auth) => {
+    if (!cancelled) unsubscribe = onAuthStateChanged(auth, cb);
+  });
+  return () => {
+    cancelled = true;
+    unsubscribe?.();
+  };
 }
 
 // Przetwarza wynik redirect po powrocie ze strony OAuth Google.
@@ -81,7 +141,7 @@ export function authOnChange(cb) {
 // żeby stan auth był już ustawiony gdy listener odpali się po raz pierwszy.
 // Zwraca user lub null. Rzuca wyjątek tylko przy realnym błędzie auth.
 export async function authHandleRedirectResult() {
-  const result = await getRedirectResult(auth);
+  const result = await getRedirectResult(await authPromise, browserPopupRedirectResolver);
   return result?.user ?? null;
 }
 
@@ -97,15 +157,16 @@ function needsRedirectAuth() {
 }
 
 export async function authLoginPopup() {
+  const auth = await authPromise;
   if (needsRedirectAuth()) {
-    await signInWithRedirect(auth, provider);
+    await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
   } else {
-    await signInWithPopup(auth, provider);
+    await signInWithPopup(auth, provider, browserPopupRedirectResolver);
   }
 }
 
 export async function authLogout() {
-  await signOut(auth);
+  await signOut(await authPromise);
 }
 
 export async function authGetIdToken(user, forceRefresh = false) {

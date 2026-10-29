@@ -62,7 +62,7 @@ const LINK_TILES = [
   },
 ];
 
-// ── Blachy klubowe (Rejestr Blach, regulamin § 6 pkt 7) ──────────────────────
+// ── Blachy klubowe (Rejestr Blach, regulamin § 6 pkt 4) ──────────────────────
 // Lista jawna dla zalogowanych. Do 2025 r. wyłącznie oficjalne archiwum klubowe (bez edycji);
 // zarząd/KR (canEditBlachy) dodaje, poprawia i usuwa błędne wpisy późniejsze. Nowe blachy
 // dopisują też procedura i kolumna „blacha" w arkuszu członków (sync, rok po archiwum).

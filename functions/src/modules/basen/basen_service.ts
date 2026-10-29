@@ -3,6 +3,7 @@ import {resolveFunctionRoleEmail} from "../setup/function_roles_service";
 import {computeBasenGodzinyBalance, blockBasenGodzinyInTx, refundBasenGodzinyInTx} from "./basen_godziny_service";
 import {norm} from "../shared/text_utils";
 import {getCachedDoc} from "../setup/doc_cache";
+import {warsawLocalMs, warsawTodayIso, seasonOf, nextEntryValuePln} from "./basen_finance";
 
 /**
  * Błąd walidacji/reguły biznesowej (zły input, kolizja, stan konfliktowy) — zawsze 400
@@ -47,12 +48,20 @@ export interface BasenVars {
   basen_2_godzina_domyslna: string;
   basen_sauna: boolean;
   basen_sauna_cena: number;
+  // Ta sama granica dla darmowej rezygnacji i dla decyzji, czy termin się odbywa
+  // (regulamin basenu § 4 pkt 3 i § 5 pkt 1).
   basen_okno_anulowania_h: number;
-  // Wyłącznie informacyjne (ściągawka cenowa w zakładce Płatności) — nie napędzają
-  // żadnej logiki, saldo godzin basenowych dopisuje admin ręcznie po wpłacie.
+  // Cennik (regulamin § 2) — wycena wejść przy dopisywaniu i w finansach sezonu.
   basen_cena_za_godzine: number;
-  basen_cena_za_karnet: number;
-  basen_ile_wejsc_na_karnet: number;
+  basen_cena_karnet_5: number;
+  basen_cena_karnet_10: number;
+  basen_karnet_prog_godzinek: number;
+  // Reguła uruchomienia terminu (regulamin § 5, dokument dla Zarządu).
+  basen_koszt_terminu: number;
+  basen_max_strata_terminu: number;
+  basen_budzet_sezonu: number;
+  basen_min_zapisow: number; // oficjalny próg dla członków — tylko informacyjnie
+  basen_max_dni_naprzod: number;
 }
 
 export interface BasenReservedSpots {
@@ -71,11 +80,26 @@ export interface BasenSlot {
   reservedSpots?: BasenReservedSpots; // tylko H1/H2, nigdy SAUNA
 }
 
+export interface BasenSessionDecision {
+  status: "confirmed" | "cancelled";
+  at: any;
+  zapisy: number; // uczestnicy H1+H2 (bez instruktorów) w chwili decyzji
+  entries: number;
+  valuePln: number;
+  costPln: number;
+  resultPln: number;
+  seasonNetPln: number; // wynik sezonu bez tego terminu, w chwili decyzji
+  light: "green" | "yellow" | "red";
+}
+
 export interface BasenSession {
   id: string;
   date: string;
   notes: string;
   slots: Partial<Record<BasenSlotLabel, BasenSlot>>;
+  costPln?: number; // koszt wynajmu z chwili utworzenia terminu
+  decision?: BasenSessionDecision; // basen.decideSessions, 30 h przed terminem
+  cancelReason?: "frekwencja" | "admin";
   createdBy: string;
   createdAt: any;
   updatedAt: any;
@@ -97,9 +121,26 @@ export interface BasenEnrollment {
   // flagi) traktowany jak true w cancelEnrollment — zachowuje dotychczasowe zachowanie
   // zwrotu dla zapisów sprzed wprowadzenia tego pola.
   chargedGodziny?: boolean;
+  valuePln?: number; // wartość pobranego wejścia (FIFO z zakupów) — finanse terminu
   status: EnrollmentStatus;
   cancelledAt?: any;
   cancelledLate?: boolean; // true jeśli anulowano w oknie <cancellationWindowHours> — ślad dla rozliczeń
+  lateRefunded?: boolean; // spóźniona rezygnacja, ale miejsce przejęła osoba z listy rezerwowej → zwrot
+  fromWaitlist?: boolean; // zapis powstał z listy rezerwowej
+  createdAt: any;
+  updatedAt: any;
+}
+
+export type WaitlistStatus = "waiting" | "promoted" | "left" | "cancelled" | "expired";
+
+export interface BasenWaitlistEntry {
+  id: string; // `${sessionId}_${slot}_${uid}`
+  sessionId: string;
+  slot: BasenSlotLabel;
+  userUid: string;
+  userEmail: string;
+  userDisplayName: string;
+  status: WaitlistStatus;
   createdAt: any;
   updatedAt: any;
 }
@@ -130,7 +171,7 @@ export interface SlotAttendeesResult {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return warsawTodayIso();
 }
 
 export function parseVarValue(v: any): any {
@@ -160,11 +201,25 @@ export async function getBasenVars(db: FirebaseFirestore.Firestore): Promise<Bas
     basen_sauna: Boolean(parseVarValue(vars["basen_sauna"]) ?? false),
     basen_sauna_cena: Number(parseVarValue(vars["basen_sauna_cena"]) ?? 0),
     // Klucz arkusza to "basen_rezygnacja_za_darmo" (ten sam koncept, inna nazwa historycznie w arkuszu).
-    basen_okno_anulowania_h: Number(parseVarValue(vars["basen_rezygnacja_za_darmo"]) ?? 24),
-    basen_cena_za_godzine: Number(parseVarValue(vars["basen_cena_za_godzine"]) ?? 0),
-    basen_cena_za_karnet: Number(parseVarValue(vars["basen_cena_za_karnet"]) ?? 0),
-    basen_ile_wejsc_na_karnet: Number(parseVarValue(vars["basen_ile_wejść_na_karnet"]) ?? 0),
+    basen_okno_anulowania_h: num(vars["basen_rezygnacja_za_darmo"], 30),
+    basen_cena_za_godzine: num(vars["basen_cena_za_godzine"], 35),
+    basen_cena_karnet_5: num(vars["basen_cena_karnet_5"], 140),
+    basen_cena_karnet_10: num(vars["basen_cena_karnet_10"], 245),
+    basen_karnet_prog_godzinek: num(vars["basen_karnet_prog_godzinek"], 20),
+    basen_koszt_terminu: num(vars["basen_koszt_terminu"], 350),
+    basen_max_strata_terminu: num(vars["basen_max_strata_terminu"], 105),
+    basen_budzet_sezonu: num(vars["basen_budzet_sezonu"], 2000),
+    basen_min_zapisow: num(vars["basen_min_zapisow"], 12),
+    basen_max_dni_naprzod: num(vars["basen_max_dni_naprzod"], 4),
   };
+}
+
+// Wartość liczbowa zmiennej albo domyślna (brak wiersza / pusta komórka / nie-liczba).
+function num(raw: any, fallback: number): number {
+  const v = parseVarValue(raw);
+  if (v === null || v === "") return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 export function sessionSlotDatetimeMs(
@@ -172,11 +227,26 @@ export function sessionSlotDatetimeMs(
   slotData: Pick<BasenSlot, "timeStart"> | undefined | null
 ): number {
   if (!slotData?.timeStart) return 0;
-  try {
-    return new Date(`${session.date}T${slotData.timeStart}:00`).getTime();
-  } catch {
-    return 0;
-  }
+  return warsawLocalMs(session.date, slotData.timeStart);
+}
+
+/** Początek terminu = najwcześniejsza godzina H1/H2 (czas warszawski, epoch ms). */
+export function sessionStartMs(session: Pick<BasenSession, "date" | "slots">): number {
+  const starts = (["H1", "H2"] as BasenSlotLabel[])
+    .map((l) => sessionSlotDatetimeMs(session, session.slots?.[l]))
+    .filter((ms) => ms > 0);
+  return starts.length ? Math.min(...starts) : 0;
+}
+
+/** Moment decyzji o terminie i końca darmowej rezygnacji. */
+export function sessionDecisionMs(session: Pick<BasenSession, "date" | "slots">, windowHours: number): number {
+  const start = sessionStartMs(session);
+  return start ? start - windowHours * 60 * 60 * 1000 : 0;
+}
+
+export function isSessionCancelled(session: Pick<BasenSession, "slots">): boolean {
+  const slots = Object.values(session.slots || {}).filter(Boolean);
+  return slots.length > 0 && slots.every((s) => s?.status === "cancelled");
 }
 
 export interface SlotAvailability {
@@ -215,23 +285,21 @@ function enrollmentId(sessionId: string, slot: BasenSlotLabel, uid: string): str
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
-export async function listUpcomingSessions(
+/**
+ * Wszystkie terminy bieżącego sezonu (od 1 lipca), także minione i odwołane —
+ * odwołany termin zostaje w kalendarzu i na liście z powodem odwołania.
+ */
+export async function listSeasonSessions(
   db: FirebaseFirestore.Firestore
 ): Promise<BasenSession[]> {
-  const today = todayIso();
+  const season = seasonOf(todayIso());
   const snap = await db
     .collection("basen_sessions")
-    .where("date", ">=", today)
+    .where("date", ">=", season.start)
     .orderBy("date", "asc")
     .get();
 
-  const sessions = snap.docs.map((d) => ({id: d.id, ...d.data()} as BasenSession));
-
-  // Ukryj dni, w których WSZYSTKIE sloty są anulowane (nic do pokazania/zapisu).
-  return sessions.filter((s) => {
-    const slots = Object.values(s.slots || {});
-    return slots.some((slot) => slot && slot.status !== "cancelled");
-  });
+  return snap.docs.map((d) => ({id: d.id, ...d.data()} as BasenSession));
 }
 
 export async function getUserEnrollments(
@@ -270,11 +338,15 @@ export interface SimpleAttendee {
 export async function getAttendeesBySessionSlot(
   db: FirebaseFirestore.Firestore
 ): Promise<Map<string, SimpleAttendee[]>> {
+  // Tylko terminy od dziś — sessionId = data terminu (createSession), więc zakres po
+  // sessionId nie czyta całego sezonu. Status filtrowany w pamięci (bez indeksu złożonego).
   const snap = await db.collection("basen_enrollments")
-    .where("status", "==", "active")
+    .where("sessionId", ">=", todayIso())
     .get();
 
-  const enrollments = snap.docs.map((d) => d.data() as BasenEnrollment);
+  const enrollments = snap.docs
+    .map((d) => d.data() as BasenEnrollment)
+    .filter((e) => e.status === "active");
 
   // N pojedynczych odczytów (choć zrównoleglonych) → jedno wywołanie getAll:
   // N round-tripów do Firestore zamienia się w jeden. Ten sam wzorzec, którego
@@ -383,6 +455,7 @@ export async function createSession(
       date: args.date,
       notes: args.notes,
       slots,
+      costPln: args.vars.basen_koszt_terminu,
       createdBy: args.createdBy,
       createdAt: now,
       updatedAt: now,
@@ -441,6 +514,7 @@ export async function enrollInSlot(
     instructorUid?: string;
     kayakId?: string; // id z gear_kayaks lub "PRIVATE"
     isKursant: boolean;
+    vars: BasenVars;
   }
 ): Promise<{ enrollmentId: string }> {
   const sessionRef = db.collection("basen_sessions").doc(args.sessionId);
@@ -476,10 +550,11 @@ export async function enrollInSlot(
     .where("status", "==", "active");
 
   const godzinyLedgerRef = db.collection("basen_godziny_ledger").doc();
+  const waitlistRef = db.collection("basen_waitlist").doc(enrollmentId(args.sessionId, args.slot, args.uid));
 
   await db.runTransaction(async (tx) => {
     // ── wszystkie odczyty przed jakimkolwiek zapisem ──
-    const [sessionSnap, existingEnrollSnap, allocationSnap, instructorEnrollSnap, godzinyLedgerSnap, instructorStudentsSnap, dailyLimitSnap] = await Promise.all([
+    const [sessionSnap, existingEnrollSnap, allocationSnap, instructorEnrollSnap, godzinyLedgerSnap, instructorStudentsSnap, dailyLimitSnap, aheadSnap, waitlistSnap] = await Promise.all([
       tx.get(sessionRef),
       tx.get(enrollRef),
       allocationRef ? tx.get(allocationRef) : Promise.resolve(null),
@@ -487,6 +562,8 @@ export async function enrollInSlot(
       tx.get(db.collection("basen_godziny_ledger").where("uid", "==", args.uid)),
       instructorStudentsQuery ? tx.get(instructorStudentsQuery) : Promise.resolve(null),
       tx.get(dailyLimitQuery),
+      args.mode !== "instructor" ? readDaysAhead(tx, db, args.uid) : Promise.resolve(null),
+      tx.get(waitlistRef),
     ]);
 
     if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
@@ -506,23 +583,30 @@ export async function enrollInSlot(
       throw new ClientError("Masz już wykorzystany dzienny limit 2 slotów basenowych (baseny, sauna i instruktorowanie liczą się łącznie) — nie możesz zapisać się na kolejny slot tego dnia.");
     }
 
+    // Regulamin § 4 pkt 2: zapisy (także lista rezerwowa) na najwyżej N terminów naprzód.
+    if (aheadSnap && !aheadSnap.has(args.sessionId) && aheadSnap.size >= args.vars.basen_max_dni_naprzod) {
+      throw new ClientError(`Możesz mieć zapisy na najwyżej ${args.vars.basen_max_dni_naprzod} terminy naprzód. Zapisz się po odbyciu któregoś z nich.`);
+    }
+
     let availability: SlotAvailability | null = null;
     // Kursant nie płaci za basen TYLKO gdy rezerwuje z WŁASNEJ puli (reservedSpots.
     // restrictedToKursant, czyli availability.viaReservedPool) — na slocie bez tej puli
     // kursant ma pełne prawa członka (może się zapisać), ale też pełny obowiązek zapłaty
     // jak każdy inny, więc musi mieć godziny basenowe tak jak reszta.
     let isFreeForKursant = false;
+    let valuePln = 0;
     if (args.mode !== "instructor") {
       availability = computeSlotAvailability(slotData, args.isKursant);
-      if (availability.isFull) throw new ClientError("Slot jest już pełny.");
+      if (availability.isFull) throw new ClientError("Slot jest już pełny — możesz zapisać się na listę rezerwową.");
 
       isFreeForKursant = args.isKursant && availability.viaReservedPool === true;
       if (!isFreeForKursant) {
-        const godzinyRecords = godzinyLedgerSnap.docs.map((d) => d.data() as any);
+        const godzinyRecords = godzinyLedgerSnap.docs.map((d) => ({id: d.id, ...d.data()} as any));
         const balance = computeBasenGodzinyBalance(godzinyRecords);
         if (balance < 1) {
           throw new ClientError("Brak dostępnych godzin basenowych. Skontaktuj się z opiekunem basenu, aby dopisać godziny.");
         }
+        valuePln = nextEntryValuePln(godzinyRecords, args.vars.basen_cena_za_godzine);
       }
     }
 
@@ -594,6 +678,7 @@ export async function enrollInSlot(
       // rola usera i dostępność puli mogłyby się zmienić między zapisem a anulowaniem,
       // a refundBasenGodzinyInTx musi wiedzieć, czy TEN konkretny zapis w ogóle zablokował godzinę.
       chargedGodziny: args.mode !== "instructor" && !isFreeForKursant,
+      valuePln,
       status: "active",
       createdAt: now,
       updatedAt: now,
@@ -606,11 +691,154 @@ export async function enrollInSlot(
         slot: args.slot,
         enrollmentId: eid,
         performedBy: args.uid,
+        valuePln,
       });
+    }
+
+    // Zapis zwykły zamyka ewentualne oczekiwanie na liście rezerwowej tej godziny.
+    if (waitlistSnap.exists && (waitlistSnap.data() as BasenWaitlistEntry).status === "waiting") {
+      tx.update(waitlistRef, {status: "left", updatedAt: now});
     }
   });
 
   return {enrollmentId: eid};
+}
+
+/**
+ * Terminy (sessionId = data), na które użytkownik ma płatny/zwykły zapis albo czeka
+ * na liście rezerwowej, od dziś. Instruktorowanie się nie liczy.
+ */
+async function readDaysAhead(
+  tx: FirebaseFirestore.Transaction,
+  db: FirebaseFirestore.Firestore,
+  uid: string
+): Promise<Set<string>> {
+  const today = todayIso();
+  const [enrollSnap, waitSnap] = await Promise.all([
+    tx.get(db.collection("basen_enrollments").where("userUid", "==", uid).where("status", "==", "active")),
+    tx.get(db.collection("basen_waitlist").where("userUid", "==", uid).where("status", "==", "waiting")),
+  ]);
+  const days = new Set<string>();
+  for (const d of enrollSnap.docs) {
+    const e = d.data() as BasenEnrollment;
+    if (e.type !== "instructor" && e.sessionId >= today) days.add(e.sessionId);
+  }
+  for (const d of waitSnap.docs) {
+    const w = d.data() as BasenWaitlistEntry;
+    if (w.sessionId >= today) days.add(w.sessionId);
+  }
+  return days;
+}
+
+// ─── Lista rezerwowa ─────────────────────────────────────────────────────────
+
+/**
+ * Zapis na listę rezerwową pełnej godziny (regulamin § 4 pkt 4). Nic nie pobiera —
+ * wejście schodzi dopiero przy przejęciu miejsca (cancelEnrollment → promocja).
+ * Tylko pula ogólna: pula kursancka jest bezpłatna i nie ma rezerwy.
+ */
+export async function joinWaitlist(
+  db: FirebaseFirestore.Firestore,
+  args: { sessionId: string; slot: BasenSlotLabel; uid: string; email: string; displayName: string; isKursant: boolean; vars: BasenVars }
+): Promise<void> {
+  const sessionRef = db.collection("basen_sessions").doc(args.sessionId);
+  const id = enrollmentId(args.sessionId, args.slot, args.uid);
+  const waitRef = db.collection("basen_waitlist").doc(id);
+  const enrollRef = db.collection("basen_enrollments").doc(id);
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  await db.runTransaction(async (tx) => {
+    const [sessionSnap, waitSnap, enrollSnap, ledgerSnap, dailySnap, ahead] = await Promise.all([
+      tx.get(sessionRef),
+      tx.get(waitRef),
+      tx.get(enrollRef),
+      tx.get(db.collection("basen_godziny_ledger").where("uid", "==", args.uid)),
+      tx.get(db.collection("basen_enrollments").where("sessionId", "==", args.sessionId).where("userUid", "==", args.uid).where("status", "==", "active")),
+      readDaysAhead(tx, db, args.uid),
+    ]);
+
+    if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
+    const session = sessionSnap.data() as BasenSession;
+    if (session.date < todayIso()) throw new ClientError("Termin już minął.");
+    const slotData = session.slots?.[args.slot];
+    if (!slotData) throw new ClientError("Slot nie istnieje dla tego terminu.");
+    if (slotData.status === "cancelled") throw new ClientError("Slot jest anulowany.");
+    if (args.slot === "SAUNA") throw new ClientError("Sauna nie ma listy rezerwowej.");
+
+    if (enrollSnap.exists && (enrollSnap.data() as BasenEnrollment).status === "active") {
+      throw new ClientError("Jesteś już zapisany/a na tę godzinę.");
+    }
+    if (waitSnap.exists && (waitSnap.data() as BasenWaitlistEntry).status === "waiting") {
+      throw new ClientError("Jesteś już na liście rezerwowej tej godziny.");
+    }
+
+    const availability = computeSlotAvailability(slotData, args.isKursant);
+    if (availability.viaReservedPool) throw new ClientError("Pula kursancka nie ma listy rezerwowej.");
+    if (!availability.isFull) throw new ClientError("Na tej godzinie są wolne miejsca — zapisz się zwyczajnie.");
+
+    if (dailySnap.docs.length >= 2) {
+      throw new ClientError("Masz już wykorzystany dzienny limit 2 slotów basenowych.");
+    }
+    if (!ahead.has(args.sessionId) && ahead.size >= args.vars.basen_max_dni_naprzod) {
+      throw new ClientError(`Możesz mieć zapisy na najwyżej ${args.vars.basen_max_dni_naprzod} terminy naprzód.`);
+    }
+    const balance = computeBasenGodzinyBalance(ledgerSnap.docs.map((d) => d.data() as any));
+    if (balance < 1) {
+      throw new ClientError("Brak dostępnych godzin basenowych — przy przejęciu miejsca z listy pobierane jest wejście.");
+    }
+
+    tx.set(waitRef, {
+      id,
+      sessionId: args.sessionId,
+      slot: args.slot,
+      userUid: args.uid,
+      userEmail: args.email,
+      userDisplayName: args.displayName,
+      status: "waiting",
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+export async function leaveWaitlist(
+  db: FirebaseFirestore.Firestore,
+  args: { sessionId: string; slot: BasenSlotLabel; uid: string }
+): Promise<void> {
+  const ref = db.collection("basen_waitlist").doc(enrollmentId(args.sessionId, args.slot, args.uid));
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || (snap.data() as BasenWaitlistEntry).status !== "waiting") {
+      throw new ClientError("Nie jesteś na liście rezerwowej tej godziny.");
+    }
+    tx.update(ref, {status: "left", updatedAt: admin.firestore.FieldValue.serverTimestamp()});
+  });
+}
+
+/** Oczekujący na listach rezerwowych od dziś, pogrupowani po `${sessionId}_${slot}` w kolejności zapisu. */
+export async function getWaitlistsBySessionSlot(
+  db: FirebaseFirestore.Firestore
+): Promise<Map<string, BasenWaitlistEntry[]>> {
+  const today = todayIso();
+  const snap = await db.collection("basen_waitlist").where("status", "==", "waiting").get();
+  const byKey = new Map<string, BasenWaitlistEntry[]>();
+  const entries = snap.docs
+    .map((d) => d.data() as BasenWaitlistEntry)
+    .filter((w) => w.sessionId >= today)
+    .sort((a, b) => tsMs(a.createdAt) - tsMs(b.createdAt));
+  for (const w of entries) {
+    const key = `${w.sessionId}_${w.slot}`;
+    const list = byKey.get(key) || [];
+    list.push(w);
+    byKey.set(key, list);
+  }
+  return byKey;
+}
+
+function tsMs(v: any): number {
+  if (v && typeof v.toMillis === "function") return v.toMillis();
+  const n = new Date(v).getTime();
+  return Number.isFinite(n) ? n : 0;
 }
 
 export async function cancelEnrollment(
@@ -620,16 +848,23 @@ export async function cancelEnrollment(
     slot: BasenSlotLabel;
     uid: string;
     cancellationWindowHours: number;
+    vars: BasenVars;
   }
-): Promise<{ wasLate: boolean }> {
+): Promise<{ wasLate: boolean; refunded: boolean; promotedUid: string | null }> {
   const eid = enrollmentId(args.sessionId, args.slot, args.uid);
   const enrollRef = db.collection("basen_enrollments").doc(eid);
   const sessionRef = db.collection("basen_sessions").doc(args.sessionId);
   const now = admin.firestore.FieldValue.serverTimestamp();
   let wasLate = false;
+  let refunded = false;
+  let promotedUid: string | null = null;
 
   await db.runTransaction(async (tx) => {
-    const [enrollSnap, sessionSnap] = await Promise.all([tx.get(enrollRef), tx.get(sessionRef)]);
+    const [enrollSnap, sessionSnap, waitSnap] = await Promise.all([
+      tx.get(enrollRef),
+      tx.get(sessionRef),
+      tx.get(db.collection("basen_waitlist").where("sessionId", "==", args.sessionId)),
+    ]);
     if (!enrollSnap.exists) throw new ClientError("Zapis nie istnieje.");
 
     const enrollment = enrollSnap.data() as BasenEnrollment;
@@ -638,6 +873,28 @@ export async function cancelEnrollment(
 
     const session = sessionSnap.data() as BasenSession;
     const slotData = session.slots?.[args.slot] || null;
+
+    // Lista rezerwowa (regulamin § 4 pkt 4): zwolnione miejsce w puli ogólnej przejmuje
+    // pierwsza osoba z listy, która ma wejście i wolny limit dzienny. Odczyty kandydatów
+    // (saldo, zapisy dnia) przed jakimkolwiek zapisem — wymóg transakcji Firestore.
+    const freesGeneralSeat = Boolean(slotData) && slotData?.status !== "cancelled" &&
+      enrollment.type !== "instructor" && enrollment.viaReservedPool !== true &&
+      session.date >= todayIso();
+    const waiting = freesGeneralSeat ?
+      waitSnap.docs
+        .map((d) => d.data() as BasenWaitlistEntry)
+        .filter((w) => w.slot === args.slot && w.status === "waiting" && w.userUid !== args.uid)
+        .sort((a, b) => tsMs(a.createdAt) - tsMs(b.createdAt))
+        .slice(0, 5) :
+      [];
+    const candidateReads = await Promise.all(waiting.map(async (w) => {
+      const [ledger, daily] = await Promise.all([
+        tx.get(db.collection("basen_godziny_ledger").where("uid", "==", w.userUid)),
+        tx.get(db.collection("basen_enrollments").where("sessionId", "==", args.sessionId).where("userUid", "==", w.userUid).where("status", "==", "active")),
+      ]);
+      return {w, records: ledger.docs.map((d) => ({id: d.id, ...d.data()} as any)), dailyCount: daily.size};
+    }));
+    const promoted = candidateReads.find((c) => computeBasenGodzinyBalance(c.records) >= 1 && c.dailyCount < 2) || null;
 
     // Okno anulowania JUŻ NIE BLOKUJE anulowania (potwierdzone z użytkownikiem: można
     // zrezygnować nawet <24h przed, ale nadal obowiązuje pełna opłata za tę godzinę
@@ -651,7 +908,8 @@ export async function cancelEnrollment(
     }
 
     // ── zapisy ──
-    if (slotData && slotData.status !== "cancelled" && enrollment.type !== "instructor") {
+    // Przy przejęciu z listy rezerwowej liczba zajętych miejsc się nie zmienia.
+    if (slotData && slotData.status !== "cancelled" && enrollment.type !== "instructor" && !promoted) {
       if (enrollment.viaReservedPool) {
         const newUsed = Math.max(0, (slotData.reservedSpots?.usedCount ?? 0) - 1);
         tx.update(sessionRef, {
@@ -681,7 +939,8 @@ export async function cancelEnrollment(
     // usera → godzina przepada, żaden nowy rekord ledgera nie powstaje (booking_block zostaje).
     // chargedGodziny!==false (a nie ===true!) — brak pola na starszych zapisach sprzed tej
     // flagi ma nadal zwracać godzinę, tak jak dotychczas; tylko jawne false (kursant) je pomija.
-    if (enrollment.type !== "instructor" && enrollment.chargedGodziny !== false && !wasLate) {
+    // Spóźniona rezygnacja odzyskuje wejście, gdy miejsce przejęła osoba z listy rezerwowej.
+    if (enrollment.type !== "instructor" && enrollment.chargedGodziny !== false && (!wasLate || promoted)) {
       const godzinyLedgerRef = db.collection("basen_godziny_ledger").doc();
       refundBasenGodzinyInTx(tx, godzinyLedgerRef, {
         uid: args.uid,
@@ -689,13 +948,63 @@ export async function cancelEnrollment(
         slot: args.slot,
         enrollmentId: eid,
         performedBy: args.uid,
+        valuePln: enrollment.valuePln,
       });
+      refunded = true;
     }
 
-    tx.update(enrollRef, {status: "cancelled", cancelledAt: now, updatedAt: now, cancelledLate: wasLate});
+    tx.update(enrollRef, {
+      status: "cancelled", cancelledAt: now, updatedAt: now, cancelledLate: wasLate,
+      ...(wasLate && promoted ? {lateRefunded: true} : {}),
+    });
+
+    if (promoted) {
+      const w = promoted.w;
+      const pid = enrollmentId(args.sessionId, args.slot, w.userUid);
+      const valuePln = nextEntryValuePln(promoted.records, args.vars.basen_cena_za_godzine);
+      tx.set(db.collection("basen_enrollments").doc(pid), {
+        id: pid,
+        sessionId: args.sessionId,
+        slot: args.slot,
+        userUid: w.userUid,
+        userEmail: w.userEmail,
+        userDisplayName: w.userDisplayName,
+        type: "regular",
+        instructorUid: null,
+        kayakId: null,
+        viaReservedPool: false,
+        chargedGodziny: true,
+        valuePln,
+        fromWaitlist: true,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      });
+      blockBasenGodzinyInTx(tx, db.collection("basen_godziny_ledger").doc(), {
+        uid: w.userUid,
+        sessionId: args.sessionId,
+        slot: args.slot,
+        enrollmentId: pid,
+        performedBy: args.uid,
+        valuePln,
+        reason: "Zapis na basen — z listy rezerwowej",
+      });
+      tx.update(db.collection("basen_waitlist").doc(w.id), {status: "promoted", updatedAt: now});
+      const jobRef = db.collection("service_jobs").doc();
+      tx.set(jobRef, {
+        id: jobRef.id,
+        taskId: "basen.notifyWaitlistPromoted",
+        payload: {sessionId: args.sessionId, slot: args.slot, uid: w.userUid},
+        status: "queued",
+        attempts: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      promotedUid = w.userUid;
+    }
   });
 
-  return {wasLate};
+  return {wasLate, refunded, promotedUid};
 }
 
 // Dodaje/zmienia/usuwa parowanie z instruktorem na JUŻ AKTYWNYM zapisie (dziś
@@ -777,7 +1086,9 @@ export async function setEnrollmentInstructor(
 export async function cancelSession(
   db: FirebaseFirestore.Firestore,
   sessionId: string,
-  performedBy: string
+  performedBy: string,
+  cancelReason: "frekwencja" | "admin" = "admin",
+  extraSessionFields: Record<string, any> = {}
 ): Promise<{ enrollments: BasenEnrollment[] }> {
   const sessionRef = db.collection("basen_sessions").doc(sessionId);
   const now = admin.firestore.FieldValue.serverTimestamp();
@@ -801,17 +1112,25 @@ export async function cancelSession(
   // filtrowanie po slocie w pamięci, żeby reużyć istniejący indeks (sessionId, status).
   const enrollmentsSnap = await db.collection("basen_enrollments")
     .where("sessionId", "==", sessionId)
-    .where("status", "==", "active")
     .get();
-  const enrollments = enrollmentsSnap.docs
-    .map((d) => ({id: d.id, ...d.data()} as BasenEnrollment))
-    .filter((e) => activeLabels.includes(e.slot));
+  const allEnrollments = enrollmentsSnap.docs.map((d) => ({id: d.id, ...d.data()} as BasenEnrollment));
+  const enrollments = allEnrollments
+    .filter((e) => e.status === "active" && activeLabels.includes(e.slot));
+  // Spóźnione rezygnacje bez zwrotu — termin się nie odbywa, więc też dostają wejście z powrotem.
+  const forfeited = allEnrollments.filter((e) =>
+    e.status === "cancelled" && e.cancelledLate === true && e.lateRefunded !== true &&
+    e.type !== "instructor" && e.chargedGodziny !== false);
+  const waitingSnap = await db.collection("basen_waitlist").where("sessionId", "==", sessionId).get();
+  const waitingIds = waitingSnap.docs
+    .filter((d) => (d.data() as BasenWaitlistEntry).status === "waiting")
+    .map((d) => d.id);
 
   // Ledger refs utworzone PRZED transakcją (auto-id, jak enrollRef/allocationRef gdzie
   // indziej) — jeden na każdy zapis, który realnie zablokował godzinę (nie instruktor).
   const godzinyRefsByEnrollmentId = new Map<string, FirebaseFirestore.DocumentReference>();
-  for (const e of enrollments) {
-    if (e.type !== "instructor") {
+  // chargedGodziny !== false — kursant z puli kursanckiej nic nie zapłacił, więc nic nie wraca.
+  for (const e of [...enrollments, ...forfeited]) {
+    if (e.type !== "instructor" && e.chargedGodziny !== false) {
       godzinyRefsByEnrollmentId.set(e.id, db.collection("basen_godziny_ledger").doc());
     }
   }
@@ -821,9 +1140,22 @@ export async function cancelSession(
     if (!sessionSnap.exists) throw new ClientError("Termin nie istnieje.");
 
     // ── zapisy ──
-    const slotUpdate: Record<string, any> = {updatedAt: now};
+    // Odwołany termin zostaje w kolekcji (kalendarz i lista sezonu) z powodem odwołania.
+    const slotUpdate: Record<string, any> = {updatedAt: now, cancelReason, cancelledAt: now, ...extraSessionFields};
     for (const l of activeLabels) slotUpdate[`slots.${l}.status`] = "cancelled";
     tx.update(sessionRef, slotUpdate);
+    for (const id of waitingIds) {
+      tx.update(db.collection("basen_waitlist").doc(id), {status: "cancelled", updatedAt: now});
+    }
+    for (const e of forfeited) {
+      tx.update(db.collection("basen_enrollments").doc(e.id), {lateRefunded: true, updatedAt: now});
+      const ledgerRef = godzinyRefsByEnrollmentId.get(e.id);
+      if (ledgerRef) {
+        refundBasenGodzinyInTx(tx, ledgerRef, {
+          uid: e.userUid, sessionId: e.sessionId, slot: e.slot, enrollmentId: e.id, performedBy, valuePln: e.valuePln,
+        });
+      }
+    }
 
     for (const e of enrollments) {
       tx.update(db.collection("basen_enrollments").doc(e.id), {status: "cancelled", cancelledAt: now, updatedAt: now});
@@ -843,6 +1175,7 @@ export async function cancelSession(
           slot: e.slot,
           enrollmentId: e.id,
           performedBy,
+          valuePln: e.valuePln,
         });
       }
     }

@@ -1,6 +1,11 @@
 import type {Request, Response} from "express";
-import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
+import {resolveBasenAdminGrant, getBasenVars} from "../modules/basen/basen_service";
 import {adminAddBasenGodziny, getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
+import {BasenProduct} from "../modules/basen/basen_finance";
+import {getBalance as getGodzinkiBalance} from "../modules/hours/godzinki_service";
+
+const PRODUCTS: BasenProduct[] = ["jednorazowe", "karnet5", "karnet10"];
+const MEMBER_ROLES = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -14,8 +19,9 @@ type Deps = {
 
 /**
  * POST /api/basen/admin/godziny/add
- * Admin dopisuje godziny basenowe użytkownikowi po potwierdzeniu wpłaty poza aplikacją.
- * Body: { userUid: string, amount: number, reason?: string }
+ * Admin dopisuje wejścia po potwierdzeniu przelewu (regulamin basenu § 3).
+ * Body: { userUid, product: "jednorazowe"|"karnet5"|"karnet10", count?: number (jednorazowe), reason? }
+ * Karnet: tylko członek z saldem godzinek ≥ basen_karnet_prog_godzinek (§ 2).
  */
 export async function handleBasenAdminAddGodziny(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -52,15 +58,20 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
 
       const body = req.body || {};
       const targetUid = String(body.userUid || "").trim();
-      const amount = Number(body.amount || 0);
-      const reason = String(body.reason || "").trim();
+      const product = String(body.product || "") as BasenProduct;
+      const count = Number(body.count || 0);
+      const reason = String(body.reason || "").trim().slice(0, 200);
 
       if (!targetUid) {
         res.status(400).json({error: "Brakuje userUid."});
         return;
       }
-      if (!amount || amount <= 0) {
-        res.status(400).json({error: "Liczba godzin musi być większa od 0."});
+      if (!PRODUCTS.includes(product)) {
+        res.status(400).json({error: "Wybierz produkt: wejścia jednorazowe, karnet 5 albo karnet 10."});
+        return;
+      }
+      if (product === "jednorazowe" && (!Number.isInteger(count) || count <= 0)) {
+        res.status(400).json({error: "Liczba wejść musi być większa od 0."});
         return;
       }
 
@@ -70,11 +81,27 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
         return;
       }
 
+      const vars = await getBasenVars(deps.db);
+      if (product !== "jednorazowe") {
+        const targetRole = String((targetSnap.data() as any)?.role_key || "");
+        if (!MEMBER_ROLES.includes(targetRole)) {
+          res.status(400).json({error: "Karnet mogą kupić tylko członkowie klubu."});
+          return;
+        }
+        const godzinki = await getGodzinkiBalance(deps.db, targetUid);
+        if (godzinki < vars.basen_karnet_prog_godzinek) {
+          res.status(400).json({error: `Karnet wymaga co najmniej ${vars.basen_karnet_prog_godzinek} godzinek (saldo: ${godzinki}).`});
+          return;
+        }
+      }
+
       const recordId = await adminAddBasenGodziny(deps.db, {
         uid: targetUid,
-        amount,
-        reason: reason || "Dopisanie godzin przez admina",
+        product,
+        count,
+        reason,
         performedBy: adminUid,
+        pricing: vars,
       });
 
       const records = await getBasenGodzinyRecords(deps.db, targetUid);

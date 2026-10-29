@@ -430,11 +430,8 @@
 }
 
 @media (max-width: 480px) {
-  /* Przyciski od krawędzi do krawędzi ekranu (zjadają padding karty), szeroka przerwa w środku */
-  /* Pełna szerokość ekranu niezależnie od paddingów #appRoot/karty (karta wyśrodkowana) */
-  .kmFormButtons { margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); gap: 20px; }
-  .kmForm .kmBigBtn.approveBtn { border-radius: 0 14px 14px 0; border-left: none; }
-  .kmForm .kmBigBtn.rejectBtn { border-radius: 14px 0 0 14px; border-right: none; }
+  /* Przyciski w obrębie karty (wcześniej na całą szerokość ekranu — wystawały poza ramkę) */
+  .kmFormButtons { gap: 12px; }
   .kmForm .kmUnitInput input { width: 70px; }
   .kmForm .kmResultLabel { font-size: 14px; gap: 6px; }
   .kmResultRow { padding-left: 12px; padding-right: 10px; }

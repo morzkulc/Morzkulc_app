@@ -24,6 +24,15 @@ const BASEN_SESSIONS_URL = "/api/basen/sessions";
 const KURS_INFO_URL = "/api/kurs/info";
 const KM_MY_STATS_URL = "/api/km/stats";
 const NOTIFICATION_PREFS_URL = "/api/profile/notifications";
+const TEST_ROLE_URL = "/api/test/role";
+const TEST_ROLE_OPTIONS = [
+  ["rola_sympatyk", "Sympatyk"],
+  ["rola_kandydat", "Kandydat"],
+  ["rola_kursant", "Kursant"],
+  ["rola_czlonek", "Członek"],
+  ["rola_zarzad", "Zarząd"],
+  ["rola_kr", "KR"],
+];
 const EVENT_INTERESTS_URL = "/api/events/interests";
 const EVENT_INTEREST_TOGGLE_URL = "/api/events/interest/toggle";
 // Klucz sessionStorage do przekazania preferowanego typu rankingu (km|points|hours)
@@ -606,6 +615,20 @@ function renderHomeProfile({ viewEl, ctx }) {
       </div>
       ` : ""}
 
+      ${ctx?.session?.isTestAccount ? `
+      <div class="profileBlock">
+        <h3 class="profileBlockTitle">Konto testowe — rola</h3>
+        <p class="muted">Rola tylko w aplikacji: bez arkusza członków i grup Workspace. Po zmianie aplikacja się przeładuje.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="testRoleSelect">
+            ${TEST_ROLE_OPTIONS.map(([key, label]) => `<option value="${escapeAttr(key)}"${key === roleKey ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+          </select>
+          <button type="button" class="primary" id="testRoleSaveBtn">Zmień rolę</button>
+        </div>
+        <div class="err hidden" id="testRoleErr"></div>
+      </div>
+      ` : ""}
+
       <div class="profileBlock">
         <h3 class="profileBlockTitle">Powiadomienia e-mail</h3>
         <p class="muted" id="notifyPrefsIntro">Powiadomienia będą wysyłane na twój adres e-mail na … dni przed wydarzeniem</p>
@@ -682,6 +705,7 @@ function renderHomeProfile({ viewEl, ctx }) {
 
   // Powiadomienia e-mail — domyślnie wyłączone, użytkownik sam włącza w profilu.
   wireNotificationPrefs(viewEl, ctx);
+  wireTestRole(viewEl, ctx);
 
   // Popover „i" przy roli (np. wyjaśnienie roli kandydata) — pokazywany tylko po kliknięciu ikonki.
   viewEl.querySelectorAll("[data-info-toggle]").forEach((btn) => {
@@ -798,6 +822,27 @@ function buildKlubBoxHtml(data) {
 
   if (!blocks.length) return "<p class=\"muted\">Brak informacji klubowych.</p>";
   return blocks.join("");
+}
+
+// Konto testowe: przełączenie roli i pełne przeładowanie (sesja, moduły i uprawnienia od nowa).
+function wireTestRole(viewEl, ctx) {
+  const btn = viewEl.querySelector("#testRoleSaveBtn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const roleKey = viewEl.querySelector("#testRoleSelect")?.value;
+    const errEl = viewEl.querySelector("#testRoleErr");
+    btn.disabled = true;
+    try {
+      await apiPostJson({ url: TEST_ROLE_URL, idToken: ctx.idToken, body: { roleKey } });
+      window.location.reload();
+    } catch (e) {
+      btn.disabled = false;
+      if (errEl) {
+        errEl.textContent = e?.message || "Nie udało się zmienić roli.";
+        errEl.classList.remove("hidden");
+      }
+    }
+  });
 }
 
 function wireNotificationPrefs(viewEl, ctx) {
@@ -1127,7 +1172,8 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
   let sessions;
   try {
     const data = await apiGetJson({ url: BASEN_SESSIONS_URL, idToken: ctx.idToken });
-    sessions = Array.isArray(data?.sessions) ? data.sessions : [];
+    // API zwraca cały sezon (także minione) — kalendarz startowy pokazuje tylko nadchodzące.
+    sessions = (Array.isArray(data?.sessions) ? data.sessions : []).filter((s) => !s.isPast);
   } catch {
     containerEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Nie udało się pobrać zajęć.</div></div></div>`;
     return;

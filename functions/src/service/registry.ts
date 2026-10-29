@@ -9,6 +9,8 @@ import { eventsSyncFromSheetTask, eventsWriteToSheetTask } from "./tasks/eventsS
 import { eventsSyncCalendarTask } from "./tasks/eventsSyncCalendar";
 import { basenNotifySessionCancelledTask } from "./tasks/basenNotifySessionCancelled";
 import { basenGrantInstructorRewardsTask } from "./tasks/basenGrantInstructorRewards";
+import { basenDecideSessionsTask } from "./tasks/basenDecideSessions";
+import { basenNotifyWaitlistPromotedTask } from "./tasks/basenNotifyWaitlistPromoted";
 import { gearPrivateStorageTask } from "./tasks/gearPrivateStorage";
 import { godzinkiMonthlyBalanceReviewTask } from "./tasks/godzinkiMonthlyBalanceReview";
 import { godzinkiArchiveSheetRowsTask } from "./tasks/godzinkiArchiveSheetRows";
@@ -57,6 +59,8 @@ const tasks: ServiceTask[] = [
   eventsSyncCalendarTask,
   basenNotifySessionCancelledTask,
   basenGrantInstructorRewardsTask,
+  basenDecideSessionsTask,
+  basenNotifyWaitlistPromotedTask,
   gearPrivateStorageTask,
   godzinkiMonthlyBalanceReviewTask,
   godzinkiArchiveSheetRowsTask,

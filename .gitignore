@@ -82,3 +82,6 @@ site_pg/_oryginaly/
 
 # Wynik prerenderu stron publicznych (scripts/prerender-site.js, predeploy Hosting)
 .build/
+
+# Źródło archiwum blach (dane w functions/src/modules/blachy/blachy_archiwum_2025.ts)
+Blachy_archiwum_2025/

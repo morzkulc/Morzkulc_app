@@ -1,6 +1,6 @@
 /* eslint-disable require-jsdoc */
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {norm} from "../modules/shared/text_utils";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
@@ -34,7 +34,7 @@ const str = (v: any) => String(v == null ? "" : v).trim();
 const ts = () => admin.firestore.FieldValue.serverTimestamp();
 
 /**
- * /api/blachy/* — procedura nadawania Blach (regulamin v3.0):
+ * /api/blachy/* — procedura nadawania Blach (regulamin v3.2):
  *  GET  stan        — faza, terminy, skład Kapituły, moje zgłoszenia, uprawnienia
  *  POST nominacja   — add / update / withdraw (aktualni członkowie, okno nominacji)
  *  GET  kapitula    — zestawienie kandydatur + głosowanie (tylko skład Kapituły)
@@ -181,7 +181,7 @@ async function nominacja(db: FirebaseFirestore.Firestore, ctx: BlachyContext, me
     kandydat.klub = "";
     memberId = u.memberId ?? null;
   }
-  if (kandydat.uid === me.uid || (kandydat.email && kandydat.email === me.email)) throw httpError(409, "Nie można zgłosić samego siebie (§3 pkt 6)");
+  if (kandydat.uid === me.uid || (kandydat.email && kandydat.email === me.email)) throw httpError(409, "Nie można zgłosić samego siebie (§3 pkt 2)");
   const hit = findInRegistry(await registry(db), {email: kandydat.email, memberId, imie: kandydat.imie, nazwisko: kandydat.nazwisko});
   if (hit) throw httpError(409, "Ta osoba ma już Blachę Klubową (Rejestr Blach)");
 
@@ -317,7 +317,7 @@ async function kapitulaPost(db: FirebaseFirestore.Firestore, ctx: BlachyContext,
   }
 }
 
-// ── Zarząd (§5 pkt 9, 12) ───────────────────────────────────────────────────
+// ── Zarząd (§5 pkt 5, 7) ────────────────────────────────────────────────────
 async function zarzadGet(db: FirebaseFirestore.Firestore, ctx: BlachyContext, me: Me) {
   if (me.role !== "rola_zarzad") throw httpError(403, "Tylko Zarząd");
   const {cfg} = ctx;
@@ -326,13 +326,9 @@ async function zarzadGet(db: FirebaseFirestore.Firestore, ctx: BlachyContext, me
   const rozpatrywane = kands.filter((k) => k.status !== "nieprawidlowa");
   return {
     ok: true, rok: cfg.rok,
-    liczby: {
-      kandydatury: rozpatrywane.length,
-      wGlosowaniu: rozpatrywane.filter((k) => k.status === "do_weryfikacji" || k.status === "otwarte").length,
-      odroczone: rozpatrywane.filter((k) => k.status === "odroczone").length,
-      wybrani: rozpatrywane.filter((k) => k.decyzja === "wybrany").length,
-    },
-    // Zarząd widzi wyłącznie wybranych (nazwiska niewyróżnionych są poufne, §6 pkt 3).
+    // Bez liczby kandydatur (tajna, §6 pkt 2): tylko czy Kapituła skończyła i kogo wybrała.
+    gotowe: !rozpatrywane.some((k) => k.status === "do_weryfikacji" || k.status === "otwarte"),
+    // Zarząd widzi wyłącznie wybranych (reszta jest tajna, §6 pkt 2).
     wybrani: rozpatrywane.filter((k) => k.decyzja === "wybrany").map((k) => ({
       id: k.id, label: k.label, uzasadnienie: str(k.uzasadnienieKapituly), przyjecie: k.przyjecie?.status || null,
       maMail: Boolean(str(k.kandydat?.email)),
@@ -354,7 +350,6 @@ async function zarzadPost(db: FirebaseFirestore.Firestore, ctx: BlachyContext, m
   const action = norm(body?.action);
 
   if (action === "approve") {
-    if (!kands.length) throw httpError(409, "Brak rozpatrzonych kandydatur");
     if (kands.some((k) => k.status === "do_weryfikacji" || k.status === "otwarte")) throw httpError(409, "Kapituła nie zakończyła głosowań");
     if (wybrani.some((k) => !str(k.uzasadnienieKapituly))) throw httpError(409, "Kapituła nie dodała uzasadnień dla wszystkich wybranych");
     const uchwala = str(body?.uchwala).slice(0, 200);

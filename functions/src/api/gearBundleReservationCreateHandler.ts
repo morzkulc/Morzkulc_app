@@ -1,6 +1,6 @@
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {createBundleReservation, BundleItemInput} from "../modules/equipment/bundle/gear_bundle_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";

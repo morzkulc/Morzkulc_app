@@ -2,6 +2,7 @@ import {ServiceTask} from "../types";
 import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {listaRoleForUserRole, RoleMappingEntry, SimpleLogger} from "../workspaceGroupSync";
 import {normNullish} from "../../modules/shared/text_utils";
+import {getAppVars} from "../../modules/setup/app_vars";
 
 /**
  * Task: users.reconcileWorkspaceGroups
@@ -103,6 +104,8 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
     const setupData = (setupSnap.exists ? setupSnap.data() : null) as any;
     const roleMappings: Record<string, RoleMappingEntry> = setupData?.roleMappings || {};
 
+    const testAccounts = (await getAppVars(firestore)).testAccounts;
+
     const managedGroups = new Set<string>();
     for (const entry of Object.values(roleMappings)) {
       for (const g of (entry?.groups || [])) {
@@ -128,6 +131,11 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
       const data = snap.docs[0].data() as any;
       const roleKey = normNullish(data?.role_key);
       const statusKey = normNullish(data?.status_key);
+
+      if (testAccounts.includes(targetEmail.toLowerCase())) {
+        logger.info("reconcileWorkspaceGroups: test account — skip", {targetEmail});
+        return {ok: true, message: `reconcile(${targetEmail}): konto testowe — pominięte`, details: {targetEmail, testAccount: true}};
+      }
 
       if (dryRun) {
         logger.info("DRYRUN reconcileWorkspaceGroups (point)", {targetEmail, roleKey, statusKey});
@@ -168,6 +176,8 @@ export const reconcileWorkspaceGroupsTask: ServiceTask<Payload> = {
       const data = doc.data() as any;
       const email = normNullish(data?.email).toLowerCase();
       if (!email || !email.includes("@")) continue;
+      // Konto testowe — rola przełączana w aplikacji, grupy Workspace nigdy nie ruszane.
+      if (testAccounts.includes(email)) continue;
       usersChecked++;
 
       const roleKey = normNullish(data?.role_key);

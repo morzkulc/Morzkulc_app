@@ -18,7 +18,7 @@
  */
 
 import type {Request, Response} from "express";
-import {logger} from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import {listUpcomingEvents} from "../modules/calendar/events_service";
 import {resolveZarzad} from "../modules/setup/function_roles_service";
 import {buildPublicKurs} from "../modules/kurs/kurs_public";

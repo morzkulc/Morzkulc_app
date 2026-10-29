@@ -1,10 +1,10 @@
 /**
- * Procedura nadawania Blach (regulamin v3.0 §3–§6): konfiguracja z SETUP (Vars_CZLONKOWIE →
+ * Procedura nadawania Blach (regulamin v3.2 §3–§6): konfiguracja z SETUP (Vars_CZLONKOWIE →
  * setup/vars_members), fazy roku, miejsca w Kapitule, klucze kandydatów, zestawienie dla Kapituły.
  *
  * Kolekcje:
  *  - blachy_procedura/{rok}         — stan roku: znaczniki maili, zatwierdzenie/zwrot Zarządu, ogłoszenie, protokół,
- *  - blachy_nominacje/{id}          — zgłoszenia (poufne: autor + Kapituła),
+ *  - blachy_nominacje/{id}          — zgłoszenia (tajne: autor + Kapituła),
  *  - blachy_kandydatury/{rok}_{key} — zgłoszenia zebrane per kandydat + głosowanie,
  *  - blachy_kandydatury/{id}/tajne/wynik — WYŁĄCZNIE sumy TAK/NIE (bez powiązania osoba↔głos).
  */
@@ -16,7 +16,7 @@ export const PROCEDURA_COLLECTION = "blachy_procedura";
 export const NOMINACJE_COLLECTION = "blachy_nominacje";
 export const KANDYDATURY_COLLECTION = "blachy_kandydatury";
 
-/** §2 pkt 2 — obszary zasług (równorzędne). */
+/** §2 pkt 1 — obszary zasług (równorzędne). */
 export const OBSZARY = [
   "Działalność organizacyjna",
   "Działalność szkoleniowa",
@@ -31,7 +31,10 @@ export const NOMINUJACE_ROLE = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 /** Numeracja nowych blach: kolejne po archiwum klubowym (00–39 → od 40). */
 export const PIERWSZY_NUMER = ARCHIWUM_MAX_NR + 1;
 
-/** Treść nominacji i sumy głosów usuwane po tylu dniach od ogłoszenia (decyzja D8, §6 pkt 5). */
+/**
+ * Po tylu dniach od ogłoszenia (termin na zastrzeżenia do KR, §6 pkt 3) usuwamy wszystkie dane o
+ * zgłoszonych — nominacje, kandydatury, sumy głosów (§6 pkt 2). Zostają tylko wyróżnieni w Rejestrze.
+ */
 export const DNI_DO_USUNIECIA = 14;
 
 export const SEATS = 5;
@@ -69,7 +72,7 @@ export function dayOfYear(raw: any, rok: number): string {
   return "";
 }
 
-/** Konfiguracja z setup/vars_members.vars (zmienne blachy_*). Brakujące terminy = harmonogram regulaminu §3 pkt 1, §5 pkt 11. */
+/** Konfiguracja z setup/vars_members.vars (zmienne blachy_*). Brakujące terminy = harmonogram regulaminu §3 pkt 1, §5 pkt 8. */
 export function parseBlachyConfig(vars: Record<string, any> | null | undefined, todayIso: string): BlachyConfig {
   const v = (k: string) => vars?.[k]?.value;
   const rok = Number(todayIso.slice(0, 4));
@@ -127,13 +130,12 @@ export function canEditRegistry(cfg: BlachyConfig, mail: string, isAdminRole: bo
 }
 
 /**
- * Kto głosuje na danym miejscu dla kandydata (§5 pkt 5): członek, a gdy jest kandydatem
- * albo zgłosił konflikt interesów — zastępca; gdy i on nie może — miejsce puste (null).
+ * Kto głosuje na danym miejscu (§5 pkt 2): członek, a gdy zgłosił konflikt interesów — zastępca;
+ * gdy i on nie może — miejsce puste (null).
  */
-export function seatVoters(cfg: BlachyConfig, candidateEmail: string, wylaczeni: string[]): Array<{seat: number; email: string | null}> {
-  const out = email(candidateEmail);
+export function seatVoters(cfg: BlachyConfig, wylaczeni: string[]): Array<{seat: number; email: string | null}> {
   const excluded = new Set(wylaczeni.map(email));
-  const ok = (e: string) => Boolean(e) && e !== out && !excluded.has(e);
+  const ok = (e: string) => Boolean(e) && !excluded.has(e);
   return cfg.kapitula.map((s) => ({seat: s.seat, email: ok(s.czlonek) ? s.czlonek : ok(s.zastepca) ? s.zastepca : null}));
 }
 
@@ -149,7 +151,7 @@ export type Kandydat = {uid: string; imie: string; nazwisko: string; ksywa: stri
 
 export type NominacjaInput = {kandydat: Kandydat; obszary: string[]; zaslugi: string; uzasadnienie: string};
 
-/** Walidacja formularza zgłoszenia (§3 pkt 4). */
+/** Walidacja formularza zgłoszenia (§3 pkt 3). */
 export function validateNominacja(body: any):
   {ok: true; data: NominacjaInput} | {ok: false; fields: Record<string, string>} {
   const f: Record<string, string> = {};

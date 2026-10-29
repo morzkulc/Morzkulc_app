@@ -4,7 +4,7 @@ import { storageFetchKayakCoverUrl, storageFetchKayakGalleryUrls, storageFetchLi
 import { createReservationCalendar } from "/core/date_range_calendar.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
 import { formatDatePL as formatDatePLFromIso, buildKayakTitle } from "/core/format_utils.js";
-import { formatCockpitSize, formatSprayskirtSize } from "/core/cockpit_size.js";
+import { cockpitFittingDecks, formatCockpitSize, formatSprayskirtSize, sprayskirtAlsoFits, sprayskirtFitsCockpit } from "/core/cockpit_size.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -1144,7 +1144,9 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
             }
           } else if (isSprayskirtsView) {
             const deck = String(filterDeckSelectEl?.value || "");
-            if (deck && sprayskirtDeckKey(item) !== deck) return false;
+            // Filtr "R5" pokazuje też fartuchy, które pasują na R5 (R6, sprayskirtAlsoFits).
+            const itemDeck = sprayskirtDeckKey(item);
+            if (deck && itemDeck !== deck && !sprayskirtAlsoFits(itemDeck).includes(deck)) return false;
             const chimney = String(filterChimneySelectEl?.value || "");
             if (chimney && (sprayskirtChimneyKey(item) || SPRAYSKIRT_NO_CHIMNEY) !== chimney) return false;
           } else {
@@ -1229,6 +1231,17 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         }
       };
 
+      // Fartuchy do wiersza "Pasujące fartuchy" w szczegółach kajaka. Błąd nie blokuje
+      // listy kajaków — wiersz po prostu się nie pokaże.
+      const loadFitSprayskirts = async () => {
+        try {
+          const resp = await apiGetJson({ url: `${GEAR_URL}?category=sprayskirts`, idToken: ctx.idToken });
+          fitSprayskirts = Array.isArray(resp?.items) ? resp.items : [];
+        } catch {
+          fitSprayskirts = [];
+        }
+      };
+
       const loadGear = async (category) => {
         setErr("");
         listEl.innerHTML = `<div class="hint">Ładuję...</div>`;
@@ -1239,6 +1252,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           const [resp] = await Promise.all([
             apiGetJson({ url, idToken: ctx.idToken }),
             loadFavorites(category),
+            category === "kayaks" ? loadFitSprayskirts() : null,
           ]);
 
           if (category === "kayaks") {
@@ -2095,8 +2109,10 @@ function sprayskirtMaterialIconHtml(item) {
 function sprayskirtBadgesHtml(item) {
   const deck = sprayskirtDeckKey(item);
   const chimney = sprayskirtChimneyKey(item);
+  const alsoFits = sprayskirtAlsoFits(deck);
+  const alsoFitsText = alsoFits.length ? `, pasuje też na ${alsoFits.join(", ")}` : "";
   const deckBadge = deck !== SPRAYSKIRT_NO_DECK
-    ? `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[deck]};" title="Deck ${escapeAttr(sprayskirtSizeLabel(item))}">${deck}</span>`
+    ? `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[deck]};" title="Deck ${escapeAttr(sprayskirtSizeLabel(item))}${alsoFitsText}">${deck}</span>`
     : "";
   const chimneyBadge = chimney
     ? `<span class="skirtChimneyBadge" title="Rozmiar komina"><small>komin</small>${escapeHtml(chimney === "regulowany" ? "reg." : chimney)}</span>`
@@ -2112,7 +2128,45 @@ function kayakDeckBadgeHtml(k) {
   const label = formatCockpitSize(k?.cockpit);
   const m = label.match(/^R\d/);
   if (!m) return "";
-  return `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[m[0]]};" title="Kokpit ${escapeAttr(label)} — pasuje fartuch ${m[0]}">${m[0]}</span>`;
+  return `<span class="skirtDeckBadge" style="background:${SPRAYSKIRT_DECK_COLORS[m[0]]};" title="Kokpit ${escapeAttr(label)} — pasuje fartuch ${decksOrList(cockpitFittingDecks(k?.cockpit))}">${m[0]}</span>`;
+}
+
+// Wiersz "Kokpit" w szczegółach: "R4 (86x50), pasuje fartuch R4, R5 lub R6" — lista
+// fartuchów tylko gdy pasuje więcej niż jeden deck.
+function kayakCockpitDetail(raw) {
+  const label = formatCockpitSize(raw);
+  const decks = cockpitFittingDecks(raw);
+  if (decks.length < 2) return label;
+  return `${label}, pasuje fartuch ${decksOrList(decks)}`;
+}
+
+// Fartuchy neoprenowe pasujące na kokpit wg obwodu elipsy (sprayskirtFitsCockpit),
+// pogrupowane po kominie: "M: 9, 10, 15 · XL: 2, 14 · S: 6". Szmaciane pomijamy —
+// reguła jest z przymiarki neoprenów. Ładowane przy wejściu na listę kajaków.
+let fitSprayskirts = [];
+
+function fittingSprayskirtsText(cockpit) {
+  const byChimney = new Map();
+  for (const s of fitSprayskirts) {
+    if (!/neopren/i.test(String(s?.meta?.material || ""))) continue;
+    if (!sprayskirtFitsCockpit(s?.size, cockpit)) continue;
+    const key = sprayskirtChimneyKey(s) || "bez komina";
+    if (!byChimney.has(key)) byChimney.set(key, []);
+    byChimney.get(key).push(s);
+  }
+  return [...byChimney.entries()]
+    .sort(([a], [b]) => orderIndex(SPRAYSKIRT_CHIMNEY_ORDER, a) - orderIndex(SPRAYSKIRT_CHIMNEY_ORDER, b))
+    .map(([key, list]) => `${key}: ${list
+      .map((s) => String(s?.number || "").trim())
+      .filter(Boolean)
+      .sort((a, b) => (Number(a) || 9999) - (Number(b) || 9999))
+      .join(", ")}`)
+    .join(" · ");
+}
+
+// ["R4", "R5", "R6"] → "R4, R5 lub R6"
+function decksOrList(decks) {
+  return decks.length < 2 ? decks.join("") : `${decks.slice(0, -1).join(", ")} lub ${decks[decks.length - 1]}`;
 }
 
 function deckLegendBadgesHtml() {
@@ -2231,7 +2285,8 @@ function buildKayakDetailsRows(k) {
     ["Rozmiar", k?.size],
     ["Litrów", k?.liters],
     ["Zakres wag", k?.weightRange],
-    ["Kokpit", isCanoe ? "" : formatCockpitSize(k?.cockpit)],
+    ["Kokpit", isCanoe ? "" : kayakCockpitDetail(k?.cockpit)],
+    ["Pasujące fartuchy", isCanoe ? "" : fittingSprayskirtsText(k?.cockpit)],
     ["Pół na pół?", isHalfHalf ? "tak" : ""],
     ["Składowany", k?.storage],
     ["Prywatny?", isPrivate ? "tak" : ""],

@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {enrollInSlot, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 
 type Deps = {
@@ -61,7 +61,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       const body = req.body || {};
       const sessionId = String(body.sessionId || "").trim();
       const slot = String(body.slot || "").trim() as BasenSlotLabel;
-      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor";
+      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor" | "waitlist";
       const instructorUid = String(body.instructorUid || "").trim();
       const kayakId = String(body.kayakId || "").trim();
 
@@ -70,8 +70,8 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         return;
       }
 
-      if (!["regular", "training", "instructor"].includes(mode)) {
-        res.status(400).json({error: "mode musi być 'regular', 'training' lub 'instructor'."});
+      if (!["regular", "training", "instructor", "waitlist"].includes(mode)) {
+        res.status(400).json({error: "mode musi być 'regular', 'training', 'instructor' lub 'waitlist'."});
         return;
       }
 
@@ -108,8 +108,14 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       // instructorUid dla mode="training" jest OPCJONALNY — brak → zapis powstaje jako
       // "szuka instruktora" (patrz basen_service.ts::listSlotAttendees/claimWaitingStudent).
 
-      // Waliduje istnienie configu (spójne z dotychczasowym zachowaniem).
-      await getBasenVars(deps.db);
+      const vars = await getBasenVars(deps.db);
+
+      // Lista rezerwowa pełnej godziny (regulamin § 4 pkt 4) — bez pobrania wejścia.
+      if (mode === "waitlist") {
+        await joinWaitlist(deps.db, {sessionId, slot, uid, email: userEmail, displayName: userDisplayName, isKursant, vars});
+        res.status(200).json({ok: true, waitlist: true});
+        return;
+      }
 
       const {enrollmentId} = await enrollInSlot(deps.db, {
         sessionId,
@@ -121,6 +127,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         instructorUid: mode === "training" ? instructorUid : undefined,
         kayakId: kayakId || undefined,
         isKursant,
+        vars,
       });
 
       res.status(200).json({ok: true, enrollmentId});
