@@ -189,9 +189,9 @@ function renderKluczeTable(osoby) {
   }
   const CHECK = `<span class="kluczeCheck">✓</span>`;
   const DASH = `<span class="kluczeDash">—</span>`;
-  let html = `<div class="tableWrapper"><table class="reportTable"><thead><tr><th>Osoba</th><th>Telefon</th><th>Klucze do siedziby</th><th>Dostęp akademik</th></tr></thead><tbody>`;
+  let html = `<div class="tableWrapper"><table class="reportTable"><thead><tr><th>Osoba</th><th>E-mail</th><th>Klucze do siedziby</th><th>Dostęp akademik</th></tr></thead><tbody>`;
   for (const o of osoby) {
-    html += `<tr><td>${escapeHtml(o.name)}</td><td>${o.phone ? escapeHtml(o.phone) : DASH}</td><td>${o.hasClubKeys ? CHECK : DASH}</td><td>${o.hasAkademikAccess ? CHECK : DASH}</td></tr>`;
+    html += `<tr><td>${escapeHtml(o.name)}</td><td>${o.email ? `<a class="klubMail" href="mailto:${escapeAttr(o.email)}">${escapeHtml(o.email)}</a>` : DASH}</td><td>${o.hasClubKeys ? CHECK : DASH}</td><td>${o.hasAkademikAccess ? CHECK : DASH}</td></tr>`;
   }
   html += `</tbody></table></div>`;
   return html;

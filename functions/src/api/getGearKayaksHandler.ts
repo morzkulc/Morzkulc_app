@@ -2,6 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
+import {canSeeMemberContacts} from "../modules/users/member_standing";
 import type * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {
@@ -41,7 +42,7 @@ function getCategoryFromRequest(req: Request): string {
   return String(raw || "kayaks").trim().toLowerCase();
 }
 
-function pickKayak(doc: any, reservedKayakIdsNow: Set<string>) {
+function pickKayak(doc: any, reservedKayakIdsNow: Set<string>, showOwnerContact: boolean) {
   const id = String(doc?.id || "");
   const isReservedNow = reservedKayakIdsNow.has(id);
 
@@ -63,7 +64,7 @@ function pickKayak(doc: any, reservedKayakIdsNow: Set<string>) {
     weightRange: String(doc?.weightRange || ""),
     cockpit: String(doc?.cockpit || ""),
     storage: String(doc?.storage || doc?.storedAt || ""),
-    ownerContact: String(doc?.ownerContact || ""),
+    ownerContact: showOwnerContact ? String(doc?.ownerContact || "") : "",
     notes: String(doc?.notes || ""),
     isReservedNow,
     reservedNowLabel: isReservedNow ? "zarezerwowany teraz" : "dostępny teraz",
@@ -145,14 +146,17 @@ export async function handleGetGearKayaks(req: Request, res: Response, deps: Get
         return;
       }
 
-      const [kayaksSnap, reservedKayakIdsNow] = await Promise.all([
+      const [kayaksSnap, reservedKayakIdsNow, userSnap] = await Promise.all([
         db.collection("gear_kayaks").where("isActive", "==", true).limit(500).get(),
         loadReservedKayakIdsNow(db),
+        db.collection("users_active").doc(tokenCheck.decoded.uid).get(),
       ]);
+      // E-mail właściciela kajaka — tylko członkowie/kandydaci/KR/zarząd (member_standing.ts).
+      const showOwnerContact = canSeeMemberContacts(String((userSnap.data() as any)?.role_key || ""));
 
       const kayaks = kayaksSnap.docs
         .map((d) => ({...d.data(), id: String(d.data()?.id || "") || d.id}))
-        .map((d) => pickKayak(d, reservedKayakIdsNow));
+        .map((d) => pickKayak(d, reservedKayakIdsNow, showOwnerContact));
 
       kayaks.sort((a, b) =>
         String(a?.number || a?.id || "").localeCompare(String(b?.number || b?.id || ""), "pl", {numeric: true})

@@ -2,6 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
+import {canSeeMemberContacts} from "../modules/users/member_standing";
 import * as logger from "firebase-functions/logger";
 import {fullNameFromUser, resolveZarzad} from "../modules/setup/function_roles_service";
 import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blachy_registry";
@@ -67,6 +68,8 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
       // 05.09.2026: nie pokazywać stanu konta nikomu poza zarządem/KR).
       const roleKey = userSnap.exists ? String((userSnap.data() as any)?.role_key || "") : "";
       const canSeeFinance = adminRoleKeys.includes(roleKey);
+      // E-mail osób z kluczami — tylko członkowie/kandydaci/KR/zarząd (member_standing.ts).
+      const canSeeContacts = canSeeMemberContacts(roleKey);
       // Lista osób z kluczami: widoczna dla KAŻDEGO zalogowanego (feedback
       // użytkownika 05.09.2026 — poprzednia bramka do samych ról modułu Klub
       // ukrywała ją też sympatykowi/kursantowi; to nie dane finansowe, sama
@@ -130,39 +133,41 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
 
       // 6) Osoby z kluczami do siedziby / dostępem do akademika — widoczne dla
       // każdego zalogowanego (patrz komentarz przy canSeeKeys wyżej — usunięty
-      // 05.09.2026). Wyświetlanie: ksywka jeśli jest (inaczej imię+nazwisko);
-      // telefon zawsze osobną kolumną (żeby dało się skontaktować w sprawie
-      // odbioru kluczy).
-      let kluczeOsoby: Array<{name: string; phone: string | null; hasClubKeys: boolean; hasAkademikAccess: boolean}> | undefined;
+      // 05.09.2026). Wyświetlanie: ksywa albo „Imię N." i e-mail osobną kolumną
+      // (kontakt w sprawie kluczy).
+      let kluczeOsoby: Array<{name: string; email: string | null; hasClubKeys: boolean; hasAkademikAccess: boolean}> | undefined;
       {
         const [withKeysSnap, withAkademikSnap] = await Promise.all([
           db.collection("users_active").where("admin.hasClubKeys", "==", true).get(),
           db.collection("users_active").where("admin.hasAkademikAccess", "==", true).get(),
         ]);
 
-        type Entry = {profile: any; hasClubKeys: boolean; hasAkademikAccess: boolean};
+        type Entry = {profile: any; email: string; hasClubKeys: boolean; hasAkademikAccess: boolean};
         const byUid = new Map<string, Entry>();
         withKeysSnap.forEach((d) => {
           const u = d.data() as any;
-          byUid.set(d.id, {profile: u?.profile || {}, hasClubKeys: true, hasAkademikAccess: false});
+          byUid.set(d.id, {profile: u?.profile || {}, email: String(u?.email || "").trim(), hasClubKeys: true, hasAkademikAccess: false});
         });
         withAkademikSnap.forEach((d) => {
           const u = d.data() as any;
           const existing = byUid.get(d.id);
           if (existing) existing.hasAkademikAccess = true;
-          else byUid.set(d.id, {profile: u?.profile || {}, hasClubKeys: false, hasAkademikAccess: true});
+          else byUid.set(d.id, {profile: u?.profile || {}, email: String(u?.email || "").trim(), hasClubKeys: false, hasAkademikAccess: true});
         });
 
         kluczeOsoby = Array.from(byUid.values())
           .map((entry) => {
             const p = entry.profile;
+            // Ksywa, a gdy jej brak — imię i inicjał nazwiska (nigdy oba naraz); kontakt mailowy
+            // zamiast telefonu (decyzja 30.10.2026 — mniej danych osobowych na liście).
             const nickname = String(p?.nickname || "").trim();
-            const fullName = [p?.firstName, p?.lastName].map((s: any) => String(s || "").trim()).filter(Boolean).join(" ").trim();
-            const phone = String(p?.phone || "").trim();
-            const name = nickname || fullName || "(bez nazwy)";
+            const firstName = String(p?.firstName || "").trim();
+            const lastInitial = String(p?.lastName || "").trim().charAt(0);
+            const shortName = [firstName, lastInitial ? `${lastInitial}.` : ""].filter(Boolean).join(" ");
+            const name = nickname || shortName || "(bez nazwy)";
             return {
               name,
-              phone: phone || null,
+              email: canSeeContacts ? (entry.email || null) : null,
               hasClubKeys: entry.hasClubKeys,
               hasAkademikAccess: entry.hasAkademikAccess,
             };

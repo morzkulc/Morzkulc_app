@@ -1,4 +1,5 @@
 import type {Request, Response} from "express";
+import {canSeeMemberContacts} from "../modules/users/member_standing";
 import {listAvailableBasenKayaks, BasenSlotLabel} from "../modules/basen/basen_service";
 
 type Deps = {
@@ -39,7 +40,10 @@ export async function handleGetBasenKayaks(req: Request, res: Response, deps: De
         return;
       }
 
-      const kayaks = await listAvailableBasenKayaks(deps.db, sessionId, slot, uid);
+      // E-mail właściciela kajaka — tylko członkowie/kandydaci/KR/zarząd (member_standing.ts).
+      const userSnap = await deps.db.collection("users_active").doc(uid).get();
+      const showOwnerContact = canSeeMemberContacts(String((userSnap.data() as any)?.role_key || ""));
+      const kayaks = await listAvailableBasenKayaks(deps.db, sessionId, slot, uid, showOwnerContact);
 
       res.status(200).json({ok: true, kayaks});
     } catch (err) {

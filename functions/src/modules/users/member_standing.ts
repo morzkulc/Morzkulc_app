@@ -4,6 +4,16 @@ import {todayWarsawIso} from "../shared/date_range_utils";
 /** Pełni członkowie klubu (głosujący). Kandydaci, sympatycy i kursanci poza. */
 export const FULL_MEMBER_ROLE_KEYS = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
+/**
+ * Role, które widzą dane kontaktowe innych osób (e-mail z listy kluczy, właściciela kajaka).
+ * Sympatyk (każde konto Google po zalogowaniu) i kursant — nie (RODO: minimalizacja, 30.10.2026).
+ */
+export const CONTACT_VISIBLE_ROLE_KEYS = ["rola_czlonek", "rola_kandydat", "rola_kr", "rola_zarzad"];
+
+export function canSeeMemberContacts(roleKey: string): boolean {
+  return CONTACT_VISIBLE_ROLE_KEYS.includes(String(roleKey || ""));
+}
+
 /** Parsuje „składki opłacone do" (YYYY-MM-DD | DD-MM-YYYY | DD.MM.YYYY) → Date (UTC) lub null. */
 export function parseContributionsPaidUntil(raw: any): Date | null {
   const s = normNullish(raw);

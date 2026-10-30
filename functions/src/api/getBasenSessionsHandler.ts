@@ -1,4 +1,5 @@
 import type {Request, Response} from "express";
+import {canSeeMemberContacts} from "../modules/users/member_standing";
 import {listSeasonSessions, getUserEnrollments, computeSlotAvailability, resolveKayakLabelsBulk, getBasenVars, sessionSlotDatetimeMs, getAttendeesBySessionSlot, getAvailableKayaksBySessionSlot, getWaitlistsBySessionSlot, resolveBasenAdminGrant, todayIso} from "../modules/basen/basen_service";
 import {getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 import {computeSeason, loadSeasonEnrollments} from "../modules/basen/basen_season";
@@ -85,7 +86,7 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
         userEnrollments.map((e) => e.kayakId).filter((id): id is string => Boolean(id) && id !== "PRIVATE")
       ));
       const [kayaksByKey, seasonEnrollments, kayakLabels] = await Promise.all([
-        getAvailableKayaksBySessionSlot(deps.db, upcoming),
+        getAvailableKayaksBySessionSlot(deps.db, upcoming, canSeeMemberContacts(String(userData?.role_key || ""))),
         loadSeasonEnrollments(deps.db, sessions),
         resolveKayakLabelsBulk(deps.db, kayakIds),
       ]);

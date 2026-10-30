@@ -1405,14 +1405,15 @@ async function fetchPoolKayaksUncached(db: FirebaseFirestore.Firestore): Promise
     .filter((k) => k?.isOperational === true);
 }
 
-function buildAvailableKayaksList(poolKayaks: any[], allocatedIds: Set<string>): AvailableKayak[] {
+function buildAvailableKayaksList(poolKayaks: any[], allocatedIds: Set<string>, showOwnerContact: boolean): AvailableKayak[] {
   const available = poolKayaks
     .filter((k) => !allocatedIds.has(k.id))
     .map((k) => {
       const baseLabel = poolKayakLabel(k, k.id);
       const isPrivate = k?.isPrivate === true;
       const isHalfHalf = !isPrivate && k?.isHalfHalf === true;
-      const ownerContact = isPrivate || isHalfHalf ? (norm(k?.ownerContact) || null) : null;
+      // E-mail właściciela tylko dla członków/kandydatów/KR/zarządu (member_standing.ts).
+      const ownerContact = (isPrivate || isHalfHalf) && showOwnerContact ? (norm(k?.ownerContact) || null) : null;
       // Kajak prywatny / „pół na pół" — jasno oznaczony w liście wyboru z mailem właściciela:
       // prywatny wymaga jego zgody, „pół na pół" = pierwszeństwo właściciela (jak w module Sprzęt).
       // Format listy (decyzja 30.10.2026): „Model nr X (kolor) PRV (mail właściciela)", nic więcej.
@@ -1436,7 +1437,8 @@ export async function listAvailableBasenKayaks(
   // Własna alokacja widza NIE liczy się jako "zajęta" — inaczej modal "Edytuj" nie
   // mógł pokazać kajaka, który user już ma, select spadał na "Bez kajaka", a zapis
   // (nawet dotykający tylko instruktora) realnie kasował istniejący wybór kajaka.
-  excludeUid?: string
+  excludeUid?: string,
+  showOwnerContact = false
 ): Promise<AvailableKayak[]> {
   const poolKayaks = await fetchPoolKayaks(db);
   const allocSnap = await db.collection("basen_kayak_allocations")
@@ -1448,7 +1450,7 @@ export async function listAvailableBasenKayaks(
       .filter((d) => String((d.data() as any)?.uid || "") !== excludeUid)
       .map((d) => String((d.data() as any)?.kayakId || ""))
   );
-  return buildAvailableKayaksList(poolKayaks, allocatedIds);
+  return buildAvailableKayaksList(poolKayaks, allocatedIds, showOwnerContact);
 }
 
 /**
@@ -1459,7 +1461,8 @@ export async function listAvailableBasenKayaks(
  */
 export async function getAvailableKayaksBySessionSlot(
   db: FirebaseFirestore.Firestore,
-  sessions: BasenSession[]
+  sessions: BasenSession[],
+  showOwnerContact = false
 ): Promise<Map<string, AvailableKayak[]>> {
   const [poolKayaks, allocSnap] = await Promise.all([
     fetchPoolKayaks(db),
@@ -1479,7 +1482,7 @@ export async function getAvailableKayaksBySessionSlot(
   for (const s of sessions) {
     for (const slotLabel of Object.keys(s.slots || {})) {
       const key = `${s.id}_${slotLabel}`;
-      result.set(key, buildAvailableKayaksList(poolKayaks, allocatedByKey.get(key) || new Set()));
+      result.set(key, buildAvailableKayaksList(poolKayaks, allocatedByKey.get(key) || new Set(), showOwnerContact));
     }
   }
   return result;

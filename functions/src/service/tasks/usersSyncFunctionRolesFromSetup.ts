@@ -327,9 +327,29 @@ export const usersSyncFunctionRolesFromSetupTask: ServiceTask<Payload> = {
 
       try {
         switch (caseType) {
-        case "no-op":
-          details[role] = {noChange: true, email: prev};
+        case "no-op": {
+          // Naprawa przekazywania (incydent 30.10.2026): przy „onboard" z adresem operatora
+          // czekającym na weryfikację reguła nie była włączana, a kolejne synci to „no-op" —
+          // przekazywanie zostawało wyłączone na zawsze (szkoleniowiec/skarbnik/prezes).
+          // Dlatego przy każdym syncu: operator jest, reguła nie wskazuje na niego → włącz,
+          // o ile Gmail ma już jego adres zweryfikowany.
+          let forwardingRepaired = false;
+          if (prev && !dryRun) {
+            const af = await workspace.getAutoForwarding(mailbox);
+            if (!af.enabled || String(af.emailAddress || "").toLowerCase() !== prev) {
+              const fwdStatus = await workspace.addForwardingAddress(mailbox, prev);
+              if (fwdStatus === "added" || fwdStatus === "already") {
+                await workspace.setAutoForwardRule(mailbox, prev, "archive");
+                forwardingRepaired = true;
+                logger.info("syncFunctionRoles: forwarding repaired", {role, mailbox, target: prev});
+              } else {
+                logger.info("syncFunctionRoles: forwarding still pending verification", {role, mailbox, target: prev});
+              }
+            }
+          }
+          details[role] = {noChange: true, email: prev, ...(forwardingRepaired ? {forwardingRepaired: true} : {})};
           break;
+        }
 
         case "onboard": {
           let forwardingActivated = dryRun;

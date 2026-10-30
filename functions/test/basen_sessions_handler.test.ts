@@ -60,7 +60,7 @@ describe("GET /api/basen/sessions", () => {
     expect(r.json.sessions).toHaveLength(1);
     const s = r.json.sessions[0];
     expect(s).toMatchObject({id: d, date: d, isPast: false});
-    expect(s.slots.H1).toMatchObject({userEnrolled: true, enrolledCount: 1, remaining: 1, waitlistCount: 0});
+    expect(s.slots.H1).toMatchObject({userEnrolled: true, enrolledCount: 1, remaining: 1, waitlistCount: 0, waitlistNames: []});
     expect(s.slots.H1.attendees).toHaveLength(1);
     expect(s.slots.H2).toMatchObject({userEnrolled: false, enrolledCount: 0, remaining: 2});
     expect(r.json.userGodzinyBalance).toBe(1);
