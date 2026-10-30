@@ -14,8 +14,10 @@ export type GodzinkiVars = {
   archiveAfterDays: number;
   /** Cena PLN za 1 godzinę przy wykupie salda ujemnego */
   buybackPricePln: number;
-  /** Automatyczny miesięczny bonus godzin dla roli zarząd/KR */
+  /** Automatyczny miesięczny bonus godzin dla roli zarząd */
   boardMonthlyBonusHours: number;
+  /** Automatyczny miesięczny bonus godzin dla roli KR (osobno od zarządu, decyzja 30.10.2026) */
+  krMonthlyBonusHours: number;
   /** Data wygaśnięcia godzinek z bilansu otwarcia (wymóg biznesowy, domyślnie 30.06.2029) */
   obHoursExpiresAt: Date;
 };
@@ -47,6 +49,7 @@ export async function getGodzinkiVars(db: FirebaseFirestore.Firestore): Promise<
     archiveAfterDays: toNumber(getVar(raw, "okres_do_archiwizacji_godzinek_dni"), 30),
     buybackPricePln: toNumber(getVar(raw, "cena_wykupu_godzinki"), 25),
     boardMonthlyBonusHours: toNumber(getVar(raw, "bonus_miesieczny_zarzad"), 10),
+    krMonthlyBonusHours: toNumber(getVar(raw, "bonus_miesieczny_kr"), 2),
     obHoursExpiresAt: toDateUtc(getVar(raw, "data_wygasniecia_bilansu_otwarcia"), new Date(Date.UTC(2029, 5, 30))),
   };
 }

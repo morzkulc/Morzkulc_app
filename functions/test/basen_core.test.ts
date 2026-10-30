@@ -16,8 +16,10 @@ import {
   sessionSlotDatetimeMs,
   parseVarValue,
   getBasenVars,
+  parseSeasonEnd,
   BasenSlot,
 } from "../src/modules/basen/basen_service";
+import {seasonOf, warsawTodayIso} from "../src/modules/basen/basen_finance";
 import {computeBasenGodzinyBalance, BasenGodzinyRecord} from "../src/modules/basen/basen_godziny_service";
 
 function slot(o: Partial<BasenSlot> = {}): BasenSlot {
@@ -129,7 +131,16 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_budzet_sezonu: 2000,
       basen_min_zapisow: 12,
       basen_max_dni_naprzod: 4,
+      basen_koniec_sezonu: seasonOf(warsawTodayIso()).karnetValidUntil,
     });
+  });
+
+  it("basen_koniec_sezonu: RRRR-MM-DD albo DD.MM.RRRR; brak/śmieci → 31.03 sezonu", () => {
+    expect(parseSeasonEnd("2027-04-15")).toBe("2027-04-15");
+    expect(parseSeasonEnd("15.04.2027")).toBe("2027-04-15");
+    expect(parseSeasonEnd("5.4.2027")).toBe("2027-04-05");
+    expect(parseSeasonEnd("", "2026-10-29")).toBe("2027-03-31");
+    expect(parseSeasonEnd("kwiecień", "2026-10-29")).toBe("2027-03-31");
   });
 
   it("czyta klucze arkusza z polskimi znakami i historyczną nazwą okna anulowania; maile rozdziela i normalizuje", async () => {

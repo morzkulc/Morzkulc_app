@@ -1172,8 +1172,8 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
   let sessions;
   try {
     const data = await apiGetJson({ url: BASEN_SESSIONS_URL, idToken: ctx.idToken });
-    // API zwraca cały sezon (także minione) — kalendarz startowy pokazuje tylko nadchodzące.
-    sessions = (Array.isArray(data?.sessions) ? data.sessions : []).filter((s) => !s.isPast);
+    // Cały sezon: także minione i odwołane terminy — członkowie widzą, które się odbyły.
+    sessions = Array.isArray(data?.sessions) ? data.sessions : [];
   } catch {
     containerEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Nie udało się pobrać zajęć.</div></div></div>`;
     return;
@@ -1182,20 +1182,53 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
   const isActiveSlot = (s) => Boolean(s) && s.status !== "cancelled";
   const isKursowySlot = (s) => isActiveSlot(s) && s.reservedSpots?.restrictedToKursant === true;
 
-  const anyKursowy = sessions.some((s) => isKursowySlot(s.slots?.H1) || isKursowySlot(s.slots?.H2));
+  // Kursowość z reservedSpots — zostaje w slocie także po terminie i po odwołaniu.
+  const isKursowyAny = (s) => s?.reservedSpots?.restrictedToKursant === true;
+  const anyKursowy = sessions.some((s) => isKursowyAny(s.slots?.H1) || isKursowyAny(s.slots?.H2));
   if (!sessions.length || (isKursant && !anyKursowy)) {
-    containerEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Brak nadchodzących zajęć${isKursant ? " dla kursantów" : ""}</div></div></div>`;
+    containerEl.innerHTML = `<div class="startListItem"><div class="startListMain"><div class="startListTitle">Brak zajęć w tym sezonie${isKursant ? " dla kursantów" : ""}</div></div></div>`;
     return;
   }
 
   const sessionsByDate = new Map(sessions.map((s) => [s.date, s]));
   const today = new Date();
   const state = { year: today.getFullYear(), month: today.getMonth(), selectedDate: null };
+  // Brak nadchodzącego terminu w bieżącym miesiącu → start od miesiąca najbliższego terminu.
+  {
+    const monthPrefix = homeBasenIsoFromParts(state.year, state.month, 1).slice(0, 7);
+    const upcoming = sessions
+      .filter((s) => !s.isPast && s.outcome !== "cancelled" && (!isKursant || isKursowyAny(s.slots?.H1) || isKursowyAny(s.slots?.H2)))
+      .map((s) => s.date)
+      .sort();
+    if (upcoming.length && !upcoming.some((d) => d.startsWith(monthPrefix))) {
+      const next = upcoming.find((d) => d.slice(0, 7) > monthPrefix);
+      if (next) {
+        state.year = Number(next.slice(0, 4));
+        state.month = Number(next.slice(5, 7)) - 1;
+      }
+    }
+  }
   const basenTarget = getModuleRouteByType(ctx, "basen");
 
   function dayInfo(dateIso) {
     const session = sessionsByDate.get(dateIso);
     if (!session) return null;
+    if (session.outcome === "cancelled" || session.isPast) {
+      const kurs = isKursowyAny(session.slots?.H1) || isKursowyAny(session.slots?.H2);
+      if (isKursant && !kurs) return null;
+      const cancelled = session.outcome === "cancelled";
+      return {
+        hasPool: Boolean(session.slots?.H1 || session.slots?.H2),
+        hasSauna: Boolean(session.slots?.SAUNA),
+        isKursowy: kurs,
+        isMine: false,
+        enrolledSlots: [],
+        closed: cancelled ? "cancelled" : "held",
+        closedText: cancelled
+          ? (session.cancelReason === "frekwencja" ? `Odwołany — za mało chętnych (${session.zapisy} zapisów)` : "Odwołany")
+          : `Odbył się · ${session.zapisy} zapisów`,
+      };
+    }
     const h1 = session.slots?.H1;
     const h2 = session.slots?.H2;
     const sauna = session.slots?.SAUNA;
@@ -1239,13 +1272,30 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
     panel.querySelector("[data-day-preview-edit]")?.addEventListener("click", () => goToSessionCard(dateIso));
   }
 
+  function showClosedPreview(dateIso, info) {
+    const panel = containerEl.querySelector("#homeBasenDayPreview");
+    if (!panel) return;
+    if (state.selectedDate === dateIso && !panel.hidden) {
+      panel.hidden = true;
+      state.selectedDate = null;
+      return;
+    }
+    state.selectedDate = dateIso;
+    panel.innerHTML = `
+      <div class="basenHomeDayPreviewTitle">${escapeHtml(formatDatePL(dateIso))}</div>
+      <div class="basenHomeDayPreviewRow">${escapeHtml(info.closedText)}</div>
+    `;
+    panel.hidden = false;
+  }
+
   function bindDayClicks() {
     containerEl.querySelectorAll(".basenCalDay[data-cal-date]").forEach((cell) => {
       cell.addEventListener("click", () => {
         const dateIso = cell.getAttribute("data-cal-date");
         const info = dayInfo(dateIso);
         if (!info) return;
-        if (info.isMine) showDayPreview(dateIso, info);
+        if (info.closed) showClosedPreview(dateIso, info);
+        else if (info.isMine) showDayPreview(dateIso, info);
         else goToSessionCard(dateIso);
       });
     });
@@ -1275,16 +1325,18 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateIso = homeBasenIsoFromParts(year, month, day);
-      if (dateIso < todayIsoStr) {
+      const info = dayInfo(dateIso);
+      if (dateIso < todayIsoStr && !info) {
         cells += `<div class="basenCalDay basenCalDay--past"><span class="basenCalDayNum">${day}</span></div>`;
         continue;
       }
-      const info = dayInfo(dateIso);
       if (!info) {
         cells += `<div class="basenCalDay basenCalDay--none"><span class="basenCalDayNum">${day}</span></div>`;
         continue;
       }
-      const borderClass = info.isMine ? "basenCalDay--mine" : info.isKursowy ? "basenCalDay--kursowy" : "basenCalDay--has-session";
+      const borderClass = info.closed === "cancelled" ? "basenCalDay--has-session basenCalDay--cancelled"
+        : info.closed === "held" ? "basenCalDay--has-session basenCalDay--held"
+        : info.isMine ? "basenCalDay--mine" : info.isKursowy ? "basenCalDay--kursowy" : "basenCalDay--has-session";
       cells += `
         <button type="button" class="basenCalDay ${borderClass}" data-cal-date="${dateIso}">
           <span class="basenCalDayNum">${day}</span>
@@ -1299,6 +1351,8 @@ async function renderHomeBasenCalendar(containerEl, ctx, isKursant) {
         <span class="basenCalLegendItem">${HOME_BASEN_SAUNA_ICON_SVG} Sauna</span>
         <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--mine"></span>Mój basen</span>
         <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--kursowy"></span>Basen kursowy</span>
+        <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--held"></span>Odbył się</span>
+        <span class="basenCalLegendItem"><span class="basenCalLegendSwatch basenCalLegendSwatch--cancelled"></span>Odwołany</span>
       </div>
       <div class="basenCalendar">
         <div class="basenCalendarHead">
@@ -1536,7 +1590,7 @@ function renderProfileForm({ viewEl, ctx }) {
 
       <div class="row">
         <label for="dateOfBirth">Data urodzenia</label>
-        <input id="dateOfBirth" type="date" />
+        <input id="dateOfBirth" type="date" min="1920-01-01" max="${escapeAttr(new Date().toISOString().slice(0, 10))}" />
       </div>
 
       <div class="checkRow">

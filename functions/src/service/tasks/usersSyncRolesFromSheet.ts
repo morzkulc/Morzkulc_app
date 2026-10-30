@@ -1,11 +1,12 @@
 import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
-import {GoogleSheetsProvider} from "../providers/googleSheetsProvider";
+import {GoogleSheetsProvider, buildLooseRowGetter} from "../providers/googleSheetsProvider";
 import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {getServiceConfig} from "../service_config";
 import {listaRoleForUserRole, syncWorkspaceGroupsForUser, syncListaGroupForUser} from "../workspaceGroupSync";
 import {norm} from "../../modules/shared/text_utils";
 import {getAppVars} from "../../modules/setup/app_vars";
+import {emailConflictMessage, findMemberEmailConflicts} from "../../modules/users/member_email_conflicts";
 
 type Payload = {
   dry?: boolean;
@@ -103,6 +104,19 @@ export const usersSyncRolesFromSheetTask: ServiceTask<Payload> = {
     }
 
     const rows = payload?.limit ? table.rows.slice(0, Number(payload.limit)) : table.rows;
+
+    // Ten sam e-mail w dwóch wierszach = rola z cudzego wiersza na niewłaściwym koncie
+    // (dopasowanie po e-mailu) — sync PRZERWANY, zero zapisów (member_email_conflicts.ts).
+    const cell = buildLooseRowGetter(table.headers);
+    const conflicts = findMemberEmailConflicts(table.rows.map((row) => ({
+      memberId: norm(cell(row, "ID")),
+      email: norm(row["e-mail"]),
+      name: `${norm(cell(row, "Imię"))} ${norm(cell(row, "Nazwisko"))}`.trim(),
+    })));
+    if (conflicts.length) {
+      ctx.logger.error("usersSyncRolesFromSheet: ABORT — konflikt adresów e-mail", {count: conflicts.length, conflicts});
+      return {ok: false, message: emailConflictMessage(conflicts), details: {validationError: true, emailConflicts: conflicts}};
+    }
 
     ctx.logger.info("usersSyncRolesFromSheet: rows read", {count: rows.length});
 

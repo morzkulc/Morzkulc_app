@@ -97,6 +97,7 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
         reason,
         performedBy: adminUid,
         pricing: vars,
+        karnetValidUntil: vars.basen_koniec_sezonu,
       });
 
       const records = await getBasenGodzinyRecords(deps.db, targetUid);

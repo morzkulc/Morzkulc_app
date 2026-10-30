@@ -7,6 +7,7 @@ import {normNullish} from "../../modules/shared/text_utils";
 import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zgloszenia";
 import {BLACHY_COLLECTION, BlachaDoc, findInRegistry, parseBlacha} from "../../modules/blachy/blachy_registry";
 import {ARCHIWUM_DO_ROKU} from "../../modules/blachy/blachy_archiwum_2025";
+import {emailConflictMessage, findMemberEmailConflicts} from "../../modules/users/member_email_conflicts";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -269,6 +270,33 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       }
     }
 
+    // ── WYMUSZENIE UNIKALNOŚCI E-MAILA (incydent 30.10.2026, patrz member_email_conflicts.ts):
+    // ten sam adres w dwóch wierszach albo adres należący w aplikacji do konta innego
+    // członka → sync PRZERWANY, zero zapisów.
+    {
+      const sheetRows = table.rows
+        .filter((row) => g(row, "id"))
+        .map((row) => ({
+          memberId: g(row, "id"),
+          email: g(row, "e_mail"),
+          name: `${g(row, "imie")} ${g(row, "nazwisko")}`.trim() || g(row, "ksywa"),
+        }));
+      const accountsSnap = await firestore.collection("users_active").get();
+      const accounts = accountsSnap.docs.map((d) => {
+        const u = d.data() as any;
+        return {
+          memberId: u?.memberId != null ? String(u.memberId) : null,
+          email: String(u?.email || ""),
+          name: `${u?.profile?.firstName || ""} ${u?.profile?.lastName || ""}`.trim(),
+        };
+      });
+      const conflicts = findMemberEmailConflicts(sheetRows, accounts);
+      if (conflicts.length) {
+        logger.error("usersSyncFieldsFromSheet: ABORT — konflikt adresów e-mail", {count: conflicts.length, conflicts});
+        return {ok: false, message: emailConflictMessage(conflicts), details: {validationError: true, emailConflicts: conflicts}};
+      }
+    }
+
     // ── WYMUSZENIE UNIKALNOŚCI KSYWY: sync przerywany, jeśli arkusz zawiera dwie
     // osoby z tą samą ksywą (porównanie case-insensitive). Spójne z walidacją
     // unikalności przy rejestracji w aplikacji (patrz registerUserHandler.ts,
@@ -446,10 +474,10 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         candidates.push(["admin.hasAkademikAccess", normalizeBoolish(g(row, "dostep_akademik"))]);
       }
 
-      // Instruktor basenowy — OPCJONALNA kolumna „Instruktor (kadra)" (moduł Basen).
+      // Instruktor basenowy — OPCJONALNA kolumna „Instruktor (basen)" (moduł Basen; do 30.10.2026 „Instruktor (kadra)").
       // Wzorem „opiekun stażu": patchujemy TYLKO gdy kolumna istnieje w arkuszu.
-      if ("instruktor_kadra" in hmap) {
-        candidates.push(["admin.basenInstructor", normalizeBoolish(g(row, "instruktor_kadra"))]);
+      if ("instruktor_basen" in hmap) {
+        candidates.push(["admin.basenInstructor", normalizeBoolish(g(row, "instruktor_basen"))]);
       }
 
       // Dane kursowe (PESEL/waga/wzrost/opłata) — OPCJONALNE kolumny przejęte z dawnego

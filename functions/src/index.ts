@@ -1589,7 +1589,7 @@ export const basenOrder = onRequest({invoker: "private"}, async (req, res) => {
 
 /**
  * GET /api/basen/kayaks (authenticated)
- * Lista dostępnych kajaków basenowych dla danego terminu+slotu (+ "Kajak prywatny").
+ * Lista dostępnych kajaków basenowych dla danego terminu+slotu (+ "Własny kajak").
  */
 export const getBasenKayaks = onRequest({invoker: "private"}, async (req, res) => {
   return handleGetBasenKayaks(req, res, {

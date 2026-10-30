@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError, resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 
 type Deps = {
@@ -61,7 +61,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       const body = req.body || {};
       const sessionId = String(body.sessionId || "").trim();
       const slot = String(body.slot || "").trim() as BasenSlotLabel;
-      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor" | "waitlist";
+      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor" | "waitlist" | "ratownik";
       const instructorUid = String(body.instructorUid || "").trim();
       const kayakId = String(body.kayakId || "").trim();
 
@@ -70,8 +70,8 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         return;
       }
 
-      if (!["regular", "training", "instructor", "waitlist"].includes(mode)) {
-        res.status(400).json({error: "mode musi być 'regular', 'training', 'instructor' lub 'waitlist'."});
+      if (!["regular", "training", "instructor", "waitlist", "ratownik"].includes(mode)) {
+        res.status(400).json({error: "mode musi być 'regular', 'training', 'instructor', 'waitlist' lub 'ratownik'."});
         return;
       }
 
@@ -84,7 +84,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       const userEmail = String(userData?.email || "").trim();
 
       if (mode === "instructor") {
-        // Jedyny gatekeeper: kolumna "Instruktor (kadra)" w arkuszu (admin.basenInstructor).
+        // Jedyny gatekeeper: kolumna "Instruktor (basen)" w arkuszu (admin.basenInstructor).
         // Bez dodatkowego ograniczenia po roli — flaga jest już wystarczająco jawną,
         // ręcznie zarządzaną decyzją zarządu (patrz usersSyncFieldsFromSheet.ts), a
         // ograniczenie po roli tylko odcinało legalne przypadki (np. konta zewnętrzne
@@ -96,6 +96,19 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         }
         if (slot === "SAUNA") {
           res.status(400).json({error: "Sauna nie ma slotu instruktorskiego."});
+          return;
+        }
+      }
+
+      // Ratownik terminu: WYŁĄCZNIE opiekun basenu (basen_admin_mail w SETUP + skarbnik) —
+      // sama rola zarząd/KR nie wystarcza (decyzja 29.10.2026).
+      if (mode === "ratownik") {
+        if (!(await resolveBasenAdminGrant(deps.db, userEmail))) {
+          res.status(403).json({error: "Ratownikiem może być tylko opiekun basenu."});
+          return;
+        }
+        if (slot === "SAUNA") {
+          res.status(400).json({error: "Ratownik zapisuje się na godzinę basenu, nie na saunę."});
           return;
         }
       }
@@ -123,7 +136,8 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         uid,
         email: userEmail,
         displayName: userDisplayName,
-        mode,
+        mode: mode === "ratownik" ? "regular" : mode,
+        ratownik: mode === "ratownik",
         instructorUid: mode === "training" ? instructorUid : undefined,
         kayakId: kayakId || undefined,
         isKursant,

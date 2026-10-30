@@ -74,8 +74,10 @@ function formatDate(iso) {
 function renderTabsHtml(activeTab, isAdmin) {
   // "Moje konto" (historia własnych godzin basenowych) widoczne dla WSZYSTKICH —
   // to nie funkcja administracyjna, każdy user ma prawo widzieć swój wyciąg.
+  // Obsługa widzi też „Baseny" — widok terminów oczami członka i własne zapisy.
   const tabs = isAdmin
     ? [
+      { id: "sessions", label: "Baseny" },
       { id: "calendar", label: "Dodaj / usuń basen" },
       { id: "finance", label: "Finanse" },
       { id: "payments", label: "Płatności" },
@@ -98,16 +100,19 @@ function renderTabsHtml(activeTab, isAdmin) {
 
 // ─── Slot card ────────────────────────────────────────────────────────────────
 
-function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
+function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null) {
   const remaining = Number(slot.remaining ?? (slot.capacity - slot.enrolledCount));
   const isCancelled = slot.status === "cancelled";
   const isFull = !isCancelled && slot.isFull === true;
   const isSauna = slotKey === "SAUNA";
 
+  // Wolne miejsca zawsze jako „X z Y" — żeby „brak miejsc" nie mylił się z brakiem
+  // opłaconych godzin basenowych (to dwie różne rzeczy).
+  const totalSpots = Number(slot.capacity) || 0;
   let spotsHtml;
   if (isCancelled) spotsHtml = `<span class="basenSpotsFull">Odwołane</span>`;
-  else if (isFull) spotsHtml = `<span class="basenSpotsFull">Brak miejsc</span>`;
-  else spotsHtml = `<span class="basenSpots">${remaining} miejsc wolnych</span>`;
+  else if (isFull) spotsHtml = `<span class="basenSpotsFull">Wolne miejsca: 0 z ${totalSpots} — lista rezerwowa</span>`;
+  else spotsHtml = `<span class="basenSpots">Wolne miejsca: ${remaining} z ${totalSpots}</span>`;
 
   const reservedNote = (!isSauna && slot.reservedSpots && slot.reservedSpots.count > 0)
     ? `<div class="basenReservedNote">${slot.reservedSpots.count} miejsc zarezerwowanych${slot.reservedSpots.restrictedToKursant ? " dla kursantów" : ""}</div>`
@@ -151,6 +156,7 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
         ? `<button type="button" class="basenAttendeeTag basenClaimTagBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}" data-target-uid="${esc(a.userUid)}" title="Kliknij, aby przypisać siebie jako instruktora">${label} — potrzebuje instruktora</button>`
         : `<div class="basenAttendeeRow">${label} <span class="basenAttendeeTag">potrzebuje instruktora</span>${ownKayakSuffix}</div>`;
     }
+    if (a.ratownik) return `<div class="basenAttendeeRow">${label} <span class="basenAttendeeTag">ratownik</span>${ownKayakSuffix}</div>`;
     return `<div class="basenAttendeeRow">${label}${ownKayakSuffix}</div>`;
   };
   const attendeesHtml = !isCancelled && attendeesList.length ? `
@@ -174,6 +180,14 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
     ? `<button type="button" class="basenInstructorBtn basenBtnAccent" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Będę instruktorem</button>`
     : "";
   let instructorBtnEmbedded = false;
+
+  // „Będę ratownikiem" — tylko opiekun basenu (basenOpiekun z /api/register), jeden ratownik
+  // na termin. Ratownik zajmuje miejsce na godzinie, nie płaci godziną basenową, a po
+  // odbytym terminie dostaje 1 godzinkę klubową.
+  const ratownikBtnHtml = (!isCancelled && !isSauna && !isFull && !isInstructorEnrolled && !isParticipantEnrolled &&
+    ctx?.session?.basenOpiekun === true && session && !session.ratownikUid)
+    ? `<button type="button" class="basenRatownikBtn basenBtnAccent" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Będę ratownikiem</button>`
+    : "";
 
   if (isCancelled) {
     footerHtml = `<span class="basenHint">Ten slot został odwołany.</span>`;
@@ -240,6 +254,7 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
         <div class="basenPrimaryActions">
           <button type="button" class="primary basenEnrollRevealBtn">Zapisz się</button>
           ${instructorBtnHtml}
+          ${ratownikBtnHtml}
         </div>
         <div class="basenEnrollExpanded hidden">
           <label class="basenCheckLabel">
@@ -250,9 +265,9 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
             <select class="basenInstructorSelect"><option value="">Ładowanie…</option></select>
           </div>
           <div class="row">
-            <label>Kajak (opcjonalnie)</label>
+            <label>Kajak</label>
             <select class="basenKayakSelect">
-              <option value="">Bez kajaka</option>
+              <option value="" disabled selected>Wybierz kajak</option>
               ${(Array.isArray(slot.availableKayaks) ? slot.availableKayaks : []).map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("")}
             </select>
           </div>
@@ -279,6 +294,11 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
       </div>
       ${reservedNote}
       ${attendeesHtml}
+      ${!isCancelled && Array.isArray(slot.waitlistNames) && slot.waitlistNames.length ? `
+        <div class="basenAttendeesSimple">
+          <div class="basenAttendeesSimpleTitle">Lista rezerwowa (kolejność)</div>
+          ${slot.waitlistNames.map((n, i) => `<div class="basenAttendeeRow">${i + 1}. ${esc(n)}</div>`).join("")}
+        </div>` : ""}
       <div class="basenSlotFooter">
         ${footerHtml}
       </div>
@@ -318,7 +338,7 @@ function renderSessionCard(s, ctx, canEnroll, season) {
   // Odwołany termin zostaje na liście (widać, że się nie odbył), ale bez slotów i akcji.
   const slotsHtml = isCancelled ? "" : SLOT_ORDER
     .filter((key) => s.slots?.[key])
-    .map((key) => renderSlotCard(s.id, key, s.slots[key], ctx, canEnroll))
+    .map((key) => renderSlotCard(s.id, key, s.slots[key], ctx, canEnroll, s))
     .join("");
 
   return `
@@ -327,6 +347,7 @@ function renderSessionCard(s, ctx, canEnroll, season) {
         <div class="basenCardDate">${esc(formatDate(s.date))}</div>
       </div>
       ${renderSessionStatusHtml(s, season)}
+      ${s.ratownikName && !isCancelled ? `<div class="basenHint">Ratownik: <strong>${esc(s.ratownikName)}</strong></div>` : ""}
       ${s.notes && !isCancelled ? `<div class="basenCardNotes">${esc(s.notes)}</div>` : ""}
       ${slotsHtml ? `<div class="basenSlotGrid">${slotsHtml}</div>` : ""}
     </div>
@@ -364,8 +385,11 @@ function renderPastSessionsHtml(past, season) {
   `;
 }
 
-async function renderSessionsView(innerEl, ctx, canEnroll) {
-  innerEl.innerHTML = spinnerHtml("Ładowanie terminów…");
+async function renderSessionsView(innerEl, ctx, canEnroll, { keepScroll = false } = {}) {
+  // Odświeżenie po akcji (zapis, instruktor, rezygnacja) — bez spinnera i z powrotem do
+  // tego samego miejsca na stronie; spinner skracał stronę i przeglądarka skakała na górę.
+  const scrollY = keepScroll ? window.scrollY : null;
+  if (!keepScroll) innerEl.innerHTML = spinnerHtml("Ładowanie terminów…");
 
   try {
     const data = await apiGetJson({ url: SESSIONS_URL, idToken: ctx.idToken });
@@ -403,7 +427,8 @@ async function renderSessionsView(innerEl, ctx, canEnroll) {
     // Delegacja zdarzeń bindowana RAZ w render() (patrz bindSessionActionsDelegation) —
     // tu tylko odświeżamy dane, które ten jeden nasłuchiwacz czyta przy każdym kliknięciu.
     innerEl._basenSessions = sessions;
-    scrollToHomeTarget(innerEl);
+    if (scrollY !== null) window.scrollTo(0, scrollY);
+    else scrollToHomeTarget(innerEl);
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się załadować terminów.")}</div>`;
   }
@@ -430,7 +455,7 @@ function scrollToHomeTarget(innerEl) {
 }
 
 async function refreshSessionsView(innerEl, ctx, canEnroll) {
-  await renderSessionsView(innerEl, ctx, canEnroll);
+  await renderSessionsView(innerEl, ctx, canEnroll, { keepScroll: true });
 }
 
 // Delegacja WSZYSTKICH akcji karty terminu — bindowana RAZ na cały czas życia #basenInner
@@ -504,6 +529,28 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
       if (kayakSelect) kayakSelect.value = "";
       expanded?.classList.add("hidden");
       revealBtnEl?.classList.remove("hidden");
+      return;
+    }
+
+    // Ratownik terminu (opiekun basenu)
+    const ratownikBtn = ev.target.closest(".basenRatownikBtn");
+    if (ratownikBtn) {
+      const sessionId = ratownikBtn.getAttribute("data-session-id");
+      const slot = ratownikBtn.getAttribute("data-slot");
+      const msgEl = ratownikBtn.closest(".basenSlotCard")?.querySelector("[data-slot-msg]");
+      ratownikBtn.disabled = true;
+      ratownikBtn.textContent = "Zapisuję…";
+      try {
+        await apiPostJson({ url: ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot, mode: "ratownik" } });
+        await refreshSessionsView(innerEl, ctx, canEnroll);
+      } catch (e) {
+        ratownikBtn.disabled = false;
+        ratownikBtn.textContent = "Będę ratownikiem";
+        if (msgEl) {
+          msgEl.textContent = e?.message || "Nie udało się zapisać.";
+          msgEl.classList.remove("hidden");
+        }
+      }
       return;
     }
 
@@ -642,7 +689,16 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
     const msgEl = cardEl?.querySelector("[data-slot-msg]");
     const withInstructor = form.querySelector(".basenWithInstructorCheck")?.checked === true;
     const instructorUid = withInstructor ? (form.querySelector(".basenInstructorSelect")?.value || "") : "";
-    const kayakId = form.querySelector(".basenKayakSelect")?.value || "";
+    const kayakSelectEl = form.querySelector(".basenKayakSelect");
+    const kayakId = kayakSelectEl?.value || "";
+    // Kajak obowiązkowy na godzinie basenu: klubowy z listy albo „Własny kajak" (sauna nie ma wyboru).
+    if (kayakSelectEl && !kayakId) {
+      if (msgEl) {
+        msgEl.textContent = "Wybierz kajak z listy albo „Własny kajak”.";
+        msgEl.classList.remove("hidden");
+      }
+      return;
+    }
 
     const btn = form.querySelector(".basenEnrollBtn");
     btn.disabled = true;
@@ -733,7 +789,10 @@ function openModifyModal(innerEl, ctx, sessionId, slotKey, current, onChanged) {
   apiGetJson({ url: `${KAYAKS_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slotKey)}`, idToken: ctx.idToken })
     .then((data) => {
       const kayaks = Array.isArray(data?.kayaks) ? data.kayaks : [];
-      kayakSelect.innerHTML = `<option value="">Bez kajaka</option>${kayaks.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("")}`;
+      // Zapis sprzed obowiązkowego wyboru kajaka może nie mieć kajaka — wtedy tylko podpowiedź
+      // (nieaktywna), żeby „Zapisz zmiany" nie przypisało po cichu pierwszego kajaka z listy.
+      const placeholder = current.currentKayakId ? "" : `<option value="" disabled>Wybierz kajak</option>`;
+      kayakSelect.innerHTML = placeholder + kayaks.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("");
       kayakSelect.value = current.currentKayakId || "";
     })
     .catch(() => { kayakSelect.innerHTML = `<option value="">Błąd ładowania</option>`; });
@@ -958,6 +1017,10 @@ function renderReservedGroupHtml(prefix, title) {
     <div class="basenReservedGroup" data-reserved-group="${prefix}">
       <div class="basenReservedGroupTitle">${esc(title)}</div>
       <div class="row">
+        <label for="cd${prefix}Capacity">Liczba miejsc</label>
+        <input type="number" id="cd${prefix}Capacity" min="1" max="60" step="1" />
+      </div>
+      <div class="row">
         <label for="cd${prefix}Count">Zarezerwuj N miejsc</label>
         <input type="number" id="cd${prefix}Count" min="0" step="1" placeholder="0" />
       </div>
@@ -1043,6 +1106,7 @@ async function renderCalendarTab(innerEl, ctx) {
   try {
     const data = await apiGetJson({ url: SESSIONS_URL, idToken: ctx.idToken });
     sessionsByDate = buildSessionsByDate(data);
+    if (data?.season?.limitNaGodzine) innerEl.dataset.defaultCapacity = String(data.season.limitNaGodzine);
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się pobrać terminów.")}</div>`;
     return;
@@ -1121,6 +1185,12 @@ function openCreateDayModal(innerEl, ctx, date, onChanged) {
   const form = modal.querySelector("#basenCreateDayForm");
   form.reset();
   ["H1", "H2"].forEach((prefix) => syncReservedSubFields(innerEl, prefix));
+  // Domyślna liczba miejsc z SETUP (basen_limit_uczestników), do zmiany w formularzu.
+  const defaultCapacity = Number(innerEl.dataset.defaultCapacity) || 12;
+  ["H1", "H2"].forEach((prefix) => {
+    const el = modal.querySelector(`#cd${prefix}Capacity`);
+    if (el) el.value = String(defaultCapacity);
+  });
   const errEl = modal.querySelector("#cdErr");
   errEl.textContent = "";
   errEl.classList.add("hidden");
@@ -1151,6 +1221,8 @@ function openCreateDayModal(innerEl, ctx, date, onChanged) {
           saunaEnabled: modal.querySelector("#cdSauna")?.checked === true,
           h1Reserved: buildReserved("H1"),
           h2Reserved: buildReserved("H2"),
+          h1Capacity: Number(modal.querySelector("#cdH1Capacity")?.value) || undefined,
+          h2Capacity: Number(modal.querySelector("#cdH2Capacity")?.value) || undefined,
           notes: String(modal.querySelector("#cdNotes")?.value || "").trim(),
         },
       });
@@ -1479,7 +1551,7 @@ function renderPendingOrdersHtml(orders) {
       <div class="basenGodzinyRowInfo">
         <div>${esc(o.userName || o.userEmail)}</div>
         <div class="basenHint">${esc(o.userEmail || "")}</div>
-        <div>${esc(o.label)} · <strong>${esc(formatZl(o.amountPln))}</strong></div>
+        <div>${esc(String(o.label || "").replace(/\s*\(.*\)$/, ""))} · <strong>${esc(formatZl(o.amountPln))}</strong></div>
         <div class="basenHint">Tytuł: ${esc(o.transferTitle)} · ${esc(formatGodzinyDate(o.createdAt))}</div>
       </div>
       <div class="basenGodzinyRowActions">
@@ -1656,47 +1728,41 @@ const LIGHT_LABELS = {
   red: "🔴 zostanie odwołany",
 };
 
-// Wynik terminów (słupki) i narastający wynik sezonu (linia) na tle limitu −budżet.
-function renderFinanceChartSvg(rows, budget) {
-  const counted = rows.filter((r) => !r.kurs && (r.outcome === "held" || r.outcome === "confirmed"));
-  if (!counted.length) return `<div class="basenHint">Wykres pojawi się po pierwszym odbytym terminie.</div>`;
-  const W = 640, H = 230, padL = 52, padR = 12, padT = 14, padB = 30;
-  let cum = 0;
-  const pts = counted.map((r) => ({ r, cum: (cum += r.resultPln) }));
-  const values = [0, -budget, ...pts.map((p) => p.cum), ...counted.map((r) => r.resultPln)];
-  const max = Math.max(...values) * 1.1 || 1;
-  const min = Math.min(...values) * 1.1;
-  const y = (v) => padT + (max - v) / (max - min) * (H - padT - padB);
-  const step = (W - padL - padR) / counted.length;
-  const bw = Math.max(4, Math.min(28, step * 0.6));
-  const x = (i) => padL + step * i + step / 2;
-
-  const bars = pts.map((p, i) => {
-    const v = p.r.resultPln;
-    const top = Math.min(y(v), y(0));
-    const h = Math.max(1, Math.abs(y(v) - y(0)));
-    return `<rect class="${v >= 0 ? "bfBarPos" : "bfBarNeg"}" x="${(x(i) - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${esc(shortDate(p.r.date))}: ${esc(formatPln(v))}</title></rect>`;
-  }).join("");
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.cum).toFixed(1)}`).join(" ");
-  const dots = pts.map((p, i) => `<circle class="bfDot" cx="${x(i).toFixed(1)}" cy="${y(p.cum).toFixed(1)}" r="3"><title>po ${esc(shortDate(p.r.date))}: ${esc(formatPln(p.cum))}</title></circle>`).join("");
-  const labelEvery = Math.ceil(counted.length / 10);
-  const xLabels = pts.map((p, i) => (i % labelEvery === 0 ? `<text class="bfAxis" x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="middle">${esc(shortDate(p.r.date))}</text>` : "")).join("");
-
+// Koło budżetu sezonu: w środku % budżetu, który został (100% + wynik netto / budżet).
+// Na plusie: pełny zielony pierścień + ciemnozielony łuk nadwyżki (np. 130% → +30%).
+// Na minusie: zielony łuk tego, co zostało, i czerwony fragment wykorzystanej straty.
+function renderBudgetDonutSvg(netPln, budget) {
+  if (!budget) return `<div class="basenHint">Brak budżetu sezonu w SETUP (basen_budzet_sezonu).</div>`;
+  const pct = (budget + Number(netPln || 0)) / budget * 100;
+  const R = 70, C = 2 * Math.PI * R;
+  const arc = (cls, fromPct, lenPct) => {
+    const len = Math.max(0, Math.min(100, lenPct)) / 100 * C;
+    if (len <= 0) return "";
+    return `<circle class="${cls}" cx="90" cy="90" r="${R}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-fromPct / 100 * C).toFixed(2)}" transform="rotate(-90 90 90)" />`;
+  };
+  let rings;
+  if (pct >= 100) {
+    rings = arc("bfRingOk", 0, 100) + arc("bfRingSurplus", 0, Math.min(pct - 100, 100));
+  } else if (pct > 0) {
+    rings = arc("bfRingOk", 0, pct) + arc("bfRingUsed", pct, 100 - pct);
+  } else {
+    rings = arc("bfRingUsed", 0, 100);
+  }
+  const cls = pct >= 100 ? "bfPos" : "bfNeg";
   return `
-    <svg class="basenFinanceChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Wynik terminów i narastający wynik sezonu">
-      <line class="bfZero" x1="${padL}" x2="${W - padR}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" />
-      <text class="bfAxis" x="${padL - 6}" y="${(y(0) + 4).toFixed(1)}" text-anchor="end">0</text>
-      <line class="bfBudget" x1="${padL}" x2="${W - padR}" y1="${y(-budget).toFixed(1)}" y2="${y(-budget).toFixed(1)}" />
-      <text class="bfAxis bfBudgetLabel" x="${padL - 6}" y="${(y(-budget) + 4).toFixed(1)}" text-anchor="end">−${esc(budget)}</text>
-      ${bars}
-      <path class="bfLine" d="${line}" />
-      ${dots}
-      ${xLabels}
-    </svg>
-    <div class="basenFinanceLegend">
-      <span><i class="bfKey bfKeyBar"></i>wynik terminu</span>
-      <span><i class="bfKey bfKeyLine"></i>wynik sezonu narastająco</span>
-      <span><i class="bfKey bfKeyBudget"></i>limit straty sezonu</span>
+    <div class="basenBudgetDonut">
+      <svg viewBox="0 0 180 180" role="img" aria-label="Zostało ${Math.round(pct)}% budżetu sezonu">
+        <circle class="bfRingTrack" cx="90" cy="90" r="${R}" />
+        ${rings}
+        <text class="bfDonutPct ${cls}" x="90" y="92" text-anchor="middle">${esc(Math.round(pct))}%</text>
+        <text class="bfDonutSub" x="90" y="114" text-anchor="middle">budżetu zostało</text>
+      </svg>
+      <div class="basenFinanceLegend">
+        <span><i class="bfKey bfKeyOk"></i>zostało</span>
+        ${pct < 100 ? `<span><i class="bfKey bfKeyUsed"></i>wykorzystana strata</span>` : ""}
+        ${pct > 100 ? `<span><i class="bfKey bfKeySurplus"></i>nadwyżka ponad budżet</span>` : ""}
+      </div>
+      <div class="basenHint">Budżet ${esc(budget)} zł · wynik netto ${esc(formatPln(netPln))}</div>
     </div>
   `;
 }
@@ -1766,7 +1832,7 @@ async function renderFinanceTab(innerEl, ctx) {
     </div>
 
     <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Wynik sezonu</div>
-    ${renderFinanceChartSvg(rows, budget)}
+    ${renderBudgetDonutSvg(s.netPln, budget)}
 
     <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Nadchodzące terminy</div>
     ${upcoming.length ? `
@@ -1880,7 +1946,7 @@ function renderShopHtml(shop) {
       ${karnetTile("karnet10", 10, p.karnet10)}
     </div>
     ${reasons}
-    ${karnet.member ? `<div class="basenHint">Godziny basenowe z karnetu wykorzystasz na dowolnych basenach i godzinach do końca sezonu (31 marca).</div>` : ""}
+    ${karnet.member ? `<div class="basenHint">Godziny basenowe z karnetu wykorzystasz na dowolnych basenach i godzinach do końca sezonu basenowego${shop?.seasonEnd ? ` (${esc(formatDate(shop.seasonEnd).replace(/ \(.*\)$/, ""))})` : ""}.</div>` : ""}
     <div class="basenHint">Płatność przelewem na konto klubu albo gotówką opiekunowi basenu. Godziny basenowe pojawią się na saldzie po potwierdzeniu wpłaty.</div>
     <div id="shopResult"></div>
     <div id="shopErr" class="err hidden"></div>

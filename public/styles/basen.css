@@ -940,20 +940,6 @@ button.basenClaimTagBtn:disabled {
   background: var(--danger);
 }
 
-.basenFinanceChart {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.basenFinanceChart .bfBarPos { fill: var(--ok); }
-.basenFinanceChart .bfBarNeg { fill: var(--danger); }
-.basenFinanceChart .bfLine { fill: none; stroke: var(--primary); stroke-width: 2.5; }
-.basenFinanceChart .bfDot { fill: var(--primary); }
-.basenFinanceChart .bfZero { stroke: var(--border); stroke-width: 1; }
-.basenFinanceChart .bfBudget { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 6 4; }
-.basenFinanceChart .bfAxis { fill: var(--text-muted); font-size: 11px; }
-
 .basenFinanceLegend {
   display: flex;
   flex-wrap: wrap;
@@ -971,9 +957,6 @@ button.basenClaimTagBtn:disabled {
   vertical-align: middle;
 }
 
-.bfKeyBar { background: linear-gradient(90deg, var(--ok) 50%, var(--danger) 50%); border-radius: 2px; }
-.bfKeyLine { height: 3px; background: var(--primary); }
-.bfKeyBudget { height: 0; border-top: 2px dashed var(--danger); }
 
 .basenFinanceTableWrap {
   overflow-x: auto;
@@ -1069,3 +1052,31 @@ button.basenClaimTagBtn:disabled {
   flex: 1 1 200px;
   min-width: 0;
 }
+
+/* Koło budżetu sezonu (Finanse) */
+.basenBudgetDonut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.basenBudgetDonut svg {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+.basenBudgetDonut circle {
+  fill: none;
+  stroke-width: 22;
+}
+.bfRingTrack { stroke: var(--border); }
+.bfRingOk { stroke: var(--ok); }
+.bfRingSurplus { stroke: color-mix(in srgb, var(--ok) 55%, #000); }
+.bfRingUsed { stroke: var(--danger); }
+.bfDonutPct { font-size: 34px; font-weight: 800; fill: currentColor; }
+.bfDonutPct.bfPos { fill: var(--ok); }
+.bfDonutPct.bfNeg { fill: var(--danger); }
+.bfDonutSub { font-size: 12px; fill: var(--text-muted); }
+.bfKeyOk { background: var(--ok); }
+.bfKeyUsed { background: var(--danger); }
+.bfKeySurplus { background: color-mix(in srgb, var(--ok) 55%, #000); }

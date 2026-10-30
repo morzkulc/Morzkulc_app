@@ -10,14 +10,21 @@
  * Uruchomienie (z functions/):
  *   node --use-system-ca scripts/seedBasenDemo.js            — podgląd
  *   node --use-system-ca scripts/seedBasenDemo.js --apply    — zapis
- *   node --use-system-ca scripts/seedBasenDemo.js --purge    — usunięcie WSZYSTKICH danych demo
- *     (także zapisów powstałych z klikania w panelu: ledger/zamówienia po uid demo_basen_*,
- *      terminy z demo:true)
+ *   node --use-system-ca scripts/seedBasenDemo.js --grant-staff [--apply]
+ *     — po 10 TESTOWYCH godzin basenowych dla każdej osoby z basen_admin_mail (obsługa basenu),
+ *       wpis w ledgerze z demo:true (jeden na osobę, ponowne uruchomienie nic nie dubluje)
+ *   node --use-system-ca scripts/seedBasenDemo.js --purge    — usunięcie WSZYSTKICH danych demo:
+ *     terminy z demo:true i wszystko, co się do nich odnosi (zapisy, lista rezerwowa, kajaki,
+ *     blokady/zwroty godzin — także obsługi, która się na nie zapisała), dokumenty osób
+ *     demo_basen_*, wpisy ledgera z demo:true (w tym testowe godziny obsługi).
+ *     Zapisy obsługi na PRAWDZIWE terminy i jej prawdziwe zamówienia zostają — skrypt je wypisuje.
  */
 const admin = require("firebase-admin");
 
 const APPLY = process.argv.includes("--apply");
 const PURGE = process.argv.includes("--purge");
+const GRANT_STAFF = process.argv.includes("--grant-staff");
+const STAFF_HOURS = 10;
 admin.initializeApp({projectId: "morzkulc-e9df7"});
 const db = admin.firestore();
 const TS = (iso) => admin.firestore.Timestamp.fromDate(new Date(iso));
@@ -162,18 +169,70 @@ function build() {
   return docs;
 }
 
+async function staffUids() {
+  const v = (await db.doc("setup/vars_basen").get()).data()?.vars || {};
+  const emails = String(v.basen_admin_mail?.value || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const out = [];
+  for (const email of emails) {
+    const q = await db.collection("users_active").where("email", "==", email).get();
+    if (q.empty) console.log(`  ${email}: brak konta w aplikacji — pominięte`);
+    q.docs.forEach((d) => out.push({uid: d.id, email}));
+  }
+  return out;
+}
+
+async function grantStaff() {
+  const staff = await staffUids();
+  for (const s of staff) {
+    const id = `${PREFIX}staff_${s.uid}`;
+    const ref = db.collection("basen_godziny_ledger").doc(id);
+    if ((await ref.get()).exists) {
+      console.log(`  ${s.email}: testowe godziny już przyznane`);
+      continue;
+    }
+    console.log(`  ${s.email}: +${STAFF_HOURS} testowych godzin basenowych${APPLY ? "" : " (podgląd)"}`);
+    if (!APPLY) continue;
+    const now = admin.firestore.Timestamp.now();
+    await ref.set({
+      id, uid: s.uid, type: "admin_add", amount: STAFF_HOURS, product: "jednorazowe", unitPricePln: 35, amountPln: STAFF_HOURS * 35,
+      reason: `TEST — ${STAFF_HOURS} godzin basenowych dla obsługi (do usunięcia)`, performedBy: "demo", demo: true,
+      createdAt: now, updatedAt: now,
+    });
+  }
+}
+
 async function purge() {
   const targets = [];
+  const seen = new Set();
+  const add = (ref) => {
+    if (!seen.has(ref.path)) {
+      seen.add(ref.path);
+      targets.push(ref);
+    }
+  };
   for (const c of ["basen_godziny_ledger", "basen_orders"]) {
     const s = await db.collection(c).where("uid", ">=", PREFIX).where("uid", "<", PREFIX + "").get();
-    s.docs.forEach((d) => targets.push(d.ref));
+    s.docs.forEach((d) => add(d.ref));
   }
   for (const c of ["basen_enrollments", "basen_waitlist"]) {
     const s = await db.collection(c).where("userUid", ">=", PREFIX).where("userUid", "<", PREFIX + "").get();
-    s.docs.forEach((d) => targets.push(d.ref));
+    s.docs.forEach((d) => add(d.ref));
   }
+  (await db.collection("basen_godziny_ledger").where("demo", "==", true).get()).docs.forEach((d) => add(d.ref));
   const ses = await db.collection("basen_sessions").where("demo", "==", true).get();
-  ses.docs.forEach((d) => targets.push(d.ref));
+  const demoIds = ses.docs.map((d) => d.id);
+  ses.docs.forEach((d) => add(d.ref));
+  for (const id of demoIds) {
+    for (const c of ["basen_enrollments", "basen_waitlist", "basen_kayak_allocations", "basen_godziny_ledger"]) {
+      (await db.collection(c).where("sessionId", "==", id).get()).docs.forEach((d) => add(d.ref));
+    }
+  }
+  // Ślady obsługi poza danymi demo — nie usuwane, tylko do wiadomości.
+  for (const s of await staffUids()) {
+    const left = (await db.collection("basen_godziny_ledger").where("uid", "==", s.uid).get()).docs.filter((d) => !seen.has(d.ref.path));
+    const orders = (await db.collection("basen_orders").where("uid", "==", s.uid).get()).size;
+    if (left.length || orders) console.log(`  zostaje (${s.email}): ${left.length} wpisów godzin basenowych, ${orders} zamówień`);
+  }
   console.log(`Do usunięcia: ${targets.length} dokumentów`);
   if (!APPLY && !PURGE) return;
   for (let i = 0; i < targets.length; i += 400) {
@@ -186,6 +245,7 @@ async function purge() {
 
 (async () => {
   if (PURGE) return purge();
+  if (GRANT_STAFF) return grantStaff();
   const docs = build();
   const byCol = {};
   docs.forEach(([c]) => (byCol[c] = (byCol[c] || 0) + 1));

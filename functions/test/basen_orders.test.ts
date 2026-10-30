@@ -100,9 +100,18 @@ describe("zamówienia godzin basenowych", () => {
     const recs = await getBasenGodzinyRecords(db, "OK");
     expect(computeBasenGodzinyBalance(recs)).toBe(5);
     expect(recs[0]).toMatchObject({type: "admin_add", product: "karnet5", amount: 5, amountPln: 140, unitPricePln: 28, orderId: o.id, performedBy: "ADMIN"});
-    expect(recs[0].validUntil).toMatch(/-03-31$/);
+    expect(recs[0].validUntil).toMatch(/-03-31$/); // brak basen_koniec_sezonu w SETUP → 31.03
     await expect(approveOrder(db, {orderId: o.id, performedBy: "ADMIN"})).rejects.toThrow(/rozpatrzone/);
     expect(await listPendingOrders(db)).toEqual([]);
+  });
+
+  it("koniec ważności karnetu z basen_koniec_sezonu w SETUP", async () => {
+    const {fake, db} = seed();
+    await db.collection("setup").doc("vars_basen").set({vars: {basen_koniec_sezonu: {value: "2027-04-15"}}});
+    const o = await order(db, "OK", "karnet10");
+    await approveOrder(db, {orderId: o.id, performedBy: "ADMIN"});
+    expect((await getBasenGodzinyRecords(db, "OK"))[0].validUntil).toBe("2027-04-15");
+    expect(fake.dump("basen_orders")[0]).toMatchObject({status: "approved"});
   });
 
   it("odrzucenie wymaga powodu, kolejkuje mail; potem nie da się zatwierdzić", async () => {

@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import {BasenProduct} from "./basen_finance";
-import {ClientError} from "./basen_service";
+import {ClientError, getBasenVars} from "./basen_service";
 import {adminAddBasenGodzinyInTx, priceProduct, ProductPricing} from "./basen_godziny_service";
 import {getBalance as getGodzinkiBalance} from "../hours/godzinki_service";
 import {FULL_MEMBER_ROLE_KEYS, isDuesPaid, isInGoodStanding} from "../users/member_standing";
@@ -149,6 +149,7 @@ export async function cancelOwnOrder(db: FirebaseFirestore.Firestore, args: {uid
 export async function approveOrder(db: FirebaseFirestore.Firestore, args: {orderId: string; performedBy: string}): Promise<{ledgerId: string; uid: string}> {
   const ref = db.collection(ORDERS).doc(args.orderId);
   const ledgerRef = db.collection("basen_godziny_ledger").doc();
+  const {basen_koniec_sezonu: karnetValidUntil} = await getBasenVars(db);
   let uid = "";
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -169,6 +170,7 @@ export async function approveOrder(db: FirebaseFirestore.Firestore, args: {order
       performedBy: args.performedBy,
       pricing,
       orderId: o.id,
+      karnetValidUntil,
     });
     const now = admin.firestore.FieldValue.serverTimestamp();
     tx.update(ref, {status: "approved", decidedBy: args.performedBy, decidedAt: now, ledgerId: ledgerRef.id, updatedAt: now});

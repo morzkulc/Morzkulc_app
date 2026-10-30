@@ -72,7 +72,11 @@ export function priceProduct(product: BasenProduct, count: number, v: ProductPri
   return {entries: n, unitPricePln: v.basen_cena_za_godzine, amountPln: n * v.basen_cena_za_godzine, label: `Godziny basenowe pojedyncze × ${n} (${n * v.basen_cena_za_godzine} zł)`};
 }
 
-type AdminAddArgs = { uid: string; product: BasenProduct; count: number; reason: string; performedBy: string; pricing: ProductPricing; orderId?: string };
+type AdminAddArgs = {
+  uid: string; product: BasenProduct; count: number; reason: string; performedBy: string; pricing: ProductPricing; orderId?: string;
+  /** Koniec ważności karnetu (basen_koniec_sezonu z SETUP); brak → 31.03 bieżącego sezonu. */
+  karnetValidUntil?: string;
+};
 
 function adminAddRecord(id: string, args: AdminAddArgs): Record<string, unknown> {
   const priced = priceProduct(args.product, args.count, args.pricing);
@@ -88,7 +92,7 @@ function adminAddRecord(id: string, args: AdminAddArgs): Record<string, unknown>
     product: args.product,
     unitPricePln: priced.unitPricePln,
     amountPln: priced.amountPln,
-    ...(args.product !== "jednorazowe" ? {validUntil: seasonOf(warsawTodayIso()).karnetValidUntil} : {}),
+    ...(args.product !== "jednorazowe" ? {validUntil: args.karnetValidUntil || seasonOf(warsawTodayIso()).karnetValidUntil} : {}),
     ...(args.orderId ? {orderId: args.orderId} : {}),
     reason: args.reason ? `${priced.label} — ${args.reason}` : priced.label,
     performedBy: args.performedBy,

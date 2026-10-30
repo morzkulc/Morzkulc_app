@@ -11,6 +11,17 @@ type Deps = {
   adminRoleKeys: string[];
 };
 
+/** Liczba miejsc na godzinę z formularza; brak → domyślna z SETUP. */
+const MAX_CAPACITY = 60;
+function readCapacity(raw: any, label: string, fallback: number): {ok: true; value: number} | {ok: false; error: string} {
+  if (raw === undefined || raw === null || raw === "") return {ok: true, value: fallback};
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > MAX_CAPACITY) {
+    return {ok: false, error: `${label}: liczba miejsc musi być liczbą całkowitą od 1 do ${MAX_CAPACITY}.`};
+  }
+  return {ok: true, value: n};
+}
+
 function readReserved(raw: any, label: string, maxCount: number): {ok: true; value?: ReservedSpotsInput} | {ok: false; error: string} {
   if (!raw || typeof raw !== "object" || !(Number(raw.count) > 0)) return {ok: true, value: undefined};
 
@@ -77,12 +88,23 @@ export async function handleBasenCreateSession(req: Request, res: Response, deps
 
       const vars = await getBasenVars(deps.db);
 
-      const h1Result = readReserved(body.h1Reserved, "H1", vars.basen_limit_uczestnikow);
+      const h1Cap = readCapacity(body.h1Capacity, "H1", vars.basen_limit_uczestnikow);
+      if (!h1Cap.ok) {
+        res.status(400).json({error: h1Cap.error});
+        return;
+      }
+      const h2Cap = readCapacity(body.h2Capacity, "H2", vars.basen_limit_uczestnikow);
+      if (!h2Cap.ok) {
+        res.status(400).json({error: h2Cap.error});
+        return;
+      }
+
+      const h1Result = readReserved(body.h1Reserved, "H1", h1Cap.value);
       if (!h1Result.ok) {
         res.status(400).json({error: h1Result.error});
         return;
       }
-      const h2Result = readReserved(body.h2Reserved, "H2", vars.basen_limit_uczestnikow);
+      const h2Result = readReserved(body.h2Reserved, "H2", h2Cap.value);
       if (!h2Result.ok) {
         res.status(400).json({error: h2Result.error});
         return;
@@ -95,6 +117,8 @@ export async function handleBasenCreateSession(req: Request, res: Response, deps
         saunaEnabled,
         h1Reserved: h1Result.value,
         h2Reserved: h2Result.value,
+        h1Capacity: h1Cap.value,
+        h2Capacity: h2Cap.value,
         notes,
         createdBy: uid,
         vars,

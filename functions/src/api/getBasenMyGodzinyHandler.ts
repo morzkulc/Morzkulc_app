@@ -78,6 +78,7 @@ export async function handleGetBasenMyGodziny(req: Request, res: Response, deps:
             karnet10: vars.basen_cena_karnet_10,
           },
           maxSingleCount: MAX_SINGLE_COUNT,
+          seasonEnd: vars.basen_koniec_sezonu,
           karnet: {member: karnet.member, eligible: karnet.eligible, reasons: karnet.reasons},
           account: appVars.clubAccount,
           bank: appVars.clubBank,

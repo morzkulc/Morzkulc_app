@@ -857,6 +857,8 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           entryFeePaidAt: (data as any).admin?.entryFeePaidAt ?? null,
           mentor: (data as any).admin?.mentor ?? null,
           basenInstructor: (data as any).admin?.basenInstructor === true,
+          // Opiekun basenu (basen_admin_mail / skarbnik) — przycisk „Będę ratownikiem”.
+          basenOpiekun: isBasenAdmin,
           szkoleniowiec,
           isActiveKierownik: kierownikSummary.isActiveKierownik,
           activeKierownikEvents: kierownikSummary.activeKierownikEvents,
@@ -1019,6 +1021,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         entryFeePaidAt: docToCreate.admin?.entryFeePaidAt ?? null,
         mentor: docToCreate.admin?.mentor ?? null,
         basenInstructor: docToCreate.admin?.basenInstructor === true,
+        basenOpiekun: isBasenAdmin,
         szkoleniowiec,
         // Nowo utworzony users_active nie mógł wcześniej zostać wskazany jako
         // kierownik (resolveKierownikCandidate wymaga istniejącego dokumentu) —

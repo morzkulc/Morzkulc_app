@@ -98,12 +98,12 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
 
       const resolveOwnKayakLabel = (kayakId: string | null | undefined): string | null => {
         if (!kayakId) return null;
-        if (kayakId === "PRIVATE") return "Kajak prywatny";
+        if (kayakId === "PRIVATE") return "Własny kajak";
         return kayakLabels.get(kayakId)?.full || null;
       };
       const resolveOwnKayakCompactLabel = (kayakId: string | null | undefined): string | null => {
         if (!kayakId) return null;
-        if (kayakId === "PRIVATE") return "Prywatny";
+        if (kayakId === "PRIVATE") return "Własny";
         return kayakLabels.get(kayakId)?.compact || null;
       };
 
@@ -143,6 +143,8 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
             userKayakCompactLabel: resolveOwnKayakCompactLabel(enrollment?.kayakId),
             userViaReservedPool: enrollment?.viaReservedPool === true,
             waitlistCount: waitlist.length,
+            // Lista rezerwowa w kolejności zgłoszeń — kto pierwszy, ten pierwszy przejmuje miejsce.
+            waitlistNames: waitlist.map((w) => w.userDisplayName || ""),
             userWaitlistPosition: myWaitIdx >= 0 ? myWaitIdx + 1 : null,
             attendees: attendeesByKey.get(key) || [],
             availableKayaks: kayaksByKey.get(key) || [],
@@ -154,6 +156,8 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
           date: s.date,
           notes: s.notes,
           isPast,
+          ratownikUid: s.ratownikUid || null,
+          ratownikName: s.ratownikName || null,
           outcome: row?.outcome || "planned",
           cancelReason: row?.cancelReason || null,
           zapisy: row?.zapisy ?? 0,
@@ -174,6 +178,7 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
           cancelledAdmin: season.summary.cancelledAdmin,
           upcoming: season.summary.planned + season.summary.confirmed,
           minZapisow: vars.basen_min_zapisow,
+          limitNaGodzine: vars.basen_limit_uczestnikow,
           maxDniNaprzod: vars.basen_max_dni_naprzod,
           oknoH: vars.basen_okno_anulowania_h,
         },

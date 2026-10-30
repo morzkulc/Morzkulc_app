@@ -9,8 +9,8 @@ import {getAppVars} from "../../modules/setup/app_vars";
  *
  * Uruchamiany RAZ W MIESIĄCU (po gear.chargePrivateStorage) przez ten sam scheduler.
  *
- * 0. Kredytuje automatyczny bonus miesięczny (setup/vars_godzinki.bonus_miesieczny_zarzad)
- *    dla ról zarząd/KR — PRZED liczeniem sald, żeby bonus tego miesiąca wliczał się do
+ * 0. Kredytuje automatyczny bonus miesięczny za pełnioną funkcję: zarząd
+ *    (setup/vars_godzinki.bonus_miesieczny_zarzad), KR (bonus_miesieczny_kr) — PRZED liczeniem sald, żeby bonus tego miesiąca wliczał się do
  *    przeglądu poniżej. Idempotentnie: pomija uid, jeśli w bieżącym miesiącu (wg grantedAt)
  *    już istnieje wpis z tym samym powodem (ponowne/ręczne odpalenie taska nie dubluje bonusu).
  * 1-3. Liczy saldo każdego użytkownika NA ŻYWO (computeNegativeBalances — ta sama
@@ -26,7 +26,7 @@ type Payload = {
 };
 
 const BOARD_ROLE_KEYS = ["rola_zarzad", "rola_kr"];
-const BOARD_BONUS_REASON = "Bonus miesięczny za pełnioną funkcję";
+export const BOARD_BONUS_REASON = "Bonus miesięczny za pełnioną funkcję";
 
 function fmtBalance(b: number): string {
   return (b > 0 ? "+" : "") + b;
@@ -43,18 +43,19 @@ function monthKeyOf(d: Date): string {
 export async function creditBoardMonthlyBonus(
   db: FirebaseFirestore.Firestore,
   now: Date,
-  bonusHours: number,
+  bonusByRole: {rola_zarzad: number; rola_kr: number},
   expiryMonths: number,
   dryRun: boolean
 ): Promise<number> {
-  if (bonusHours <= 0) return 0;
-
   const boardSnap = await db.collection("users_active").where("role_key", "in", BOARD_ROLE_KEYS).get();
   const monthKey = monthKeyOf(now);
   let credited = 0;
 
   for (const doc of boardSnap.docs) {
     const uid = doc.id;
+    const roleKey = String((doc.data() as any)?.role_key || "") as "rola_zarzad" | "rola_kr";
+    const bonusHours = bonusByRole[roleKey] || 0;
+    if (bonusHours <= 0) continue;
     const existing = await db.collection("godzinki_ledger")
       .where("uid", "==", uid)
       .where("reason", "==", BOARD_BONUS_REASON)
@@ -72,6 +73,7 @@ export async function creditBoardMonthlyBonus(
       expiresAt.setMonth(expiresAt.getMonth() + expiryMonths);
       await creditApprovedEarn(db, uid, bonusHours, now, expiresAt, {
         reason: BOARD_BONUS_REASON,
+        bonusRole: roleKey,
         approvedBy: "system",
         submittedBy: "system",
       });
@@ -101,7 +103,7 @@ export const godzinkiMonthlyBalanceReviewTask: ServiceTask<Payload> = {
 
     // 0. Bonus miesięczny zarząd/KR (patrz creditBoardMonthlyBonus) — przed liczeniem sald.
     const bonusCredited = await creditBoardMonthlyBonus(
-      ctx.firestore, now, vars.boardMonthlyBonusHours, vars.expiryMonths, dryRun
+      ctx.firestore, now, {rola_zarzad: vars.boardMonthlyBonusHours, rola_kr: vars.krMonthlyBonusHours}, vars.expiryMonths, dryRun
     );
     ctx.logger.info("godzinki.monthlyBalanceReview: board bonus", {bonusCredited, dryRun});
 

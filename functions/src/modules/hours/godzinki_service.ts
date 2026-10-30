@@ -995,9 +995,10 @@ export async function creditApprovedEarn(
   amount: number,
   grantedAt: Date,
   expiresAt: Date,
-  opts?: {reason?: string; approvedBy?: string; submittedBy?: string; createdAt?: Date}
+  opts?: {reason?: string; approvedBy?: string; submittedBy?: string; createdAt?: Date; docId?: string; bonusRole?: string}
 ): Promise<{id: string}> {
-  const ref = db.collection(COLLECTION).doc();
+  // docId: deterministyczny identyfikator dla nagród systemowych (idempotencja).
+  const ref = opts?.docId ? db.collection(COLLECTION).doc(opts.docId) : db.collection(COLLECTION).doc();
   const grantedTs = admin.firestore.Timestamp.fromDate(grantedAt);
   const expiresTs = admin.firestore.Timestamp.fromDate(expiresAt);
   const createdTs = opts?.createdAt ?
@@ -1017,6 +1018,7 @@ export async function creditApprovedEarn(
     approvedBy: opts?.approvedBy ?? "system",
     reason: opts?.reason ?? "",
     submittedBy: opts?.submittedBy ?? "system",
+    ...(opts?.bonusRole ? {bonusRole: opts.bonusRole} : {}),
     createdAt: createdTs,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });

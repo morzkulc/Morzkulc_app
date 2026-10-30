@@ -1,5 +1,8 @@
 import {ServiceTask} from "../types";
 import {grantInstructorReward, getAllInstructorRewardEnrollmentIds} from "../../modules/basen/basen_godziny_service";
+import {isSessionCancelled} from "../../modules/basen/basen_service";
+import {creditApprovedEarn} from "../../modules/hours/godzinki_service";
+import {getGodzinkiVars} from "../../modules/hours/godzinki_vars";
 
 type Payload = Record<string, never>;
 
@@ -19,12 +22,16 @@ function todayIso(now: Date): string {
  *
  * Nagroda to godzina basenowa (basen_godziny_ledger), nie godzinki. Dostaje ją tylko osoba,
  * która W CHWILI naliczania ma uprawnienie instruktora z arkusza członków
- * (admin.basenInstructor, kolumna „Instruktor (kadra)"). Zapis bez uprawnienia nie jest
+ * (admin.basenInstructor, kolumna „Instruktor (basen)"). Zapis bez uprawnienia nie jest
  * oznaczany jako nagrodzony — gdy uprawnienie wróci, nagroda zostanie naliczona.
+ *
+ * Ratownik terminu (opiekun basenu, zapis z ratownik:true) za odbyty termin dostaje
+ * 1 GODZINKĘ KLUBOWĄ (godzinki_ledger, earn zatwierdzony), nie godzinę basenową.
+ * Odwołany termin = brak nagrody. Idempotentnie: wpis o stałym id basen_ratownik_{zapis}.
  */
 export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
   id: "basen.grantInstructorRewards",
-  description: "Nagradza instruktorów 1h basenową za każdy przeprowadzony (miniony) termin.",
+  description: "Nagradza instruktorów 1h basenową, a ratownika 1 godzinką klubową za każdy odbyty termin.",
 
   validate: () => {
     // brak wymaganych pól
@@ -47,6 +54,8 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
     let granted = 0;
     let skipped = 0;
     let notInstructor = 0;
+    let ratownikGranted = 0;
+    const godzinkiVars = await getGodzinkiVars(ctx.firestore);
     const instructorFlag = new Map<string, boolean>();
     const isInstructor = async (uid: string): Promise<boolean> => {
       if (!instructorFlag.has(uid)) {
@@ -60,6 +69,39 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
     for (const sessionDoc of sessionsSnap.docs) {
       const session = sessionDoc.data() as any;
       const slotLabels = Object.keys(session.slots || {});
+
+      if (session.ratownikUid && !isSessionCancelled(session)) {
+        const ratSnap = await ctx.firestore.collection("basen_enrollments")
+          .where("sessionId", "==", sessionDoc.id)
+          .where("ratownik", "==", true)
+          .where("status", "==", "active")
+          .get();
+        for (const enrollDoc of ratSnap.docs) {
+          const enrollment = enrollDoc.data() as any;
+          const docId = `basen_ratownik_${enrollDoc.id}`;
+          if ((await ctx.firestore.collection("godzinki_ledger").doc(docId).get()).exists) continue;
+          if (ctx.dryRun) {
+            ratownikGranted++;
+            continue;
+          }
+          try {
+            const now = ctx.now;
+            const expiresAt = new Date(now);
+            expiresAt.setMonth(expiresAt.getMonth() + godzinkiVars.expiryMonths);
+            await creditApprovedEarn(ctx.firestore, String(enrollment.userUid), 1, now, expiresAt, {
+              reason: `Ratownik na basenie ${sessionDoc.id}`,
+              approvedBy: "system",
+              submittedBy: "system",
+              docId,
+            });
+            await enrollDoc.ref.update({ratownikRewardedAt: now});
+            ratownikGranted++;
+          } catch (e: any) {
+            errors.push(`${enrollDoc.id} (ratownik): ${e?.message || String(e)}`);
+            ctx.logger.error("basenGrantInstructorRewards: ratownik grant failed", {enrollmentId: enrollDoc.id, message: e?.message});
+          }
+        }
+      }
 
       for (const slot of slotLabels) {
         const enrollmentsSnap = await ctx.firestore
@@ -103,8 +145,8 @@ export const basenGrantInstructorRewardsTask: ServiceTask<Payload> = {
 
     return {
       ok: errors.length === 0,
-      message: `granted=${granted}, skipped=${skipped}, notInstructor=${notInstructor}, errors=${errors.length}`,
-      details: {granted, skipped, notInstructor, errors},
+      message: `granted=${granted}, skipped=${skipped}, notInstructor=${notInstructor}, ratownik=${ratownikGranted}, errors=${errors.length}`,
+      details: {granted, skipped, notInstructor, ratownikGranted, errors},
     };
   },
 };

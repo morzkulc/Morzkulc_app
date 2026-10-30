@@ -61,6 +61,7 @@ export interface BasenVars {
   basen_budzet_sezonu: number;
   basen_min_zapisow: number; // oficjalny próg dla członków — tylko informacyjnie
   basen_max_dni_naprzod: number;
+  basen_koniec_sezonu: string; // RRRR-MM-DD — do kiedy ważne godziny basenowe z karnetu
 }
 
 export interface BasenReservedSpots {
@@ -98,6 +99,10 @@ export interface BasenSession {
   slots: Partial<Record<BasenSlotLabel, BasenSlot>>;
   costPln?: number; // koszt wynajmu z chwili utworzenia terminu
   decision?: BasenSessionDecision; // basen.decideSessions, 30 h przed terminem
+  // Ratownik terminu (opiekun basenu, jeden na termin): nie płaci godziną basenową,
+  // zajmuje miejsce na swojej godzinie, po odbytym terminie dostaje 1 godzinkę klubową.
+  ratownikUid?: string | null;
+  ratownikName?: string | null;
   cancelReason?: "frekwencja" | "admin";
   createdBy: string;
   createdAt: any;
@@ -126,6 +131,8 @@ export interface BasenEnrollment {
   cancelledLate?: boolean; // true jeśli anulowano w oknie <cancellationWindowHours> — ślad dla rozliczeń
   lateRefunded?: boolean; // spóźniona rezygnacja, ale miejsce przejęła osoba z listy rezerwowej → zwrot
   fromWaitlist?: boolean; // zapis powstał z listy rezerwowej
+  ratownik?: boolean; // zapis ratownika terminu (bez opłaty, nagroda: 1 godzinka klubowa)
+  ratownikRewardedAt?: any;
   createdAt: any;
   updatedAt: any;
 }
@@ -209,7 +216,21 @@ export async function getBasenVars(db: FirebaseFirestore.Firestore): Promise<Bas
     basen_budzet_sezonu: num(vars["basen_budzet_sezonu"], 2000),
     basen_min_zapisow: num(vars["basen_min_zapisow"], 12),
     basen_max_dni_naprzod: num(vars["basen_max_dni_naprzod"], 4),
+    basen_koniec_sezonu: parseSeasonEnd(parseVarValue(vars["basen_koniec_sezonu"])),
   };
+}
+
+/**
+ * Koniec sezonu basenowego z SETUP (RRRR-MM-DD albo DD.MM.RRRR) — nie jest sztywny
+ * (koniec marca, czasem połowa kwietnia). Brak/niepoprawna wartość → 31.03 bieżącego sezonu.
+ */
+export function parseSeasonEnd(raw: any, todayIso: string = warsawTodayIso()): string {
+  const s = String(raw ?? "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return seasonOf(todayIso).karnetValidUntil;
 }
 
 // Wartość liczbowa zmiennej albo domyślna (brak wiersza / pusta komórka / nie-liczba).
@@ -324,6 +345,7 @@ export interface SimpleAttendee {
   displayLabel: string; // ksywka, a jak brak to imię+nazwisko — NIGDY oba naraz (prosta lista)
   type: EnrollmentType;
   instructorUid: string | null;
+  ratownik?: boolean;
 }
 
 /**
@@ -369,6 +391,7 @@ export async function getAttendeesBySessionSlot(
       displayLabel: nicknameByUid.get(e.userUid) || e.userDisplayName,
       type: e.type,
       instructorUid: e.instructorUid || null,
+      ...(e.ratownik ? {ratownik: true} : {}),
     });
     byKey.set(key, list);
   }
@@ -390,6 +413,9 @@ export async function createSession(
     saunaEnabled: boolean;
     h1Reserved?: ReservedSpotsInput;
     h2Reserved?: ReservedSpotsInput;
+    /** Liczba miejsc na godzinę (formularz, domyślnie basen_limit_uczestników z SETUP). */
+    h1Capacity?: number;
+    h2Capacity?: number;
     notes: string;
     createdBy: string;
     vars: BasenVars;
@@ -418,7 +444,7 @@ export async function createSession(
     H1: {
       timeStart: args.vars.basen_1_godzina_domyslna,
       timeEnd: args.vars.basen_1_godzina_domyslna,
-      capacity: args.vars.basen_limit_uczestnikow,
+      capacity: args.h1Capacity ?? args.vars.basen_limit_uczestnikow,
       enrolledCount: 0,
       status: "open",
       ...(h1Reserved ? {reservedSpots: h1Reserved} : {}),
@@ -426,7 +452,7 @@ export async function createSession(
     H2: {
       timeStart: args.vars.basen_2_godzina_domyslna,
       timeEnd: args.vars.basen_2_godzina_domyslna,
-      capacity: args.vars.basen_limit_uczestnikow,
+      capacity: args.h2Capacity ?? args.vars.basen_limit_uczestnikow,
       enrolledCount: 0,
       status: "open",
       ...(h2Reserved ? {reservedSpots: h2Reserved} : {}),
@@ -513,6 +539,8 @@ export async function enrollInSlot(
     kayakId?: string; // id z gear_kayaks lub "PRIVATE"
     isKursant: boolean;
     vars: BasenVars;
+    /** Zapis jako ratownik terminu (uprawnienie sprawdza handler: tylko opiekun basenu). */
+    ratownik?: boolean;
   }
 ): Promise<{ enrollmentId: string }> {
   const sessionRef = db.collection("basen_sessions").doc(args.sessionId);
@@ -577,6 +605,16 @@ export async function enrollInSlot(
       if (existing.status === "active") throw new ClientError("Jesteś już zapisany/a na ten slot.");
     }
 
+    const isRatownik = args.ratownik === true && args.mode === "regular";
+    if (isRatownik) {
+      if (args.slot === "SAUNA") throw new ClientError("Ratownik zapisuje się na godzinę basenu, nie na saunę.");
+      if (session.ratownikUid && session.ratownikUid !== args.uid) {
+        throw new ClientError(`Ten termin ma już ratownika${session.ratownikName ? `: ${session.ratownikName}` : ""}.`);
+      }
+      if (session.ratownikUid === args.uid) throw new ClientError("Jesteś już ratownikiem na tym terminie.");
+    }
+    const ratownikPatch = isRatownik ? {ratownikUid: args.uid, ratownikName: args.displayName} : {};
+
     if (dailyLimitSnap.docs.length >= 2) {
       throw new ClientError("Masz już wykorzystany dzienny limit 2 slotów basenowych (baseny, sauna i instruktorowanie liczą się łącznie) — nie możesz zapisać się na kolejny slot tego dnia.");
     }
@@ -595,14 +633,14 @@ export async function enrollInSlot(
     let valuePln = 0;
     if (args.mode !== "instructor") {
       availability = computeSlotAvailability(slotData, args.isKursant);
-      if (availability.isFull) throw new ClientError("Slot jest już pełny — możesz zapisać się na listę rezerwową.");
+      if (availability.isFull) throw new ClientError("Brak wolnych miejsc na tej godzinie — możesz zapisać się na listę rezerwową.");
 
       isFreeForKursant = args.isKursant && availability.viaReservedPool === true;
-      if (!isFreeForKursant) {
+      if (!isFreeForKursant && !isRatownik) {
         const godzinyRecords = godzinyLedgerSnap.docs.map((d) => ({id: d.id, ...d.data()} as any));
         const balance = computeBasenGodzinyBalance(godzinyRecords);
         if (balance < 1) {
-          throw new ClientError("Brak dostępnych godzin basenowych. Skontaktuj się z opiekunem basenu, aby dopisać godziny.");
+          throw new ClientError("Wolne miejsca są, ale nie masz opłaconych godzin basenowych (saldo 0). Kup je w zakładce „Moje konto” — pojedyncze albo karnet.");
         }
         valuePln = nextEntryValuePln(godzinyRecords, args.vars.basen_cena_za_godzine);
       }
@@ -636,6 +674,7 @@ export async function enrollInSlot(
         const newUsed = (slotData.reservedSpots?.usedCount ?? 0) + 1;
         tx.update(sessionRef, {
           [`slots.${args.slot}.reservedSpots.usedCount`]: newUsed,
+          ...ratownikPatch,
           updatedAt: now,
         }); // status ogólny NIE dotykany — odzwierciedla wyłącznie pulę ogólną
       } else {
@@ -644,6 +683,7 @@ export async function enrollInSlot(
         tx.update(sessionRef, {
           [`slots.${args.slot}.enrolledCount`]: newCount,
           [`slots.${args.slot}.status`]: newStatus,
+          ...ratownikPatch,
           updatedAt: now,
         });
       }
@@ -675,14 +715,15 @@ export async function enrollInSlot(
       // Zapisane na zapisie (nie odtwarzane z bieżącej roli/puli przy anulowaniu) —
       // rola usera i dostępność puli mogłyby się zmienić między zapisem a anulowaniem,
       // a refundBasenGodzinyInTx musi wiedzieć, czy TEN konkretny zapis w ogóle zablokował godzinę.
-      chargedGodziny: args.mode !== "instructor" && !isFreeForKursant,
+      chargedGodziny: args.mode !== "instructor" && !isFreeForKursant && !isRatownik,
       valuePln,
+      ...(isRatownik ? {ratownik: true} : {}),
       status: "active",
       createdAt: now,
       updatedAt: now,
     });
 
-    if (args.mode !== "instructor" && !isFreeForKursant) {
+    if (args.mode !== "instructor" && !isFreeForKursant && !isRatownik) {
       blockBasenGodzinyInTx(tx, godzinyLedgerRef, {
         uid: args.uid,
         sessionId: args.sessionId,
@@ -782,7 +823,7 @@ export async function joinWaitlist(
     }
     const balance = computeBasenGodzinyBalance(ledgerSnap.docs.map((d) => d.data() as any));
     if (balance < 1) {
-      throw new ClientError("Brak dostępnych godzin basenowych — przy przejęciu miejsca z listy pobierana jest godzina basenowa.");
+      throw new ClientError("Nie masz opłaconych godzin basenowych (saldo 0). Na listę rezerwową potrzebna jest co najmniej jedna — pobieramy ją, gdy przejmiesz miejsce. Kup w zakładce „Moje konto”.");
     }
 
     tx.set(waitRef, {
@@ -906,12 +947,19 @@ export async function cancelEnrollment(
     }
 
     // ── zapisy ──
+    // Rezygnacja ratownika zwalnia rolę ratownika terminu (może ją przejąć inny opiekun).
+    const ratownikClear = enrollment.ratownik === true && session.ratownikUid === args.uid ?
+      {ratownikUid: null, ratownikName: null} :
+      null;
+    let sessionUpdated = false;
     // Przy przejęciu z listy rezerwowej liczba zajętych miejsc się nie zmienia.
     if (slotData && slotData.status !== "cancelled" && enrollment.type !== "instructor" && !promoted) {
+      sessionUpdated = true;
       if (enrollment.viaReservedPool) {
         const newUsed = Math.max(0, (slotData.reservedSpots?.usedCount ?? 0) - 1);
         tx.update(sessionRef, {
           [`slots.${args.slot}.reservedSpots.usedCount`]: newUsed,
+          ...(ratownikClear || {}),
           updatedAt: now,
         });
       } else {
@@ -921,10 +969,12 @@ export async function cancelEnrollment(
         tx.update(sessionRef, {
           [`slots.${args.slot}.enrolledCount`]: newCount,
           [`slots.${args.slot}.status`]: newStatus,
+          ...(ratownikClear || {}),
           updatedAt: now,
         });
       }
     }
+    if (ratownikClear && !sessionUpdated) tx.update(sessionRef, {...ratownikClear, updatedAt: now});
 
     if (enrollment.kayakId && enrollment.kayakId !== "PRIVATE") {
       const allocationRef = db.collection("basen_kayak_allocations")
@@ -1241,6 +1291,15 @@ export async function setEnrollmentKayak(
 
 // Nazwa+numer kajaka (np. "Optima 2 (nr 66)") zamiast surowego ID — współdzielone
 // przez listAvailableBasenKayaks (wybór) i resolveKayakLabel (już wybrany kajak).
+/** Lista wyboru na basenie: „Model nr X (kolor)" — bez producenta (decyzja 30.10.2026). */
+function poolKayakLabel(k: any, fallbackId: string): string {
+  const model = norm(k?.model) || norm(k?.brand);
+  const number = norm(k?.number);
+  const color = norm(k?.color).toLowerCase();
+  const label = [model, number ? `nr ${number}` : ""].filter(Boolean).join(" ") + (color ? ` (${color})` : "");
+  return label.trim() || fallbackId;
+}
+
 function kayakBaseLabel(k: any, fallbackId: string): string {
   const brand = norm(k?.brand);
   const model = norm(k?.model);
@@ -1260,7 +1319,7 @@ function kayakBaseLabel(k: any, fallbackId: string): string {
 // pokazujemy istniejący zapis (własna karta slotu, lista uczestników), w
 // odróżnieniu od listAvailableBasenKayaks (lista do wyboru przy zapisie).
 export async function resolveKayakLabel(db: FirebaseFirestore.Firestore, kayakId: string): Promise<string> {
-  if (kayakId === "PRIVATE") return "Kajak prywatny";
+  if (kayakId === "PRIVATE") return "Własny kajak";
   const snap = await db.collection("gear_kayaks").doc(kayakId).get();
   if (!snap.exists) return `Kajak (nr ${kayakId})`; // sprzątnięty/nieznaleziony kajak — degraduje się do surowego ID
   return kayakBaseLabel(snap.data(), kayakId);
@@ -1334,6 +1393,8 @@ async function fetchPoolKayaks(db: FirebaseFirestore.Firestore): Promise<any[]> 
 
 async function fetchPoolKayaksUncached(db: FirebaseFirestore.Firestore): Promise<any[]> {
   const kayaksSnap = await db.collection("gear_kayaks").where("isActive", "==", true).get();
+  // Kajaki prywatne na basenie są na liście zawsze (także bez zgody na wypożyczanie) —
+  // z oznaczeniem i mailem właściciela; korzystanie wymaga jego zgody (decyzja 30.10.2026).
   return kayaksSnap.docs
     .map((d) => {
       const data = d.data() as any;
@@ -1341,31 +1402,30 @@ async function fetchPoolKayaksUncached(db: FirebaseFirestore.Firestore): Promise
     })
     .filter((k) => k.gearScrapped !== true)
     .filter((k) => String(k?.storage || k?.storedAt || "").trim().toLowerCase() === "basen")
-    .filter((k) => k?.isOperational === true)
-    // Prywatny kajak niedostępny do wypożyczenia — widoczny tylko dla właściciela poza
-    // tą listą (nie ma tu żadnej roli), więc go nie proponujemy innym uczestnikom.
-    // Wzorem tej samej reguły w module Sprzęt (gear_bundle_service.ts).
-    .filter((k) => k?.isPrivate !== true || k?.isPrivateRentable === true);
+    .filter((k) => k?.isOperational === true);
 }
 
 function buildAvailableKayaksList(poolKayaks: any[], allocatedIds: Set<string>): AvailableKayak[] {
   const available = poolKayaks
     .filter((k) => !allocatedIds.has(k.id))
     .map((k) => {
-      const baseLabel = kayakBaseLabel(k, k.id);
+      const baseLabel = poolKayakLabel(k, k.id);
       const isPrivate = k?.isPrivate === true;
-      const ownerContact = isPrivate ? (norm(k?.ownerContact) || null) : null;
-      // Kajak prywatny (choć użyczalny) — jasno oznaczony w liście wyboru, żeby
-      // uczestnik wiedział, że wypożyczenie wymaga zgody właściciela (poza aplikacją —
-      // ten sam wzorzec zaufania co płatność "jednorazowe"/nagrody instruktorskie).
-      const label = isPrivate ?
-        `${baseLabel} — PRYWATNY, wymaga zgody właściciela${ownerContact ? ` (${ownerContact})` : ""}` :
-        baseLabel;
+      const isHalfHalf = !isPrivate && k?.isHalfHalf === true;
+      const ownerContact = isPrivate || isHalfHalf ? (norm(k?.ownerContact) || null) : null;
+      // Kajak prywatny / „pół na pół" — jasno oznaczony w liście wyboru z mailem właściciela:
+      // prywatny wymaga jego zgody, „pół na pół" = pierwszeństwo właściciela (jak w module Sprzęt).
+      // Format listy (decyzja 30.10.2026): „Model nr X (kolor) PRV (mail właściciela)", nic więcej.
+      const owner = ownerContact ? ` (${ownerContact})` : "";
+      const label = isPrivate ? `${baseLabel} PRV${owner}` :
+        isHalfHalf ? `${baseLabel} PÓŁ NA PÓŁ${owner}` :
+          baseLabel;
       return {id: k.id, label, isPrivate, ownerContact};
     })
     .sort((a, b) => a.label.localeCompare(b.label, "pl"));
 
-  available.push({id: "PRIVATE", label: "Kajak prywatny", isPrivate: false, ownerContact: null});
+  // Sentinel „PRIVATE" = uczestnik przyjeżdża z własnym kajakiem spoza listy klubowej.
+  available.push({id: "PRIVATE", label: "Własny kajak", isPrivate: false, ownerContact: null});
   return available;
 }
 
