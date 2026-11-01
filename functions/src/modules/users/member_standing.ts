@@ -40,6 +40,26 @@ export function isDuesPaid(userData: any, todayIso: string = todayWarsawIso()): 
 }
 
 /**
+ * Wpisowe ważne: 12 miesięcy od wpłaty, do końca tego samego miesiąca rok później
+ * (admin.entryFeePaidAt „YYYY-MM”; „2026-06” → ważne do czerwca 2027 — jak „Wpisowe ważne do” w profilu).
+ */
+export function isEntryFeeValid(userData: any, todayIso: string = todayWarsawIso()): boolean {
+  const m = /^(\d{4})-(\d{2})$/.exec(normNullish(userData?.admin?.entryFeePaidAt));
+  if (!m) return false;
+  const validUntil = `${Number(m[1]) + 1}-${m[2]}`;
+  return todayIso.slice(0, 7) <= validUntil;
+}
+
+/**
+ * Składka „opłacona” dla uprawnień członkowskich (karnet basenowy): opłacone składki
+ * ALBO ważne wpisowe — wpisowe kandydata traktujemy jak składkę (decyzja 01.11.2026).
+ * Raport składek / prawo głosu nadal liczy wyłącznie składki (isDuesPaid).
+ */
+export function isDuesOrEntryFeePaid(userData: any, todayIso: string = todayWarsawIso()): boolean {
+  return isDuesPaid(userData, todayIso) || isEntryFeeValid(userData, todayIso);
+}
+
+/**
  * Czynny członek: opłacone składki i dodatnie saldo godzinek. Ta sama reguła wyznacza
  * prawo głosu (raport składek) i prawo do karnetu basenowego (dofinansowanie klubu).
  */

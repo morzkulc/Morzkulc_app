@@ -9,7 +9,7 @@ import {
   listUserOrders, rejectOrder, validateOrderInput,
 } from "../src/modules/basen/basen_orders";
 import {computeBasenGodzinyBalance, getBasenGodzinyRecords} from "../src/modules/basen/basen_godziny_service";
-import {isDuesPaid, parseContributionsPaidUntil} from "../src/modules/users/member_standing";
+import {isDuesOrEntryFeePaid, isDuesPaid, isEntryFeeValid, parseContributionsPaidUntil} from "../src/modules/users/member_standing";
 
 const PRICING = {basen_cena_za_godzine: 35, basen_cena_karnet_5: 140, basen_cena_karnet_10: 245};
 
@@ -31,8 +31,10 @@ function seed() {
       user("ZERO", "rola_czlonek", "2099-12-31"),
       user("SYMP", "rola_sympatyk"),
       user("KAND", "rola_kandydat", "2099-12-31"),
+      // Kandydat z wygasłą składką, ale wpisowym wpłaconym w bieżącym miesiącu (ważne 12 mc).
+      {...user("KANDFEE", "rola_kandydat"), admin: {contributions: "2020-01-01", entryFeePaidAt: new Date().toISOString().slice(0, 7)}},
     ],
-    godzinki_ledger: [earn("OK", 5), earn("NODUES", 5), earn("KAND", 5)],
+    godzinki_ledger: [earn("OK", 5), earn("NODUES", 5), earn("KAND", 5), earn("KANDFEE", 5)],
   });
   return {fake, db: fake.asDb()};
 }
@@ -59,6 +61,20 @@ describe("składki i reguła karnetu", () => {
     expect(await getKarnetEligibility(db, "OK", await userData(db, "OK"))).toMatchObject({member: true, eligible: true, reasons: []});
   });
 
+  it("wpisowe ważne 12 mc (do końca miesiąca rok później) liczy się jak składka", () => {
+    expect(isEntryFeeValid({admin: {entryFeePaidAt: "2026-06"}}, "2027-06-30")).toBe(true);
+    expect(isEntryFeeValid({admin: {entryFeePaidAt: "2026-06"}}, "2027-07-01")).toBe(false);
+    expect(isEntryFeeValid({admin: {}}, "2026-11-01")).toBe(false);
+    const wlodek = {admin: {contributions: "2026-09-30", entryFeePaidAt: "2026-06"}};
+    expect(isDuesPaid(wlodek, "2026-11-01")).toBe(false);
+    expect(isDuesOrEntryFeePaid(wlodek, "2026-11-01")).toBe(true);
+  });
+
+  it("kandydat z ważnym wpisowym (składka wygasła) i dodatnim saldem → karnet dostępny", async () => {
+    const {db} = seed();
+    expect(await getKarnetEligibility(db, "KANDFEE", await userData(db, "KANDFEE"))).toMatchObject({member: true, eligible: true, duesPaid: true, reasons: []});
+  });
+
   it("kandydat ze składkami i dodatnim saldem godzinek → karnet dostępny", async () => {
     const {db} = seed();
     expect(await getKarnetEligibility(db, "KAND", await userData(db, "KAND"))).toMatchObject({member: true, eligible: true, reasons: []});
@@ -68,7 +84,7 @@ describe("składki i reguła karnetu", () => {
     const {db} = seed();
     const nodues = await getKarnetEligibility(db, "NODUES", await userData(db, "NODUES"));
     expect(nodues).toMatchObject({member: true, eligible: false});
-    expect(nodues.reasons.join(" ")).toMatch(/składek/);
+    expect(nodues.reasons.join(" ")).toMatch(/składk/);
     const zero = await getKarnetEligibility(db, "ZERO", await userData(db, "ZERO"));
     expect(zero).toMatchObject({member: true, eligible: false});
     expect(zero.reasons.join(" ")).toMatch(/godzinek/);
@@ -95,7 +111,7 @@ describe("zamówienia godzin basenowych", () => {
 
   it("karnet bez spełnionych warunków → odmowa z powodem", async () => {
     const {db} = seed();
-    await expect(order(db, "NODUES", "karnet5")).rejects.toThrow(/składek/);
+    await expect(order(db, "NODUES", "karnet5")).rejects.toThrow(/składk/);
     await expect(order(db, "SYMP", "karnet10")).rejects.toThrow(/członków/);
   });
 

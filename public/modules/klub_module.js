@@ -1,5 +1,6 @@
 // public/modules/klub_module.js
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
+import { formatNrb } from "/core/format_utils.js";
 import { setHash } from "/core/router.js";
 import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { storageFetchKlubVideoUrl } from "/core/firebase_client.js";
@@ -174,13 +175,6 @@ function mapsDirectionsUrl(address) {
 function safeUrl(u) {
   const s = String(u || "").trim();
   return /^https?:\/\//i.test(s) ? s : "";
-}
-
-// Numer NRB (26 cyfr) → grupy „2 + 6×4"; nieznany format pokazujemy bez zmian.
-function formatNrb(raw) {
-  const digits = String(raw || "").replace(/\s+/g, "");
-  if (!/^\d{26}$/.test(digits)) return String(raw || "");
-  return digits.slice(0, 2) + " " + (digits.slice(2).match(/.{1,4}/g) || []).join(" ");
 }
 
 function renderKluczeTable(osoby) {

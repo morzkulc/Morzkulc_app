@@ -1,6 +1,7 @@
 // public/modules/basen_module.js
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
 import { renderRegulaminHtml } from "/modules/basen_regulamin.js";
+import { formatNrb } from "/core/format_utils.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -2116,6 +2117,45 @@ function renderOrdersHtml(orders) {
     <div class="basenLedgerList">${rows}</div>`;
 }
 
+// Konto klubu na górze „Moje konto” — numer z przyciskiem kopiowania; tytuł przelewu jest w mailu z zamówieniem.
+function renderClubAccountHtml(shop) {
+  if (!shop?.account) return "";
+  const raw = String(shop.account).replace(/\s+/g, "");
+  return `
+    <div class="basenClubAccount">
+      <div class="basenAttendeesGroupTitle">Konto klubu do wpłat</div>
+      <div class="basenClubAccountRow">
+        <span class="basenClubAccountNr" id="basenKontoNr">${esc(formatNrb(raw))}</span>
+        <button type="button" class="primary small" data-basen-copy="${esc(raw)}">Kopiuj numer</button>
+      </div>
+      ${shop.bank ? `<div class="basenHint">${esc(shop.bank)}</div>` : ""}
+      <div class="basenHint"><strong>Tytuł przelewu skopiuj z maila z zamówieniem</strong> — po nim rozpoznajemy wpłatę.</div>
+    </div>`;
+}
+
+function wireClubAccountCopy(root) {
+  root.querySelectorAll("[data-basen-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(btn.getAttribute("data-basen-copy") || "");
+        const old = btn.textContent;
+        btn.textContent = "Skopiowano ✓";
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500);
+      } catch {
+        // Schowek niedostępny — zaznacz numer do ręcznego skopiowania.
+        const nr = root.querySelector("#basenKontoNr");
+        if (!nr) return;
+        const range = document.createRange();
+        range.selectNodeContents(nr);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  });
+}
+
 async function renderAccountTab(innerEl, ctx, notice = "") {
   innerEl.innerHTML = spinnerHtml("Ładowanie…");
 
@@ -2136,6 +2176,7 @@ async function renderAccountTab(innerEl, ctx, notice = "") {
     : `<div class="basenHint">Brak operacji.</div>`;
 
   innerEl.innerHTML = `
+    ${renderClubAccountHtml(shop)}
     <div class="row" style="margin-top:12px;">
       <div class="basenAttendeesGroupTitle">Saldo godzin basenowych</div>
       <div class="${balance > 0 ? "basenGodzinyBalance" : "basenGodzinyBalanceZero"}" style="font-size:20px;">${balance} h</div>
@@ -2146,6 +2187,7 @@ async function renderAccountTab(innerEl, ctx, notice = "") {
     <div class="basenLedgerList">${rowsHtml}</div>
   `;
   if (notice) innerEl.querySelector("#shopResult").innerHTML = notice;
+  wireClubAccountCopy(innerEl);
 
   const errEl = innerEl.querySelector("#shopErr");
   const showErr = (msg) => {

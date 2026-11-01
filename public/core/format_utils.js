@@ -46,3 +46,10 @@ export function formatPoints(n) {
   const v = Number(n) || 0;
   return v.toFixed(2).replace(".", ",");
 }
+
+// Numer NRB (26 cyfr) → grupy „2 + 6×4"; nieznany format pokazujemy bez zmian.
+export function formatNrb(raw) {
+  const digits = String(raw || "").replace(/\s+/g, "");
+  if (!/^\d{26}$/.test(digits)) return String(raw || "");
+  return digits.slice(0, 2) + " " + (digits.slice(2).match(/.{1,4}/g) || []).join(" ");
+}

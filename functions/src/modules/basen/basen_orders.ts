@@ -4,7 +4,7 @@ import {BasenVars, ClientError, getBasenVars} from "./basen_service";
 import {adminAddBasenGodzinyInTx, priceProduct, ProductPricing} from "./basen_godziny_service";
 import {computeEarnedBalance, deductHoursInTx, getAllRecords, GodzinkiRecord} from "../hours/godzinki_service";
 import {getGodzinkiVars} from "../hours/godzinki_vars";
-import {MEMBER_ROLE_KEYS, isDuesPaid} from "../users/member_standing";
+import {MEMBER_ROLE_KEYS, isDuesOrEntryFeePaid} from "../users/member_standing";
 
 /**
  * Zamówienia godzin basenowych (kolekcja basen_orders).
@@ -80,10 +80,11 @@ export async function getKarnetEligibility(
     return {member, eligible: false, byProduct: {karnet5: false, karnet10: false}, godzinkiCost, duesPaid: false, godzinkiBalance: 0,
       reasons: ["Karnety są dostępne tylko dla członków klubu."]};
   }
-  const duesPaid = isDuesPaid(userData);
+  // Ważne wpisowe kandydata liczy się jak opłacona składka.
+  const duesPaid = isDuesOrEntryFeePaid(userData);
   const godzinkiBalance = computeEarnedBalance(await getAllRecords(db, uid));
   const reasons: string[] = [];
-  if (!duesPaid) reasons.push("Brak opłaconych składek członkowskich.");
+  if (!duesPaid) reasons.push("Brak opłaconej składki członkowskiej ani ważnego wpisowego.");
   const byProduct = {
     karnet5: duesPaid && godzinkiBalance >= godzinkiCost.karnet5,
     karnet10: duesPaid && godzinkiBalance >= godzinkiCost.karnet10,
