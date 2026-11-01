@@ -175,7 +175,10 @@ describe("sync arkusza członków", () => {
     ];
     const db = seedDb({users_active: [
       {_docId: "u1", memberId: 1, email: "ala@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-09-30"}},
-      {_docId: "u9", email: "sierota@x.pl", displayName: "Sierota Konto", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}},
+      {_docId: "u9", email: "sierota@x.pl", displayName: "Sierota Konto", role_key: "rola_czlonek", status_key: "status_aktywny",
+        profile: {firstName: "Sierota", lastName: "Konto", phone: "1", dateOfBirth: "2000-01-01", consentRodo: true, consentStatute: true}},
+      // niedokończona rejestracja — nie blokuje (obsługuje users.incompleteRegistration)
+      {_docId: "u8", email: "niedokonczone@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}},
     ]});
     const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
     expect(r.ok).toBe(false);
@@ -184,6 +187,7 @@ describe("sync arkusza członków", () => {
     expect(r.message).toMatch(/Bez Id .*brak ID/);
     expect(r.message).toMatch(/sierota@x\.pl.*bez ID/);
     expect(r.message).not.toMatch(/Dobra/);
+    expect(r.message).not.toMatch(/niedokonczone/);
     expect((db.dump("users_active") as any[]).find((u) => u.memberId === 1).admin.contributions).toBe("2026-09-30");
   });
 

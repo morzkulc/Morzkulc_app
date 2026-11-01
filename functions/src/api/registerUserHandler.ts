@@ -6,6 +6,7 @@ import type * as admin from "firebase-admin";
 import {creditOpeningBalance} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {getObHours, buildOpeningBalanceAdminPatch, obValueExact, obEmailKey} from "../modules/hours/opening_balance_fields";
+import {isProfileComplete} from "../modules/users/profile_complete";
 import {getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {isTestAccount} from "../modules/setup/app_vars";
@@ -160,18 +161,6 @@ function readProfileInput(req: Request): ProfileInput {
   if (typeof iAmKursant === "boolean") out.iAmKursant = iAmKursant;
 
   return out;
-}
-
-function isProfileComplete(p: any): boolean {
-  const firstName = normalizeStr(p?.firstName);
-  const lastName = normalizeStr(p?.lastName);
-  const phone = normalizeStr(p?.phone);
-
-  const dateOfBirth = normalizeStr(p?.dateOfBirth);
-  const consentRodo = p?.consentRodo === true;
-  const consentStatute = p?.consentStatute === true;
-
-  return Boolean(firstName && lastName && phone && dateOfBirth && consentRodo && consentStatute);
 }
 
 function validateIncomingProfile(incoming: ProfileInput): ValidationResult {

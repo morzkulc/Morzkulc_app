@@ -1849,6 +1849,20 @@ export const usersSyncFieldsDaily = onSchedule(
   }
 );
 
+/**
+ * SCHEDULER: Niedokończone rejestracje (decyzja 01.11.2026) — codzienne sprawdzenie terminów:
+ * jeden mail po 3 dniach od założenia konta, usunięcie po 7 dniach (Vars_MEMBERS: rejestracja_dni_do_przypomnienia,
+ * rejestracja_dni_do_usuniecia).
+ */
+export const usersIncompleteRegistrationDaily = onSchedule(
+  {schedule: "10 5 * * *", timeZone: "Europe/Warsaw", timeoutSeconds: 540},
+  async () => {
+    logger.info("usersIncompleteRegistrationDaily: start");
+    const result = await (await loadRunTaskById())("users.incompleteRegistration", {});
+    logger.info("usersIncompleteRegistrationDaily: done", result as unknown as Record<string, unknown>);
+  }
+);
+
 export const usersSyncRolesDaily = onSchedule(
   {schedule: "30 4 * * *", timeZone: "Europe/Warsaw"},
   async () => {

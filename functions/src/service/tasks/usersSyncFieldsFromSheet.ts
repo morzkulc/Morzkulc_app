@@ -10,6 +10,7 @@ import {ARCHIWUM_DO_ROKU} from "../../modules/blachy/blachy_archiwum_2025";
 import {emailConflictMessage, findMemberEmailConflicts} from "../../modules/users/member_email_conflicts";
 import {MEMBER_ROLE_KEYS, parseContributionsPaidUntil} from "../../modules/users/member_standing";
 import {isTestAccount} from "../../modules/setup/app_vars";
+import {isProfileComplete} from "../../modules/users/profile_complete";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -298,6 +299,9 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       for (const d of orphanSnap.docs) {
         const u = d.data() as any;
         if (u?.memberId) continue;
+        // Niedokończona rejestracja nie blokuje syncu — obsługuje ją users.incompleteRegistration
+        // (przypomnienie i usunięcie konta). Blokuje tylko konto z dokończoną rejestracją bez wiersza.
+        if (!isProfileComplete(u?.profile)) continue;
         const email = String(u?.email || "").toLowerCase();
         if (email && sheetEmailsWithId.has(email)) continue;
         if (await isTestAccount(firestore, email)) continue;
