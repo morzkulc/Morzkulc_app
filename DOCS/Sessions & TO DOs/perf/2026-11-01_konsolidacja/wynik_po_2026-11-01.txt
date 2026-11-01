@@ -1,0 +1,24 @@
+C:\Users\kswitek\Documents\morzkulc_app\DOCS\Sessions & TO DOs\perf\2026-11-01_konsolidacja\analyze_po.py:113: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"\nOkno PO: {D.datetime.utcfromtimestamp(app[0]['T']):%Y-%m-%d %H:%M} – {D.datetime.utcfromtimestamp(app[-1]['T']):%H:%M} UTC, "
+
+== PRZED (osobne funkcje): 461 otwaræ
+  z zimnym startem: 283 (61%), w tym obie fale zimne: 137
+  czekanie na serwer — ciep³e: mediana 500 ms, p90 985 | zimne: mediana 5965 ms, p90 10708
+  œrednie czekanie (wszystkie otwarcia): 4330 ms
+  zimne z bezczynnoœci (bez startów po wdro¿eniu): 283 (61%)
+
+== PO (appApi): 105 otwaræ
+  z zimnym startem: 6 (5%), w tym obie fale zimne: 0
+  czekanie na serwer — ciep³e: mediana 323 ms, p90 609 | zimne: mediana 3067 ms, p90 3191
+  œrednie czekanie (wszystkie otwarcia): 495 ms
+  zimne z bezczynnoœci (bez startów po wdro¿eniu): 4 (3%)
+
+== PO — ¿¹dania wed³ug modu³ów (appapi)
+  sprzêt: 167 ¿¹dañ, zimne 0 (0%)
+  km: 222 ¿¹dañ, zimne 1 (0%)
+  zarz¹d: 93 ¿¹dañ, zimne 0 (0%)
+  basen: 356 ¿¹dañ, zimne 0 (0%)
+  blachy: 9 ¿¹dañ, zimne 0 (0%)
+  publiczne: 87 ¿¹dañ, zimne 5 (5%)
+
+Okno PO: 2026-11-01 10:25 – 18:48 UTC, instancji appapi: 13, wdro¿eñ (rewizji): 8

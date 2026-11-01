@@ -25,6 +25,7 @@
     honorary: "honorary",
     rip: "† ",
     fail: "Could not load the list — see the full calendar.",
+    lbLabel: "Photo viewer", lbPrev: "Previous photo", lbNext: "Next photo", lbClose: "Close",
   } : {
     noEvents: "Brak zaplanowanych imprez — zajrzyj wkrótce.",
     seat: "Siedziba: ",
@@ -37,6 +38,7 @@
     honorary: "honorowa",
     rip: "ś.p. ",
     fail: "Nie udało się wczytać listy — skorzystaj z pełnego kalendarza.",
+    lbLabel: "Podgląd zdjęć", lbPrev: "Poprzednie zdjęcie", lbNext: "Następne zdjęcie", lbClose: "Zamknij",
   };
   var ICONS = {
     facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.8c0-.9.3-1.5 1.6-1.5h1.7V4.4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.4H7.6V14h2.8v8h3.1z"/></svg>',
@@ -294,6 +296,78 @@
   }
 
   if (PRERENDER) { window.__siteApply = apply; return; }
+
+  // Podgląd zdjęć (galeria, plakaty, prasa, poradniki): poprzednie/następne bez zamykania, pod zdjęciem tylko rok (yyyy), jeśli znany —
+  // strzałki, klawisze ←/→, Esc, przesunięcie palcem. Bez JS link nadal otwiera duże zdjęcie.
+  function initLightbox() {
+    var links = $$(".photoGrid a, .posters a");
+    if (!links.length) return;
+    var idx = 0, startX = null;
+    var box = el("div", "lb hidden");
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-label", T.lbLabel);
+    box.innerHTML = '<button type="button" class="lbClose">✕</button><button type="button" class="lbNav lbPrev">‹</button>' +
+      '<figure class="lbFig"><img alt=""><figcaption class="lbYear"></figcaption></figure>' +
+      '<button type="button" class="lbNav lbNext">›</button>';
+    document.body.appendChild(box);
+    var img = box.querySelector("img"), year = box.querySelector(".lbYear");
+    var btnPrev = box.querySelector(".lbPrev"), btnNext = box.querySelector(".lbNext"), btnClose = box.querySelector(".lbClose");
+    btnPrev.setAttribute("aria-label", T.lbPrev);
+    btnNext.setAttribute("aria-label", T.lbNext);
+    btnClose.setAttribute("aria-label", T.lbClose);
+    function captionOf(a) {
+      var fc = a.parentNode && a.parentNode.querySelector("figcaption");
+      var im = a.querySelector("img");
+      return (fc && fc.textContent.trim()) || (im && im.alt) || "";
+    }
+    function show(i) {
+      idx = (i + links.length) % links.length;
+      var a = links[idx];
+      img.src = a.getAttribute("href");
+      img.alt = captionOf(a);
+      // Pod zdjęciem wyłącznie rok (yyyy), jeśli znany z opisu — decyzja usera 01.11.2026.
+      var y = captionOf(a).match(/\b(?:19|20)\d{2}\b/g);
+      year.textContent = y ? y[y.length - 1] : "";
+      [1, -1].forEach(function (d) { new Image().src = links[(idx + d + links.length) % links.length].getAttribute("href"); });
+    }
+    function open(i) {
+      show(i);
+      box.classList.remove("hidden");
+      document.body.classList.add("lbOpen");
+      btnClose.focus();
+    }
+    function close() {
+      box.classList.add("hidden");
+      document.body.classList.remove("lbOpen");
+      links[idx].focus();
+    }
+    links.forEach(function (a, i) {
+      a.addEventListener("click", function (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+        e.preventDefault();
+        open(i);
+      });
+    });
+    btnPrev.addEventListener("click", function () { show(idx - 1); });
+    btnNext.addEventListener("click", function () { show(idx + 1); });
+    btnClose.addEventListener("click", close);
+    box.addEventListener("click", function (e) { if (e.target === box) close(); });
+    document.addEventListener("keydown", function (e) {
+      if (box.classList.contains("hidden")) return;
+      if (e.key === "ArrowLeft") show(idx - 1);
+      else if (e.key === "ArrowRight") show(idx + 1);
+      else if (e.key === "Escape") close();
+    });
+    box.addEventListener("touchstart", function (e) { startX = e.touches[0].clientX; }, {passive: true});
+    box.addEventListener("touchend", function (e) {
+      if (startX == null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      startX = null;
+      if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1));
+    });
+  }
+  initLightbox();
 
   var toggle = $(".navToggle");
   if (toggle) toggle.addEventListener("click", function () {

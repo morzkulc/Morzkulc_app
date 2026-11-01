@@ -205,6 +205,18 @@ thead th { border-top: 0; font-size: .85rem; text-transform: uppercase; letter-s
 @media (prefers-reduced-motion: reduce) { .heroPool .dot { animation: none; } }
 .howItWorks { margin-top: 20px; }
 .howItWorks h3 { font-size: 1.25rem; margin: 0 0 6px; }
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(5,10,15,.94); display: flex; align-items: center; justify-content: center; }
+.lbFig { margin: 0; max-width: 92vw; max-height: 88vh; display: flex; flex-direction: column; align-items: center; }
+.lbFig img { max-width: 92vw; max-height: 80vh; object-fit: contain; border-radius: 8px; }
+.lbFig figcaption { color: #e6edf3; margin-top: 10px; font-size: .95rem; text-align: center; }
+.lbYear { color: #9db0c1; min-height: 1.4em; }
+.lbNav, .lbClose { position: absolute; border: 0; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; border-radius: 999px; font: inherit; }
+.lbNav { top: 50%; transform: translateY(-50%); width: 52px; height: 52px; font-size: 2rem; line-height: 1; }
+.lbPrev { left: 12px; }
+.lbNext { right: 12px; }
+.lbClose { top: 12px; right: 12px; width: 44px; height: 44px; font-size: 1.2rem; }
+.lbNav:hover, .lbClose:hover { background: rgba(255,255,255,.25); }
+body.lbOpen { overflow: hidden; }
 .foot { grid-template-columns: 1fr; }
 .footNav { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .footNav a { color: var(--muted); }

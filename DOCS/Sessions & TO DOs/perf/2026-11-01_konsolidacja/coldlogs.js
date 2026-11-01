@@ -2,7 +2,8 @@ const {google} = require(process.cwd() + "/node_modules/googleapis");
 (async () => {
   const auth = new google.auth.GoogleAuth({scopes: ["https://www.googleapis.com/auth/logging.read"]});
   const logging = google.logging({version: "v2", auth});
-  const since = new Date(Date.now() - 14 * 864e5).toISOString();
+  // argv[3] = liczba dni wstecz (domyślnie 14)
+  const since = new Date(Date.now() - Number(process.argv[3] || 14) * 864e5).toISOString();
   const filter = `resource.type="cloud_run_revision" AND jsonPayload.message="coldstart" AND timestamp>="${since}"`;
   let out = [], pageToken;
   do {

@@ -166,6 +166,39 @@ describe("sync arkusza członków", () => {
     const again = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
     expect((again.details as any).blachyAdded).toEqual([]);
   });
+
+  it("składki/ID: zły format daty, członek bez ID w arkuszu, konto członka bez ID spoza arkusza → sync przerwany bez zapisów", async () => {
+    sheet.rows = [
+      row({"ID": "1", "imię": "Ala", "nazwisko": "Zła", "e-mail": "ala@x.pl", "składki": "wrzesień 2026"}),
+      row({"ID": "", "imię": "Bez", "nazwisko": "Id", "e-mail": "bez@x.pl"}),
+      row({"ID": "3", "imię": "Ok", "nazwisko": "Dobra", "e-mail": "ok@x.pl", "składki": "31.03.2027"}),
+    ];
+    const db = seedDb({users_active: [
+      {_docId: "u1", memberId: 1, email: "ala@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-09-30"}},
+      {_docId: "u9", email: "sierota@x.pl", displayName: "Sierota Konto", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}},
+    ]});
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/Synchronizacja przerwana/);
+    expect(r.message).toMatch(/#1 .*wrzesień 2026/);
+    expect(r.message).toMatch(/Bez Id .*brak ID/);
+    expect(r.message).toMatch(/sierota@x\.pl.*bez ID/);
+    expect(r.message).not.toMatch(/Dobra/);
+    expect((db.dump("users_active") as any[]).find((u) => u.memberId === 1).admin.contributions).toBe("2026-09-30");
+  });
+
+  it("konto członka bez ID z e-mailem w arkuszu → połączone z wierszem, składki z arkusza", async () => {
+    sheet.rows = [row({"ID": "40", "imię": "Karo", "nazwisko": "Bezid", "e-mail": "karo@x.pl", "składki": "2027-03-31"})];
+    const db = seedDb({users_active: [
+      {_docId: "u40", email: "karo@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-09-30"}},
+    ]});
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(true);
+    expect((r.details as any).linkedByEmail).toBe(1);
+    const u = (db.dump("users_active") as any[])[0];
+    expect(u.memberId).toBe(40);
+    expect(u.admin.contributions).toBe("2027-03-31");
+  });
 });
 
 describe("endpointy", () => {

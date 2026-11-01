@@ -879,6 +879,7 @@ function buildAppsScriptSyncSummary(taskId: string, details: any): string {
   case "users.syncFieldsFromSheet":
     return `Dane członków zsynchronizowane.\nSprawdzono: ${n(d.found)} · zaktualizowano: ${n(d.patched)} · bez zmian: ${n(d.unchanged)}.` +
       (Number(d.roleStatusChanged) > 0 ? `\nZmiany ról/statusów: ${n(d.roleStatusChanged)} — przetwarzane w tle.` : "") +
+      (Number(d.linkedByEmail) > 0 ? `\nPołączono konta z wierszami po e-mailu: ${n(d.linkedByEmail)}.` : "") +
       (Number(d.notFound) > 0 ? `\nNie znaleziono w bazie: ${n(d.notFound)}.` : "");
   case "users.syncRolesFromSheet":
     return `Role i statusy zsynchronizowane.\nZaktualizowano: ${n(d.updated)} · bez zmian: ${n(d.unchanged)}.`;
@@ -1833,6 +1834,21 @@ export const gearPrivateStorageMonthly = onSchedule(
  * Uruchamiany codziennie o 04:30 czasu warszawskiego.
  * Odpowiada za aktualizację role_key i status_key na podstawie arkusza członków.
  */
+/**
+ * SCHEDULER: Dzienny sync danych członków z arkusza (w tym „Składki" — jedyne źródło dat składek,
+ * decyzja 01.11.2026). Wpis skarbnika trafia do aplikacji najpóźniej następnego ranka bez klikania
+ * „sync członkowie". Walidacja (ID, format daty składek, konflikty) przerywa sync bez zapisów — błąd w logach.
+ * 04:20 — przed usersSyncRolesDaily (04:30).
+ */
+export const usersSyncFieldsDaily = onSchedule(
+  {schedule: "20 4 * * *", timeZone: "Europe/Warsaw", timeoutSeconds: 540},
+  async () => {
+    logger.info("usersSyncFieldsDaily: start");
+    const result = await (await loadRunTaskById())("users.syncFieldsFromSheet", {requestedBy: "scheduler"});
+    logger.info("usersSyncFieldsDaily: done", result as unknown as Record<string, unknown>);
+  }
+);
+
 export const usersSyncRolesDaily = onSchedule(
   {schedule: "30 4 * * *", timeZone: "Europe/Warsaw"},
   async () => {

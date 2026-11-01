@@ -59,10 +59,8 @@ export function buildOpeningBalanceAdminPatch(obData: any): Record<string, any> 
   if (!obData) return null;
   const adminPatch: Record<string, any> = {};
 
-  const contributions = obValueByPrefix(obData, "składki");
-  if (contributions != null && String(contributions).trim() !== "") {
-    adminPatch.contributions = String(contributions).trim();
-  }
+  // „Składki opłacone do" NIE z bilansu: jedynym źródłem jest kolumna „Składki" arkusza członków
+  // (users.syncFieldsFromSheet). Bilans nadpisywał dane skarbnika przy opening.reconcile (decyzja 01.11.2026).
 
   // Saldo godzinek z bilansu jako informacja w admin.hours (źródłem prawdy jest godzinki_ledger).
   adminPatch.hours = String(getObHours(obData));

@@ -8,6 +8,8 @@ import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zglo
 import {BLACHY_COLLECTION, BlachaDoc, findInRegistry, parseBlacha} from "../../modules/blachy/blachy_registry";
 import {ARCHIWUM_DO_ROKU} from "../../modules/blachy/blachy_archiwum_2025";
 import {emailConflictMessage, findMemberEmailConflicts} from "../../modules/users/member_email_conflicts";
+import {MEMBER_ROLE_KEYS, parseContributionsPaidUntil} from "../../modules/users/member_standing";
+import {isTestAccount} from "../../modules/setup/app_vars";
 
 /**
  * Task: users.syncFieldsFromSheet
@@ -270,6 +272,51 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       }
     }
 
+    // ── SKŁADKI I ID (decyzja 01.11.2026): arkusz jest jedynym źródłem „składki opłacone do",
+    // więc każdy członek musi mieć ID (po nim łączymy wiersz z kontem), data musi być czytelna
+    // dla aplikacji, a każde konto członka musi mieć swój wiersz. Inaczej sync PRZERWANY, zero zapisów.
+    {
+      const issues: string[] = [];
+      const sheetEmailsWithId = new Set<string>();
+      for (const row of table.rows) {
+        const roleKey = mapRoleDisplayToKey(g(row, "rola"));
+        const memberIdRaw = g(row, "id");
+        const name = g(row, "ksywa") || `${g(row, "imie")} ${g(row, "nazwisko")}`.trim() || g(row, "e_mail") || "(bez nazwy)";
+        if (!memberIdRaw) {
+          if (MEMBER_ROLE_KEYS.includes(roleKey)) issues.push(`${name} (${g(row, "rola")}): brak ID w arkuszu`);
+          continue;
+        }
+        if (g(row, "e_mail")) sheetEmailsWithId.add(g(row, "e_mail").toLowerCase());
+        const skladki = g(row, "skladki");
+        if (skladki && !parseContributionsPaidUntil(skladki)) {
+          issues.push(`#${memberIdRaw} ${name}: „Składki" = „${skladki}" — wpisz datę jako RRRR-MM-DD albo DD.MM.RRRR`);
+        }
+      }
+      // Konta członków w aplikacji bez ID: łączymy je z wierszem po e-mailu (główna pętla) —
+      // jeśli e-maila nie ma w arkuszu, nie da się zaktualizować ich składek.
+      const orphanSnap = await firestore.collection("users_active").where("role_key", "in", MEMBER_ROLE_KEYS).get();
+      for (const d of orphanSnap.docs) {
+        const u = d.data() as any;
+        if (u?.memberId) continue;
+        const email = String(u?.email || "").toLowerCase();
+        if (email && sheetEmailsWithId.has(email)) continue;
+        if (await isTestAccount(firestore, email)) continue;
+        const who = `${u?.profile?.firstName || ""} ${u?.profile?.lastName || ""}`.trim() || u?.displayName || "(bez nazwy)";
+        issues.push(`${who} <${email || "brak e-maila"}>: konto członka w aplikacji bez ID — wpisz ten e-mail w jego wierszu arkusza (kolumna E-mail)`);
+      }
+      if (issues.length) {
+        const MAX_LIST = 25;
+        const shown = issues.slice(0, MAX_LIST).map((s) => `• ${s}`).join("\n") +
+          (issues.length > MAX_LIST ? `\n• …i ${issues.length - MAX_LIST} więcej` : "");
+        const message =
+          "Synchronizacja przerwana — dane członków niekompletne (ID / składki).\n" +
+          `Do poprawienia w arkuszu (${issues.length}):\n${shown}\n` +
+          "Popraw wskazane wiersze i ponów synchronizację.";
+        logger.error("usersSyncFieldsFromSheet: ABORT — ID/składki", {count: issues.length, issues});
+        return {ok: false, message, details: {validationError: true, duesIssuesCount: issues.length, duesIssues: issues}};
+      }
+    }
+
     // ── WYMUSZENIE UNIKALNOŚCI E-MAILA (incydent 30.10.2026, patrz member_email_conflicts.ts):
     // ten sam adres w dwóch wierszach albo adres należący w aplikacji do konta innego
     // członka → sync PRZERWANY, zero zapisów.
@@ -345,6 +392,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
     let skipped = 0;
     let roleStatusChanged = 0;
     let rosterUpserted = 0;
+    let linkedByEmail = 0;
     const now = new Date().toISOString();
     const registry: Array<{id: string; d: Partial<BlachaDoc>}> =
       (await firestore.collection(BLACHY_COLLECTION).get()).docs.map((d) => ({id: d.id, d: d.data() as Partial<BlachaDoc>}));
@@ -435,7 +483,17 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         },
       };
 
-      const snap = await firestore.collection("users_active").where("memberId", "==", memberId).limit(1).get();
+      let snap = await firestore.collection("users_active").where("memberId", "==", memberId).limit(1).get();
+      if (snap.empty && rowEmail) {
+        // Konto członka bez ID (np. z bilansu otwarcia, bez uzupełnionego profilu) — łączymy po e-mailu.
+        const byEmail = await firestore.collection("users_active").where("email", "==", rowEmail).limit(1).get();
+        if (!byEmail.empty && !(byEmail.docs[0].data() as any)?.memberId) {
+          if (!dryRun) await byEmail.docs[0].ref.update({memberId, updatedAt: admin.firestore.FieldValue.serverTimestamp()});
+          logger.info("usersSyncFieldsFromSheet: linked account to memberId by email", {memberId});
+          linkedByEmail++;
+          snap = byEmail;
+        }
+      }
       if (snap.empty) {
         notFound++;
         continue;
@@ -575,7 +633,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
       logger.info("usersSyncFieldsFromSheet: enqueued users.syncRolesFromSheet", {roleStatusChanged});
     }
 
-    const details = {found, patched, unchanged, notFound, skipped, roleStatusChanged, rosterUpserted, blachyAdded, dryRun};
+    const details = {found, patched, unchanged, notFound, skipped, roleStatusChanged, rosterUpserted, linkedByEmail, blachyAdded, dryRun};
     logger.info("usersSyncFieldsFromSheet: done", details);
 
     return {

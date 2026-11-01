@@ -138,7 +138,7 @@ describe("opening_balance_fields — helpery nagłówków bilansu", () => {
     expect(getObHours(null)).toBe(0);
   });
 
-  it("buildOpeningBalanceAdminPatch: pełny wiersz → admin.* z przyciętymi wartościami; puste pomijane; blacha poza admin.*", () => {
+  it("buildOpeningBalanceAdminPatch: pełny wiersz → admin.* z przyciętymi wartościami; puste pomijane; blacha i składki poza admin.*", () => {
     const patch = buildOpeningBalanceAdminPatch({
       "Składki 2026": " opłacone ",
       "Godzinki Bilans otwarcia01.04.2026": "14",
@@ -149,8 +149,8 @@ describe("opening_balance_fields — helpery nagłówków bilansu", () => {
       "Funkcje pełnione na rzecz klubu": "skarbnik",
       "założyciel stowarzyszenia": "tak",
     });
+    // Składki tylko z arkusza członków (users.syncFieldsFromSheet) — bilans ich nie zapisuje.
     expect(patch).toEqual({
-      contributions: "opłacone",
       hours: "14",
       schoolYear: "2024",
       legNr: "7",
