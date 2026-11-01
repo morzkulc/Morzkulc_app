@@ -1,5 +1,6 @@
 // public/modules/basen_module.js
 import { apiGetJson, apiPostJson } from "/core/api_client.js";
+import { renderRegulaminHtml } from "/modules/basen_regulamin.js";
 
 const NAV_BACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const NAV_HOME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
@@ -18,10 +19,9 @@ const ADD_SAUNA_URL = "/api/basen/sessions/add-sauna";
 const SET_KAYAK_URL = "/api/basen/kayak";
 const SET_INSTRUCTOR_URL = "/api/basen/instructor";
 const CLAIM_URL = "/api/basen/instructor/claim";
-const KAYAKS_URL = "/api/basen/kayaks";
-const ATTENDEES_URL = "/api/basen/attendees";
 const GODZINY_USERS_URL = "/api/basen/admin/godziny/users";
 const GODZINY_ADD_URL = "/api/basen/admin/godziny/add";
+const GODZINY_EXTRA_URL = "/api/basen/admin/godziny/extra";
 const GODZINY_HISTORY_URL = "/api/basen/admin/godziny/history";
 const GODZINY_MY_URL = "/api/basen/godziny/my";
 const ORDER_URL = "/api/basen/order";
@@ -82,10 +82,12 @@ function renderTabsHtml(activeTab, isAdmin) {
       { id: "finance", label: "Finanse" },
       { id: "payments", label: "Płatności" },
       { id: "account", label: "Moje konto" },
+      { id: "regulamin", label: "Regulamin" },
     ]
     : [
       { id: "sessions", label: "Baseny" },
       { id: "account", label: "Moje konto" },
+      { id: "regulamin", label: "Regulamin" },
     ];
 
   return `<div class="modTabs basenTabs">
@@ -100,7 +102,7 @@ function renderTabsHtml(activeTab, isAdmin) {
 
 // ─── Slot card ────────────────────────────────────────────────────────────────
 
-function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null) {
+function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
   const remaining = Number(slot.remaining ?? (slot.capacity - slot.enrolledCount));
   const isCancelled = slot.status === "cancelled";
   const isFull = !isCancelled && slot.isFull === true;
@@ -156,7 +158,6 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null
         ? `<button type="button" class="basenAttendeeTag basenClaimTagBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}" data-target-uid="${esc(a.userUid)}" title="Kliknij, aby przypisać siebie jako instruktora">${label} — potrzebuje instruktora</button>`
         : `<div class="basenAttendeeRow">${label} <span class="basenAttendeeTag">potrzebuje instruktora</span>${ownKayakSuffix}</div>`;
     }
-    if (a.ratownik) return `<div class="basenAttendeeRow">${label} <span class="basenAttendeeTag">ratownik</span>${ownKayakSuffix}</div>`;
     return `<div class="basenAttendeeRow">${label}${ownKayakSuffix}</div>`;
   };
   const attendeesHtml = !isCancelled && attendeesList.length ? `
@@ -180,14 +181,6 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null
     ? `<button type="button" class="basenInstructorBtn basenBtnAccent" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Będę instruktorem</button>`
     : "";
   let instructorBtnEmbedded = false;
-
-  // „Będę ratownikiem" — tylko opiekun basenu (basenOpiekun z /api/register), jeden ratownik
-  // na termin. Ratownik zajmuje miejsce na godzinie, nie płaci godziną basenową, a po
-  // odbytym terminie dostaje 1 godzinkę klubową.
-  const ratownikBtnHtml = (!isCancelled && !isSauna && !isFull && !isInstructorEnrolled && !isParticipantEnrolled &&
-    ctx?.session?.basenOpiekun === true && session && !session.ratownikUid)
-    ? `<button type="button" class="basenRatownikBtn basenBtnAccent" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Będę ratownikiem</button>`
-    : "";
 
   if (isCancelled) {
     footerHtml = `<span class="basenHint">Ten slot został odwołany.</span>`;
@@ -223,7 +216,7 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null
         <span class="basenWaitlistBadge">Lista rezerwowa — miejsce ${esc(slot.userWaitlistPosition)}</span>
         <button type="button" class="ghost basenWaitlistLeaveBtn" data-session-id="${esc(sessionId)}" data-slot="${esc(slotKey)}">Wypisz z listy</button>
       </div>
-      <div class="basenHint">Gdy zwolni się miejsce, zapiszemy Cię automatycznie (pobierze jedną godzinę basenową) i wyślemy maila.</div>
+      <div class="basenHint">Zwolni się miejsce → zapiszemy Cię (−1 godz. basenowa) i wyślemy maila.</div>
     `;
   } else if (isFull && !isSauna && !slot.viaReservedPool) {
     const waitingHtml = slot.waitlistCount ? ` <span class="basenHint">Na liście: ${esc(slot.waitlistCount)}</span>` : "";
@@ -254,12 +247,11 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll, session = null
         <div class="basenPrimaryActions">
           <button type="button" class="primary basenEnrollRevealBtn">Zapisz się</button>
           ${instructorBtnHtml}
-          ${ratownikBtnHtml}
         </div>
         <div class="basenEnrollExpanded hidden">
           <label class="basenCheckLabel">
             <input type="checkbox" class="basenWithInstructorCheck" />
-            Potrzebuję instruktora
+            Potrzebuję instruktora <span class="basenHint">(1 godzinka; sympatyk: +1 godz. basenowa)</span>
           </label>
           <div class="basenInstructorPickerWrap hidden">
             <select class="basenInstructorSelect"><option value="">Ładowanie…</option></select>
@@ -315,30 +307,26 @@ function formatDecisionAt(ms) {
   return `${days[d.getDay()]} ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-// Status terminu dla członków — bez kwot (regulamin § 5: minimum zapisów).
-function renderSessionStatusHtml(s, season) {
-  const min = Number(season?.minZapisow || 0);
+// Status terminu dla członków — bez kwot i bez progu liczby osób (decyzja 01.11.2026).
+function renderSessionStatusHtml(s) {
   if (s.outcome === "cancelled") {
     return s.cancelReason === "frekwencja"
-      ? `<div class="basenSessionStatus basenSessionStatus--cancelled">Odwołany — za mało zapisów (${esc(s.zapisy)} z wymaganych ${esc(min)})</div>`
+      ? `<div class="basenSessionStatus basenSessionStatus--cancelled">Odwołany — za mało zapisów</div>`
       : `<div class="basenSessionStatus basenSessionStatus--cancelled">Odwołany</div>`;
   }
   if (s.outcome === "confirmed") {
     return `<div class="basenSessionStatus basenSessionStatus--ok">Odbędzie się ✓ · zapisy: ${esc(s.zapisy)}</div>`;
   }
-  const missing = Math.max(0, min - Number(s.zapisy || 0));
   const decision = s.decisionAtMs ? ` · decyzja: ${esc(formatDecisionAt(s.decisionAtMs))}` : "";
-  return `<div class="basenSessionStatus${missing ? " basenSessionStatus--pending" : " basenSessionStatus--ok"}">
-    Zapisy: <strong>${esc(s.zapisy)}</strong> / min. ${esc(min)}${missing ? ` — brakuje ${esc(missing)}` : " ✓"}${decision}
-  </div>`;
+  return `<div class="basenSessionStatus basenSessionStatus--pending">Zapisy: <strong>${esc(s.zapisy)}</strong>${decision}</div>`;
 }
 
-function renderSessionCard(s, ctx, canEnroll, season) {
+function renderSessionCard(s, ctx, canEnroll) {
   const isCancelled = s.outcome === "cancelled";
   // Odwołany termin zostaje na liście (widać, że się nie odbył), ale bez slotów i akcji.
   const slotsHtml = isCancelled ? "" : SLOT_ORDER
     .filter((key) => s.slots?.[key])
-    .map((key) => renderSlotCard(s.id, key, s.slots[key], ctx, canEnroll, s))
+    .map((key) => renderSlotCard(s.id, key, s.slots[key], ctx, canEnroll))
     .join("");
 
   return `
@@ -346,8 +334,7 @@ function renderSessionCard(s, ctx, canEnroll, season) {
       <div class="basenCardHead">
         <div class="basenCardDate">${esc(formatDate(s.date))}</div>
       </div>
-      ${renderSessionStatusHtml(s, season)}
-      ${s.ratownikName && !isCancelled ? `<div class="basenHint">Ratownik: <strong>${esc(s.ratownikName)}</strong></div>` : ""}
+      ${renderSessionStatusHtml(s)}
       ${s.notes && !isCancelled ? `<div class="basenCardNotes">${esc(s.notes)}</div>` : ""}
       ${slotsHtml ? `<div class="basenSlotGrid">${slotsHtml}</div>` : ""}
     </div>
@@ -356,24 +343,23 @@ function renderSessionCard(s, ctx, canEnroll, season) {
 
 function renderSeasonStripHtml(season) {
   if (!season) return "";
-  const parts = [`odbyło się ${season.held}`];
-  if (season.cancelledLow) parts.push(`odwołano z braku chętnych ${season.cancelledLow}`);
-  if (season.cancelledAdmin) parts.push(`odwołano z innych przyczyn ${season.cancelledAdmin}`);
+  const parts = [`odbyte ${season.held}`];
+  const cancelled = Number(season.cancelledLow || 0) + Number(season.cancelledAdmin || 0);
+  if (cancelled) parts.push(`odwołane ${cancelled}`);
   parts.push(`przed nami ${season.upcoming}`);
   return `
     <div class="basenSeasonStrip">
       <div><strong>Sezon ${esc(season.key)}:</strong> ${esc(parts.join(" · "))}</div>
-      <div class="basenHint">Termin odbywa się przy co najmniej ${esc(season.minZapisow)} zapisach na obu godzinach. Decyzja o terminie i koniec darmowej rezygnacji: ${esc(season.oknoH)} h przed basenem (godzina przy każdym terminie). Zapisy na najwyżej ${esc(season.maxDniNaprzod)} terminy naprzód.</div>
+      <div class="basenHint">Decyzja i darmowa rezygnacja: do ${esc(season.oknoH)} h przed. Maks. ${esc(season.maxDniNaprzod)} terminy naprzód.</div>
     </div>
   `;
 }
 
-function renderPastSessionsHtml(past, season) {
+function renderPastSessionsHtml(past) {
   if (!past.length) return "";
-  const min = Number(season?.minZapisow || 0);
   const rows = past.slice().reverse().map((s) => {
     const label = s.outcome === "cancelled"
-      ? (s.cancelReason === "frekwencja" ? `odwołany — za mało zapisów (${s.zapisy}/${min})` : "odwołany")
+      ? (s.cancelReason === "frekwencja" ? "odwołany — za mało zapisów" : "odwołany")
       : `odbył się · ${s.zapisy} zapisów`;
     return `<div class="basenPastRow${s.outcome === "cancelled" ? " basenPastRow--cancelled" : ""}"><span>${esc(formatDate(s.date))}</span><span>${esc(label)}</span></div>`;
   }).join("");
@@ -404,22 +390,22 @@ async function renderSessionsView(innerEl, ctx, canEnroll, { keepScroll = false 
     // więc brak wyświetlania salda nie otwiera żadnej luki — po prostu tego nie widzi.
     const isKursant = ctx?.session?.role_key === "rola_kursant";
     const balanceHtml = canEnroll && !isKursant
-      ? `<div class="basenHint" style="margin-top:8px;">Dostępne godziny basenowe: <strong>${balance}</strong>${balance <= 0 ? " — kup godziny basenowe w zakładce „Moje konto”." : ""}</div>`
+      ? `<div class="basenHint" style="margin-top:8px;">Twoje godziny basenowe: <strong>${balance}</strong>${balance <= 0 ? " — kup w „Moje konto”" : ""}</div>`
       : "";
 
     const headHtml = renderSeasonStripHtml(season) + balanceHtml;
     if (!sessions.length) {
       innerEl._basenSessions = [];
-      innerEl.innerHTML = headHtml + `<div class="hint" style="margin-top:16px;">Brak nadchodzących terminów basenowych.</div>` + renderPastSessionsHtml(past, season);
+      innerEl.innerHTML = headHtml + `<div class="hint" style="margin-top:16px;">Brak nadchodzących terminów basenowych.</div>` + renderPastSessionsHtml(past);
       return;
     }
 
     innerEl.innerHTML = `
       ${headHtml}
       <div class="basenList">
-        ${sessions.map((s) => renderSessionCard(s, ctx, canEnroll, season)).join("")}
+        ${sessions.map((s) => renderSessionCard(s, ctx, canEnroll)).join("")}
       </div>
-      ${renderPastSessionsHtml(past, season)}
+      ${renderPastSessionsHtml(past)}
       ${renderModifyModalHtml()}
       ${renderClaimStudentModalHtml()}
     `;
@@ -532,28 +518,6 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
       return;
     }
 
-    // Ratownik terminu (opiekun basenu)
-    const ratownikBtn = ev.target.closest(".basenRatownikBtn");
-    if (ratownikBtn) {
-      const sessionId = ratownikBtn.getAttribute("data-session-id");
-      const slot = ratownikBtn.getAttribute("data-slot");
-      const msgEl = ratownikBtn.closest(".basenSlotCard")?.querySelector("[data-slot-msg]");
-      ratownikBtn.disabled = true;
-      ratownikBtn.textContent = "Zapisuję…";
-      try {
-        await apiPostJson({ url: ENROLL_URL, idToken: ctx.idToken, body: { sessionId, slot, mode: "ratownik" } });
-        await refreshSessionsView(innerEl, ctx, canEnroll);
-      } catch (e) {
-        ratownikBtn.disabled = false;
-        ratownikBtn.textContent = "Będę ratownikiem";
-        if (msgEl) {
-          msgEl.textContent = e?.message || "Nie udało się zapisać.";
-          msgEl.classList.remove("hidden");
-        }
-      }
-      return;
-    }
-
     // Instructor self sign-up
     const instructorBtn = ev.target.closest(".basenInstructorBtn");
     if (instructorBtn) {
@@ -615,7 +579,7 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
 
       const withinWindow = cancelBtn.getAttribute("data-within-window") === "1";
       const confirmMsg = withinWindow
-        ? "Termin darmowej rezygnacji minął — godzina basenowa przepada, chyba że Twoje miejsce zajmie osoba z listy rezerwowej (wtedy wróci na saldo). Zrezygnować?"
+        ? "Po terminie darmowej rezygnacji godzina przepada (wróci, jeśli miejsce zajmie ktoś z listy rezerwowej). Zrezygnować?"
         : "Anulować ten zapis? Godzina basenowa wróci na saldo.";
       if (!confirm(confirmMsg)) return;
 
@@ -663,18 +627,11 @@ function bindSessionActionsDelegation(innerEl, ctx, canEnroll) {
     const select = wrap.querySelector(".basenInstructorSelect");
     if (select.getAttribute("data-loaded") === "1") return;
 
-    const sessionId = form.getAttribute("data-session-id");
-    const slot = form.getAttribute("data-slot");
-    try {
-      const data = await apiGetJson({ url: `${ATTENDEES_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slot)}`, idToken: ctx.idToken });
-      const instructors = Array.isArray(data?.instructors) ? data.instructors : [];
-      select.innerHTML = instructors.length
-        ? `<option value="">Bez wyboru — dopasujemy później</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`
-        : `<option value="">Brak dostępnych instruktorów — zapiszesz się na listę oczekujących</option>`;
-      select.setAttribute("data-loaded", "1");
-    } catch (e) {
-      select.innerHTML = `<option value="">Błąd ładowania</option>`;
-    }
+    const instructors = slotInstructors(innerEl, form.getAttribute("data-session-id"), form.getAttribute("data-slot"));
+    select.innerHTML = instructors.length
+      ? `<option value="">Bez wyboru — dopasujemy później</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`
+      : `<option value="">Brak instruktorów — trafisz na listę oczekujących</option>`;
+    select.setAttribute("data-loaded", "1");
   });
 
   // Enroll (regular/training)
@@ -768,6 +725,17 @@ function renderModifyModalHtml() {
   `;
 }
 
+// Instruktorzy slotu z danych już pobranych z /api/basen/sessions (slot.attendees) —
+// bez osobnego zapytania (dawne /api/basen/attendees przy zimnym starcie ładowało się
+// kilka sekund).
+function slotInstructors(innerEl, sessionId, slot) {
+  const session = (innerEl._basenSessions || []).find((s) => s.id === sessionId);
+  const attendees = Array.isArray(session?.slots?.[slot]?.attendees) ? session.slots[slot].attendees : [];
+  return attendees
+    .filter((a) => a.type === "instructor")
+    .map((a) => ({ userUid: a.userUid, userDisplayName: a.displayLabel }));
+}
+
 function openModifyModal(innerEl, ctx, sessionId, slotKey, current, onChanged) {
   const modal = innerEl.querySelector("#basenModifyModal");
   if (!modal) return;
@@ -779,23 +747,23 @@ function openModifyModal(innerEl, ctx, sessionId, slotKey, current, onChanged) {
   const msgEl = modal.querySelector("#basenModifyMsg");
   const saveBtn = modal.querySelector(".basenModifySaveBtn");
 
-  kayakSelect.innerHTML = `<option value="">Ładowanie…</option>`;
-  instructorSelect.innerHTML = `<option value="">Ładowanie…</option>`;
   msgEl.textContent = "";
   msgEl.classList.add("hidden");
   saveBtn.disabled = false;
   saveBtn.textContent = "Zapisz zmiany";
 
-  apiGetJson({ url: `${KAYAKS_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slotKey)}`, idToken: ctx.idToken })
-    .then((data) => {
-      const kayaks = Array.isArray(data?.kayaks) ? data.kayaks : [];
-      // Zapis sprzed obowiązkowego wyboru kajaka może nie mieć kajaka — wtedy tylko podpowiedź
-      // (nieaktywna), żeby „Zapisz zmiany" nie przypisało po cichu pierwszego kajaka z listy.
-      const placeholder = current.currentKayakId ? "" : `<option value="" disabled>Wybierz kajak</option>`;
-      kayakSelect.innerHTML = placeholder + kayaks.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("");
-      kayakSelect.value = current.currentKayakId || "";
-    })
-    .catch(() => { kayakSelect.innerHTML = `<option value="">Błąd ładowania</option>`; });
+  // Kajaki z danych terminu (slot.availableKayaks) + kajak, który user ma teraz (jest zajęty,
+  // więc nie ma go na liście wolnych) — bez osobnego zapytania i zimnego startu (perf 01.11, W5).
+  const slotData = (innerEl._basenSessions || []).find((s) => s.id === sessionId)?.slots?.[slotKey] || {};
+  const kayaks = Array.isArray(slotData.availableKayaks) ? [...slotData.availableKayaks] : [];
+  if (current.currentKayakId && !kayaks.some((k) => k.id === current.currentKayakId)) {
+    kayaks.unshift({ id: current.currentKayakId, label: slotData.userKayakLabel || current.currentKayakId });
+  }
+  // Zapis sprzed obowiązkowego wyboru kajaka może nie mieć kajaka — wtedy tylko podpowiedź
+  // (nieaktywna), żeby „Zapisz zmiany" nie przypisało po cichu pierwszego kajaka z listy.
+  const placeholder = current.currentKayakId ? "" : `<option value="" disabled>Wybierz kajak</option>`;
+  kayakSelect.innerHTML = placeholder + kayaks.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("");
+  kayakSelect.value = current.currentKayakId || "";
 
   // Trzy różne stany, nie dwa: "Brak" (zwykły zapis, bez instruktora, koniec tematu),
   // "Szukam instruktora" (nadal chcę, ale nikt jeszcze nie jest dostępny — dopasujemy
@@ -804,13 +772,9 @@ function openModifyModal(innerEl, ctx, sessionId, slotKey, current, onChanged) {
   // szukających — jedyna droga była zaznaczenie checkboxa przy samym zapisie.
   const currentSelectValue = current.currentInstructorUid || (current.currentType === "training" ? SEEKING_SENTINEL : "");
 
-  apiGetJson({ url: `${ATTENDEES_URL}?sessionId=${encodeURIComponent(sessionId)}&slot=${encodeURIComponent(slotKey)}`, idToken: ctx.idToken })
-    .then((data) => {
-      const instructors = Array.isArray(data?.instructors) ? data.instructors : [];
-      instructorSelect.innerHTML = `<option value="">Brak</option><option value="${SEEKING_SENTINEL}">Szukam instruktora (dopasujemy później)</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`;
-      instructorSelect.value = currentSelectValue;
-    })
-    .catch(() => { instructorSelect.innerHTML = `<option value="">Błąd ładowania</option>`; });
+  const instructors = slotInstructors(innerEl, sessionId, slotKey);
+  instructorSelect.innerHTML = `<option value="">Brak</option><option value="${SEEKING_SENTINEL}">Szukam instruktora (dopasujemy później)</option>${instructors.map((i) => `<option value="${esc(i.userUid)}">${esc(i.userDisplayName)}</option>`).join("")}`;
+  instructorSelect.value = currentSelectValue;
 
   saveBtn.onclick = async () => {
     msgEl.classList.add("hidden");
@@ -1324,7 +1288,7 @@ function openDayDetailModal(innerEl, ctx, session, onChanged) {
 
   const cancelDayBtn = modal.querySelector("#ddCancelDayBtn");
   cancelDayBtn.onclick = async () => {
-    if (!confirm(`Anulować basen ${formatDate(session.date)}? Wszyscy uczestnicy zostaną wypisani, a pobrane godziny basenowe wrócą na ich saldo.`)) return;
+    if (!confirm(`Anulować basen ${formatDate(session.date)}? Uczestnicy zostaną wypisani, godziny wrócą na saldo.`)) return;
     cancelDayBtn.disabled = true;
     try {
       await apiPostJson({ url: CANCEL_SESSION_URL, idToken: ctx.idToken, body: { sessionId: session.id, reason: reasonEl.value.trim() || undefined } });
@@ -1420,7 +1384,8 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
       priceEl.textContent = p.jednorazowe ? `Kwota wpłaty: ${n * p.jednorazowe} zł (${p.jednorazowe} zł za godzinę basenową)` : "";
     } else {
       const price = product === "karnet5" ? p.karnet5 : p.karnet10;
-      priceEl.textContent = price ? `Kwota wpłaty: ${price} zł · tylko członek z opłaconymi składkami i dodatnim saldem godzinek` : "";
+      const cost = product === "karnet5" ? p.karnet5Godzinki : p.karnet10Godzinki;
+      priceEl.textContent = price ? `Wpłata: ${price} zł · −${cost ?? "?"} godzinek` : "";
     }
   };
   productEl.onchange = syncPrice;
@@ -1458,6 +1423,140 @@ function openAddGodzinyModal(innerEl, ctx, user, onSaved, pricing) {
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
+}
+
+// Ekstra godziny basenowe (bez wpłaty, 0 zł) dla dowolnego użytkownika — w „Moje konto”
+// wpis „Ręczne dodanie N godzin basenowych”.
+function renderAddExtraModalHtml() {
+  return `
+    <div id="basenAddExtraModal" class="basenModal hidden" aria-hidden="true">
+      <div class="basenModalBackdrop" data-basen-modal-close="addExtra"></div>
+      <div class="basenModalCard" role="dialog" aria-modal="true" aria-label="Ekstra godziny basenowe">
+        <div class="basenModalTop">
+          <div class="basenModalTitle">Ekstra godziny basenowe</div>
+          <button type="button" class="basenModalClose" data-basen-modal-close="addExtra" aria-label="Zamknij">✕</button>
+        </div>
+        <div class="basenModalBody">
+          <div class="row" data-agk-search-row>
+            <label for="agkSearch">Komu (mail / nazwisko / ksywka)</label>
+            <input type="text" id="agkSearch" placeholder="zacznij pisać…" autocomplete="off" />
+          </div>
+          <div class="basenAgkResults" data-agk-results></div>
+          <div class="basenHint" data-agk-selected></div>
+          <div class="row">
+            <label for="agkAmount">Liczba godzin basenowych</label>
+            <input type="number" id="agkAmount" min="1" max="100" step="1" placeholder="np. 2" />
+          </div>
+          <div class="row">
+            <label for="agkNote">Uwagi (opcjonalnie, widoczne w historii)</label>
+            <input type="text" id="agkNote" maxlength="200" placeholder="np. ratownik 12.11" />
+          </div>
+          <div class="basenHint">Bez wpłaty. Wpis pojawi się w „Moje konto” tej osoby.</div>
+          <div id="agkErr" class="err hidden"></div>
+        </div>
+        <div class="basenModalActions">
+          <button type="button" class="ghost" data-basen-modal-close="addExtra">Anuluj</button>
+          <button type="button" class="primary" id="agkSubmitBtn">Dopisz</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+let allUsersCache = null;
+
+function openAddExtraModal(innerEl, ctx, presetUser, onSaved) {
+  const modal = innerEl.querySelector("#basenAddExtraModal");
+  if (!modal) return;
+  const searchRow = modal.querySelector("[data-agk-search-row]");
+  const searchEl = modal.querySelector("#agkSearch");
+  const resultsEl = modal.querySelector("[data-agk-results]");
+  const selectedEl = modal.querySelector("[data-agk-selected]");
+  const amountEl = modal.querySelector("#agkAmount");
+  const noteEl = modal.querySelector("#agkNote");
+  const errEl = modal.querySelector("#agkErr");
+  const submitBtn = modal.querySelector("#agkSubmitBtn");
+
+  let selected = presetUser || null;
+  const userLabel = (u) => u.userName || u.userNick || u.userEmail || u.userUid;
+  const showErr = (msg) => {
+    errEl.textContent = msg;
+    errEl.classList.toggle("hidden", !msg);
+  };
+  const drawSelected = () => {
+    selectedEl.innerHTML = selected ? `Wybrano: <strong>${esc(userLabel(selected))}</strong> ${esc(selected.userEmail || "")}` : "";
+    searchRow.classList.toggle("hidden", !!presetUser);
+  };
+  const drawResults = () => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q || !allUsersCache) {
+      resultsEl.innerHTML = q && !allUsersCache ? spinnerHtml("Ładowanie…") : "";
+      return;
+    }
+    const hits = allUsersCache.filter((u) =>
+      String(u.userEmail || "").toLowerCase().includes(q) ||
+      String(u.userName || "").toLowerCase().includes(q) ||
+      String(u.userNick || "").toLowerCase().includes(q)).slice(0, 8);
+    resultsEl.innerHTML = hits.length
+      ? hits.map((u) => `<button type="button" class="ghost small" data-agk-pick="${esc(u.userUid)}">${esc(userLabel(u))} · ${esc(u.userEmail || "")}</button>`).join("")
+      : `<div class="basenHint">Brak wyników.</div>`;
+    resultsEl.querySelectorAll("[data-agk-pick]").forEach((btn) => {
+      btn.onclick = () => {
+        selected = allUsersCache.find((u) => u.userUid === btn.getAttribute("data-agk-pick")) || null;
+        searchEl.value = "";
+        resultsEl.innerHTML = "";
+        drawSelected();
+      };
+    });
+  };
+
+  searchEl.value = "";
+  resultsEl.innerHTML = "";
+  amountEl.value = "";
+  noteEl.value = "";
+  showErr("");
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Dopisz";
+  drawSelected();
+  searchEl.oninput = drawResults;
+  if (!presetUser && !allUsersCache) {
+    apiGetJson({ url: `${GODZINY_USERS_URL}?scope=all`, idToken: ctx.idToken })
+      .then((data) => { allUsersCache = Array.isArray(data?.rows) ? data.rows : []; drawResults(); })
+      .catch((e) => showErr(e?.message || "Nie udało się pobrać listy użytkowników."));
+  }
+
+  submitBtn.onclick = async () => {
+    const amount = Number(amountEl.value);
+    if (!selected) return showErr("Wybierz osobę.");
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100) return showErr("Podaj liczbę całkowitą godzin basenowych od 1 do 100.");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Zapisuję…";
+    try {
+      const res = await apiPostJson({
+        url: GODZINY_EXTRA_URL,
+        idToken: ctx.idToken,
+        body: { userUid: selected.userUid, amount, note: noteEl.value.trim() || undefined },
+      });
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      const okEl = innerEl.querySelector("#extraAddResult");
+      if (okEl) {
+        okEl.textContent = `Dopisano ${amount} h basenowych — ${userLabel(selected)}${typeof res?.newBalance === "number" ? ` (saldo: ${res.newBalance} h)` : ""}.`;
+        okEl.classList.remove("hidden");
+      }
+      if (onSaved) await onSaved(selected.userUid, res?.newBalance);
+    } catch (e) {
+      showErr(e?.message || "Nie udało się dopisać godzin basenowych.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Dopisz";
+    }
+  };
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  if (!presetUser) searchEl.focus();
 }
 
 function renderGodzinyHistoryModalHtml() {
@@ -1500,7 +1599,7 @@ function openGodzinyHistoryModal(innerEl, ctx, user) {
       const records = Array.isArray(data?.records) ? data.records : [];
       const rowsHtml = records.length
         ? records.map(renderGodzinyLedgerRow).join("")
-        : `<div class="basenHint">Brak historii — brak operacji na godzinach basenowych.</div>`;
+        : `<div class="basenHint">Brak operacji.</div>`;
       body.innerHTML = `
         <div class="row">
           <div class="basenAttendeesGroupTitle">Saldo</div>
@@ -1537,6 +1636,7 @@ function renderGodzinyRow(u) {
       <div class="${balCls}">${u.balance} h</div>
       <div class="basenGodzinyRowActions">
         <button type="button" class="ghost small basenAddGodzinyBtn" data-uid="${esc(u.userUid)}">Dopisz godziny basenowe</button>
+        <button type="button" class="ghost small basenAddExtraBtn" data-uid="${esc(u.userUid)}">Ekstra godziny</button>
         <button type="button" class="ghost small basenShowHistoryBtn" data-uid="${esc(u.userUid)}">Pokaż historię</button>
       </div>
     </div>
@@ -1565,7 +1665,7 @@ function renderPendingOrdersHtml(orders) {
     </div>`).join("");
   return `
     <div class="basenAttendeesGroupTitle" style="margin-top:12px;">Do zatwierdzenia (${orders.length})</div>
-    <div class="basenGodzinyList">${orders.length ? rows : `<div class="basenHint">Brak zamówień czekających na potwierdzenie wpłaty.</div>`}</div>
+    <div class="basenGodzinyList">${orders.length ? rows : `<div class="basenHint">Brak.</div>`}</div>
     <div id="ordersErr" class="err hidden"></div>`;
 }
 
@@ -1634,16 +1734,31 @@ async function renderPaymentsTab(innerEl, ctx) {
   const draw = () => {
     innerEl.innerHTML = `
       ${renderPendingOrdersHtml(pendingOrders)}
+      <div class="basenAttendeesGroupTitle" style="margin-top:12px;">Ekstra godziny basenowe</div>
+      <div class="basenHint">Bez wpłaty, np. za ratownika.</div>
+      <button type="button" class="ghost small" id="extraAddOpenBtn" style="margin-top:6px;">Dopisz ekstra godziny</button>
+      <div id="extraAddResult" class="basenHint hidden"></div>
       <div class="row" style="margin-top:12px;">
-        <label for="paymentsSearch">Szukaj (mail / nazwisko / ksywka)</label>
-        <input type="text" id="paymentsSearch" placeholder="np. jan.kowalski albo Kowalski albo ksywka" autocomplete="off" />
+        <label for="paymentsSearch">Szukaj</label>
+        <input type="text" id="paymentsSearch" placeholder="mail, nazwisko, ksywka" autocomplete="off" />
       </div>
-      <div class="basenHint">Lista pokazuje tylko osoby aktywne w basenie (zapis albo ruch na koncie godzin basenowych) w ostatnich 4 miesiącach.</div>
+      <div class="basenHint">Osoby aktywne w basenie w ostatnich 4 miesiącach.</div>
       <div id="paymentsSummary" class="hint" style="margin:8px 0;"></div>
       <div id="paymentsContent"></div>
       ${renderAddGodzinyModalHtml()}
+      ${renderAddExtraModalHtml()}
       ${renderGodzinyHistoryModalHtml()}
     `;
+
+    // Po dopisaniu odśwież saldo na liście (osoba spoza listy pojawi się po ponownym wejściu).
+    const onExtraSaved = async (uid, newBalance) => {
+      const user = byUid.get(uid);
+      if (user && typeof newBalance === "number") {
+        user.balance = newBalance;
+        innerEl.querySelector("#paymentsSearch")?.dispatchEvent(new Event("input"));
+      }
+    };
+    innerEl.querySelector("#extraAddOpenBtn").addEventListener("click", () => openAddExtraModal(innerEl, ctx, null, onExtraSaved));
 
     bindPendingOrders(innerEl, ctx, () => renderPaymentsTab(innerEl, ctx));
 
@@ -1663,7 +1778,7 @@ async function renderPaymentsTab(innerEl, ctx) {
       const withHours = filtered.filter((u) => u.balance > 0);
       const withoutHours = filtered.filter((u) => u.balance <= 0);
 
-      summaryEl.textContent = `Razem: ${filtered.length} · Mają godziny basenowe: ${withHours.length} · Brak godzin basenowych: ${withoutHours.length}`;
+      summaryEl.textContent = `Razem ${filtered.length} · z godzinami ${withHours.length} · bez ${withoutHours.length}`;
 
       let html = "";
       html += `<div class="basenAttendeesGroupTitle">Mają godziny basenowe</div>`;
@@ -1683,6 +1798,13 @@ async function renderPaymentsTab(innerEl, ctx) {
         });
       });
 
+      contentEl.querySelectorAll(".basenAddExtraBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const user = byUid.get(btn.getAttribute("data-uid"));
+          if (user) openAddExtraModal(innerEl, ctx, user, onExtraSaved);
+        });
+      });
+
       contentEl.querySelectorAll(".basenShowHistoryBtn").forEach((btn) => {
         btn.addEventListener("click", () => {
           const user = byUid.get(btn.getAttribute("data-uid"));
@@ -1697,6 +1819,12 @@ async function renderPaymentsTab(innerEl, ctx) {
       const key = ev.target?.getAttribute?.("data-basen-modal-close");
       if (key === "addGodziny") {
         const modal = innerEl.querySelector("#basenAddGodzinyModal");
+        modal?.classList.add("hidden");
+        modal?.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      }
+      if (key === "addExtra") {
+        const modal = innerEl.querySelector("#basenAddExtraModal");
         modal?.classList.add("hidden");
         modal?.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
@@ -1850,9 +1978,8 @@ async function renderFinanceTab(innerEl, ctx) {
       </table></div>` : `<div class="basenHint">Brak minionych terminów.</div>`}
 
     <div class="basenHint" style="margin-top:14px;">
-      Zasada: termin rusza, gdy wynik ≥ 0 zł albo strata ≤ ${esc(rules.maxStrataTerminu)} zł i wynik sezonu po niej ≥ −${esc(rules.budzetSezonu)} zł.
-      Koszt terminu ${esc(rules.kosztTerminu)} zł. Decyzja automatyczna ${esc(rules.oknoH)} h przed basenem; odwołanie zwraca godziny basenowe i wysyła maila.
-      Godzina basenowa wyceniana po cenie zakupu, w kolejności zakupów (karnet taniej, nagroda instruktora 0 zł); „do zera” liczone po ${esc(rules.cenaWejscia)} zł. Terminy kursowe poza wynikiem.
+      Termin rusza, gdy wynik ≥ 0 zł albo strata ≤ ${esc(rules.maxStrataTerminu)} zł i sezon ≥ −${esc(rules.budzetSezonu)} zł. Koszt terminu ${esc(rules.kosztTerminu)} zł, decyzja ${esc(rules.oknoH)} h przed.
+      Godzina wyceniana po cenie zakupu; „do zera” po ${esc(rules.cenaWejscia)} zł. Kursy poza wynikiem.
     </div>
   `;
 }
@@ -1864,6 +1991,7 @@ const GODZINY_TYPE_LABELS = {
   booking_block: "Wykorzystane",
   booking_refund: "Zwrot",
   instructor_reward: "Nagroda za instruktorowanie",
+  manual_extra: "Ekstra godziny",
 };
 
 function formatGodzinyDate(iso) {
@@ -1917,17 +2045,20 @@ function renderShopHtml(shop) {
   const karnet = shop?.karnet || {};
   const karnetTile = (product, n, price) => {
     if (!karnet.member) return "";
-    const disabled = !karnet.eligible;
+    const disabled = !(karnet.byProduct ? karnet.byProduct[product] : karnet.eligible);
+    const cost = karnet.godzinkiCost?.[product];
     return `
       <div class="basenShopTile${disabled ? " disabled" : ""}">
         <div class="basenShopTitle">Karnet ${n}</div>
         <div class="basenShopPrice">${esc(formatZl(price))}</div>
         <div class="basenHint">${n} godzin basenowych · ${esc(formatZl(price / n))} za godzinę</div>
+        ${cost ? `<div class="basenHint">dofinansowanie klubu: −${esc(cost)} godzinek</div>` : ""}
         <button type="button" class="primary small" data-shop-buy="${product}" ${disabled ? "disabled" : ""}>Kup</button>
       </div>`;
   };
-  const reasons = karnet.member && !karnet.eligible && Array.isArray(karnet.reasons) && karnet.reasons.length
-    ? `<div class="basenShopReasons">Karnety nieaktywne: ${karnet.reasons.map(esc).join(" ")}</div>`
+  const someDisabled = karnet.byProduct ? !(karnet.byProduct.karnet5 && karnet.byProduct.karnet10) : !karnet.eligible;
+  const reasons = karnet.member && someDisabled && Array.isArray(karnet.reasons) && karnet.reasons.length
+    ? `<div class="basenShopReasons">${karnet.eligible ? "" : "Karnety nieaktywne: "}${karnet.reasons.map(esc).join(" ")}</div>`
     : "";
   return `
     <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Kup godziny basenowe</div>
@@ -1946,8 +2077,6 @@ function renderShopHtml(shop) {
       ${karnetTile("karnet10", 10, p.karnet10)}
     </div>
     ${reasons}
-    ${karnet.member ? `<div class="basenHint">Godziny basenowe z karnetu wykorzystasz na dowolnych basenach i godzinach do końca sezonu basenowego${shop?.seasonEnd ? ` (${esc(formatDate(shop.seasonEnd).replace(/ \(.*\)$/, ""))})` : ""}.</div>` : ""}
-    <div class="basenHint">Płatność przelewem na konto klubu albo gotówką opiekunowi basenu. Godziny basenowe pojawią się na saldzie po potwierdzeniu wpłaty.</div>
     <div id="shopResult"></div>
     <div id="shopErr" class="err hidden"></div>
   `;
@@ -2004,7 +2133,7 @@ async function renderAccountTab(innerEl, ctx, notice = "") {
 
   const rowsHtml = records.length
     ? records.map(renderGodzinyLedgerRow).join("")
-    : `<div class="basenHint">Brak historii — nie masz jeszcze żadnych operacji na godzinach basenowych.</div>`;
+    : `<div class="basenHint">Brak operacji.</div>`;
 
   innerEl.innerHTML = `
     <div class="row" style="margin-top:12px;">
@@ -2081,7 +2210,7 @@ export function createBasenModule({ id, type, label, defaultRoute, order, enable
       const canEnroll = actions.includes("basen.enroll");
 
       const requestedTab = String(routeId || "").trim();
-      const validTabs = ["sessions", "account", ...(isAdmin ? ["calendar", "payments", "finance"] : [])];
+      const validTabs = ["sessions", "account", "regulamin", ...(isAdmin ? ["calendar", "payments", "finance"] : [])];
       const activeTab = validTabs.includes(requestedTab) ? requestedTab : "sessions";
 
       viewEl.innerHTML = `
@@ -2138,6 +2267,8 @@ export function createBasenModule({ id, type, label, defaultRoute, order, enable
         await renderFinanceTab(innerEl, ctx);
       } else if (activeTab === "account") {
         await renderAccountTab(innerEl, ctx);
+      } else if (activeTab === "regulamin") {
+        innerEl.innerHTML = renderRegulaminHtml();
       } else {
         await renderSessionsView(innerEl, ctx, canEnroll);
       }

@@ -11,7 +11,7 @@ import {BasenProduct, seasonOf, warsawTodayIso} from "./basen_finance";
  * Model: prosty ledger (suma amount), bez wygasania/zatwierdzania jak w
  * godzinki_service.ts. Wartość godzin basenowych w zł liczona FIFO (basen_finance.ts).
  */
-export type BasenGodzinyOpType = "admin_add" | "booking_block" | "booking_refund" | "instructor_reward";
+export type BasenGodzinyOpType = "admin_add" | "booking_block" | "booking_refund" | "instructor_reward" | "manual_extra";
 
 export interface BasenGodzinyRecord {
   id: string;
@@ -189,6 +189,37 @@ export async function grantInstructorReward(
     sessionId: args.sessionId,
     slot: args.slot,
     enrollmentId: args.enrollmentId,
+    performedBy: args.performedBy,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+/** Opis wpisu w historii godzin basenowych: „Ręczne dodanie 2 godzin basenowych”. */
+export function manualExtraReason(amount: number, note: string): string {
+  const base = `Ręczne dodanie ${amount} ${amount === 1 ? "godziny basenowej" : "godzin basenowych"}`;
+  return note ? `${base} — ${note}` : base;
+}
+
+/**
+ * Ekstra godziny basenowe dopisane ręcznie przez opiekuna basenu (bez wpłaty) —
+ * zastępuje dawną nagrodę „ratownika”. Wartość 0 zł (FIFO, jak nagroda instruktora),
+ * nie wchodzi do przychodu sezonu.
+ */
+export async function addManualExtraBasenGodziny(
+  db: FirebaseFirestore.Firestore,
+  args: {uid: string; amount: number; note: string; performedBy: string}
+): Promise<string> {
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const ref = db.collection(COLLECTION).doc();
+  await ref.set({
+    id: ref.id,
+    uid: args.uid,
+    type: "manual_extra",
+    amount: args.amount,
+    unitPricePln: 0,
+    reason: manualExtraReason(args.amount, args.note),
     performedBy: args.performedBy,
     createdAt: now,
     updatedAt: now,

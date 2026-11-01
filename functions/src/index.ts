@@ -57,8 +57,6 @@ import {handleGetBasenAdminGodzinyUsers} from "./api/getBasenAdminGodzinyUsersHa
 import {handleGetBasenAdminGodzinyHistory} from "./api/getBasenAdminGodzinyHistoryHandler";
 import {handleGetBasenMyGodziny} from "./api/getBasenMyGodzinyHandler";
 import {handleBasenAdminAddGodziny} from "./api/basenAdminAddGodzinyHandler";
-import {handleGetBasenKayaks} from "./api/getBasenKayaksHandler";
-import {handleGetBasenAttendees} from "./api/getBasenAttendeesHandler";
 import {handleKmAddLog} from "./api/kmAddLogHandler";
 import {handleKmMyLogs} from "./api/kmMyLogsHandler";
 import {handleKmMyStats} from "./api/kmMyStatsHandler";
@@ -445,7 +443,7 @@ function filterSetupForUser(
  * Returns setup filtered to modules visible for the requesting user.
  * Sensitive access fields (testUsersAllow, usersBlock) are stripped from the response.
  */
-export const getSetup = onRequest({invoker: "private"}, async (req, res) => {
+const getSetupRoute = async (req: Request, res: Response) => {
   if (sendPreflight(req, res)) return;
 
   if (!requireAllowedHost(req, res)) return;
@@ -522,13 +520,14 @@ export const getSetup = onRequest({invoker: "private"}, async (req, res) => {
       res.status(500).json({error: "Server error", message: e?.message || String(err)});
     }
   });
-});
+};
+export const getSetup = onRequest({invoker: "private"}, getSetupRoute);
 
 /**
  * POST /api/admin/setup (authenticated + admin)
  * Body: { modules: { [id]: SetupModuleConfig } }
  */
-export const adminPutSetup = onRequest({invoker: "private"}, async (req, res) => {
+const adminPutSetupRoute = async (req: Request, res: Response) => {
   if (sendPreflight(req, res)) return;
 
   if (!requireAllowedHost(req, res)) return;
@@ -582,12 +581,13 @@ export const adminPutSetup = onRequest({invoker: "private"}, async (req, res) =>
       res.status(500).json({error: "Server error", message: e?.message || String(err)});
     }
   });
-});
+};
+export const adminPutSetup = onRequest({invoker: "private"}, adminPutSetupRoute);
 
 /**
  * POST /api/register (authenticated)
  */
-export const registerUser = onRequest({invoker: "private"}, async (req, res) => {
+const registerUserRoute = async (req: Request, res: Response) => {
   return handleRegisterUser(req, res, {
     db,
     admin,
@@ -603,7 +603,8 @@ export const registerUser = onRequest({invoker: "private"}, async (req, res) => 
     enqueueWorkspaceGroupsRoleSync,
     memberRoleKeys,
   });
-});
+};
+export const registerUser = onRequest({invoker: "private"}, registerUserRoute);
 
 /**
  * GET /api/nickname-availability?nickname=XXX (authenticated)
@@ -611,7 +612,7 @@ export const registerUser = onRequest({invoker: "private"}, async (req, res) => 
  * "Sprawdź dostępność" w formularzu rejestracji oraz jako pomocnicze info przed
  * wysłaniem formularza (ostateczna walidacja unikalności jest w /api/register).
  */
-export const checkNicknameAvailability = onRequest({invoker: "private"}, async (req, res) => {
+const checkNicknameAvailabilityRoute = async (req: Request, res: Response) => {
   return handleCheckNicknameAvailability(req, res, {
     db,
     sendPreflight,
@@ -620,12 +621,13 @@ export const checkNicknameAvailability = onRequest({invoker: "private"}, async (
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const checkNicknameAvailability = onRequest({invoker: "private"}, checkNicknameAvailabilityRoute);
 
 /**
  * GET /api/gear/kayaks (authenticated)
  */
-export const getGearKayaks = onRequest({invoker: "private"}, async (req, res) => {
+const getGearKayaksRoute = async (req: Request, res: Response) => {
   return handleGetGearKayaks(req, res, {
     db,
     admin,
@@ -635,12 +637,13 @@ export const getGearKayaks = onRequest({invoker: "private"}, async (req, res) =>
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getGearKayaks = onRequest({invoker: "private"}, getGearKayaksRoute);
 
 /**
  * GET /api/gear/items (authenticated)
  */
-export const getGearItems = onRequest({invoker: "private"}, async (req, res) => {
+const getGearItemsRoute = async (req: Request, res: Response) => {
   return handleGetGearItems(req, res, {
     db,
     sendPreflight,
@@ -649,12 +652,13 @@ export const getGearItems = onRequest({invoker: "private"}, async (req, res) => 
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getGearItems = onRequest({invoker: "private"}, getGearItemsRoute);
 
 /**
  * GET /api/gear/my-reservations (authenticated)
  */
-export const getGearMyReservations = onRequest({invoker: "private"}, async (req, res) => {
+const getGearMyReservationsRoute = async (req: Request, res: Response) => {
   return handleGearMyReservations(req, res, {
     db,
     sendPreflight,
@@ -663,12 +667,13 @@ export const getGearMyReservations = onRequest({invoker: "private"}, async (req,
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getGearMyReservations = onRequest({invoker: "private"}, getGearMyReservationsRoute);
 
 /**
  * POST /api/gear/reservations/create (authenticated)
  */
-export const createGearReservation = onRequest({invoker: "private"}, async (req, res) => {
+const createGearReservationRoute = async (req: Request, res: Response) => {
   return handleGearReservationCreate(req, res, {
     db,
     sendPreflight,
@@ -678,12 +683,13 @@ export const createGearReservation = onRequest({invoker: "private"}, async (req,
     requireIdToken,
     memberRoleKeys: svcCfg.memberRoleKeys,
   });
-});
+};
+export const createGearReservation = onRequest({invoker: "private"}, createGearReservationRoute);
 
 /**
  * POST /api/gear/reservations/create-bundle (authenticated)
  */
-export const createBundleGearReservation = onRequest({invoker: "private"}, async (req, res) => {
+const createBundleGearReservationRoute = async (req: Request, res: Response) => {
   return handleGearBundleReservationCreate(req, res, {
     db,
     sendPreflight,
@@ -693,7 +699,8 @@ export const createBundleGearReservation = onRequest({invoker: "private"}, async
     requireIdToken,
     memberRoleKeys: svcCfg.memberRoleKeys,
   });
-});
+};
+export const createBundleGearReservation = onRequest({invoker: "private"}, createBundleGearReservationRoute);
 
 /**
  * POST /api/gear/reservations/update-items (authenticated)
@@ -701,7 +708,7 @@ export const createBundleGearReservation = onRequest({invoker: "private"}, async
  * klubową (jedyny typ rezerwacji, dla którego to wspierane — patrz
  * updateBundleReservationItems).
  */
-export const updateBundleGearReservationItems = onRequest({invoker: "private"}, async (req, res) => {
+const updateBundleGearReservationItemsRoute = async (req: Request, res: Response) => {
   return handleGearBundleReservationUpdateItems(req, res, {
     db,
     sendPreflight,
@@ -710,12 +717,13 @@ export const updateBundleGearReservationItems = onRequest({invoker: "private"}, 
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const updateBundleGearReservationItems = onRequest({invoker: "private"}, updateBundleGearReservationItemsRoute);
 
 /**
  * GET /api/gear/items/availability?category=X&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD (authenticated)
  */
-export const getGearItemAvailability = onRequest({invoker: "private"}, async (req, res) => {
+const getGearItemAvailabilityRoute = async (req: Request, res: Response) => {
   return handleGetGearItemAvailability(req, res, {
     db,
     sendPreflight,
@@ -724,12 +732,13 @@ export const getGearItemAvailability = onRequest({invoker: "private"}, async (re
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getGearItemAvailability = onRequest({invoker: "private"}, getGearItemAvailabilityRoute);
 
 /**
  * POST /api/gear/damage-report (authenticated, memberRoleKeys — kandydat/czlonek/kr/zarzad)
  */
-export const submitGearDamageReport = onRequest({invoker: "private"}, async (req, res) => {
+const submitGearDamageReportRoute = async (req: Request, res: Response) => {
   return handleSubmitGearDamageReport(req, res, {
     db,
     bucket: admin.storage().bucket(),
@@ -740,12 +749,13 @@ export const submitGearDamageReport = onRequest({invoker: "private"}, async (req
     requireIdToken,
     memberRoleKeys,
   });
-});
+};
+export const submitGearDamageReport = onRequest({invoker: "private"}, submitGearDamageReportRoute);
 
 /**
  * POST /api/gear/reservations/update (authenticated)
  */
-export const updateGearReservation = onRequest({invoker: "private"}, async (req, res) => {
+const updateGearReservationRoute = async (req: Request, res: Response) => {
   return handleGearReservationUpdate(req, res, {
     db,
     sendPreflight,
@@ -756,12 +766,13 @@ export const updateGearReservation = onRequest({invoker: "private"}, async (req,
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const updateGearReservation = onRequest({invoker: "private"}, updateGearReservationRoute);
 
 /**
  * POST /api/gear/reservations/cancel (authenticated)
  */
-export const cancelGearReservation = onRequest({invoker: "private"}, async (req, res) => {
+const cancelGearReservationRoute = async (req: Request, res: Response) => {
   return handleGearReservationCancel(req, res, {
     db,
     sendPreflight,
@@ -770,14 +781,15 @@ export const cancelGearReservation = onRequest({invoker: "private"}, async (req,
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const cancelGearReservation = onRequest({invoker: "private"}, cancelGearReservationRoute);
 
 /**
  * POST /api/admin/gear-reservations/cancel (authenticated, role: zarzad/kr)
  * Wymuszone anulowanie DOWOLNEJ aktywnej rezerwacji sprzętu przez zarząd/KR,
  * ze zwrotem godzinek właścicielowi. Wymaga podania powodu (audyt).
  */
-export const adminCancelGearReservation = onRequest({invoker: "private"}, async (req, res) => {
+const adminCancelGearReservationRoute = async (req: Request, res: Response) => {
   return handleAdminGearReservationCancel(req, res, {
     db,
     sendPreflight,
@@ -787,12 +799,13 @@ export const adminCancelGearReservation = onRequest({invoker: "private"}, async 
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const adminCancelGearReservation = onRequest({invoker: "private"}, adminCancelGearReservationRoute);
 
 /**
  * GET /api/gear/favorites?category=kayaks (authenticated)
  */
-export const getGearFavorites = onRequest({invoker: "private"}, async (req, res) => {
+const getGearFavoritesRoute = async (req: Request, res: Response) => {
   return handleGetGearFavorites(req, res, {
     db,
     sendPreflight,
@@ -801,12 +814,13 @@ export const getGearFavorites = onRequest({invoker: "private"}, async (req, res)
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getGearFavorites = onRequest({invoker: "private"}, getGearFavoritesRoute);
 
 /**
  * POST /api/gear/favorites/toggle (authenticated)
  */
-export const gearFavoriteToggle = onRequest({invoker: "private"}, async (req, res) => {
+const gearFavoriteToggleRoute = async (req: Request, res: Response) => {
   return handleGearFavoriteToggle(req, res, {
     db,
     sendPreflight,
@@ -815,7 +829,8 @@ export const gearFavoriteToggle = onRequest({invoker: "private"}, async (req, re
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const gearFavoriteToggle = onRequest({invoker: "private"}, gearFavoriteToggleRoute);
 
 /**
  * Kolejkuje zadanie serwisowe zapisu godzinek do Google Sheets.
@@ -1015,7 +1030,7 @@ export const appsScriptSync = onRequest({invoker: "private"}, async (req, res) =
 /**
  * GET /api/godzinki (authenticated)
  */
-export const getGodzinki = onRequest({invoker: "private"}, async (req, res) => {
+const getGodzinkiRoute = async (req: Request, res: Response) => {
   return handleGetGodzinki(req, res, {
     db,
     sendPreflight,
@@ -1025,13 +1040,14 @@ export const getGodzinki = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     godzinkiRoleKeys: svcCfg.godzinkiRoleKeys,
   });
-});
+};
+export const getGodzinki = onRequest({invoker: "private"}, getGodzinkiRoute);
 
 /**
  * GET /api/gear/kayak-reservations?kayakId=X (authenticated)
  * Zwraca aktywne rezerwacje danego kajaka z nazwami użytkowników.
  */
-export const getKayakReservations = onRequest({invoker: "private"}, async (req, res) => {
+const getKayakReservationsRoute = async (req: Request, res: Response) => {
   return handleGetKayakReservations(req, res, {
     db,
     sendPreflight,
@@ -1040,12 +1056,13 @@ export const getKayakReservations = onRequest({invoker: "private"}, async (req, 
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getKayakReservations = onRequest({invoker: "private"}, getKayakReservationsRoute);
 
 /**
  * POST /api/godzinki/submit (authenticated)
  */
-export const submitGodzinki = onRequest({invoker: "private"}, async (req, res) => {
+const submitGodzinkiRoute = async (req: Request, res: Response) => {
   return handleSubmitGodzinki(req, res, {
     db,
     sendPreflight,
@@ -1056,13 +1073,14 @@ export const submitGodzinki = onRequest({invoker: "private"}, async (req, res) =
     godzinkiRoleKeys: svcCfg.godzinkiRoleKeys,
     enqueueGodzinkiSheetWrite,
   });
-});
+};
+export const submitGodzinki = onRequest({invoker: "private"}, submitGodzinkiRoute);
 
 /**
  * POST /api/godzinki/purchase (authenticated)
  * Zgłasza wniosek o wykup salda ujemnego (pending → zatwierdza admin przez Sheets).
  */
-export const purchaseGodzinki = onRequest({invoker: "private"}, async (req, res) => {
+const purchaseGodzinkiRoute = async (req: Request, res: Response) => {
   return handleGodzinkiPurchase(req, res, {
     db,
     sendPreflight,
@@ -1073,7 +1091,8 @@ export const purchaseGodzinki = onRequest({invoker: "private"}, async (req, res)
     enqueueGodzinkiSheetWrite,
     godzinkiRoleKeys: svcCfg.godzinkiRoleKeys,
   });
-});
+};
+export const purchaseGodzinki = onRequest({invoker: "private"}, purchaseGodzinkiRoute);
 
 /**
  * Kolejkuje zadanie serwisowe synchronizacji członka z Google Sheets.
@@ -1153,7 +1172,7 @@ async function enqueueEventSheetWrite(eventId: string, uid: string): Promise<voi
 /**
  * GET /api/events (authenticated)
  */
-export const getEvents = onRequest({invoker: "private"}, async (req, res) => {
+const getEventsRoute = async (req: Request, res: Response) => {
   return handleGetEvents(req, res, {
     db,
     sendPreflight,
@@ -1162,13 +1181,14 @@ export const getEvents = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getEvents = onRequest({invoker: "private"}, getEventsRoute);
 
 /**
  * GET /api/admin/pending (authenticated, role: zarzad/kr)
  * Zwraca listę godzinek i imprez oczekujących na zatwierdzenie.
  */
-export const getAdminPending = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminPendingRoute = async (req: Request, res: Response) => {
   return handleGetAdminPending(req, res, {
     db,
     sendPreflight,
@@ -1178,13 +1198,14 @@ export const getAdminPending = onRequest({invoker: "private"}, async (req, res) 
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminPending = onRequest({invoker: "private"}, getAdminPendingRoute);
 
 /**
  * GET /api/admin/reports/gear-rentals (authenticated, role: zarzad/kr)
  * Raport wypożyczonego sprzętu w zadanym zakresie czasu.
  */
-export const getAdminGearRentals = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminGearRentalsRoute = async (req: Request, res: Response) => {
   return handleGetAdminGearRentals(req, res, {
     db,
     sendPreflight,
@@ -1194,13 +1215,14 @@ export const getAdminGearRentals = onRequest({invoker: "private"}, async (req, r
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminGearRentals = onRequest({invoker: "private"}, getAdminGearRentalsRoute);
 
 /**
  * GET /api/admin/reports/gear-top-rentals (authenticated, role: zarzad/kr)
  * Raport „Najczęściej wypożyczane" — suma dni wypożyczenia per sprzęt w zadanym zakresie.
  */
-export const getAdminGearTopRentals = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminGearTopRentalsRoute = async (req: Request, res: Response) => {
   return handleGetAdminGearTopRentals(req, res, {
     db,
     sendPreflight,
@@ -1210,13 +1232,14 @@ export const getAdminGearTopRentals = onRequest({invoker: "private"}, async (req
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminGearTopRentals = onRequest({invoker: "private"}, getAdminGearTopRentalsRoute);
 
 /**
  * GET /api/admin/reports/gear-damage (authenticated, role: zarzad/kr)
  * Raport zgłoszeń uszkodzeń sprzętu (status "open"), posortowany wg wagi.
  */
-export const getAdminGearDamageReports = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminGearDamageReportsRoute = async (req: Request, res: Response) => {
   return handleGetAdminGearDamageReports(req, res, {
     db,
     sendPreflight,
@@ -1226,13 +1249,14 @@ export const getAdminGearDamageReports = onRequest({invoker: "private"}, async (
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminGearDamageReports = onRequest({invoker: "private"}, getAdminGearDamageReportsRoute);
 
 /**
  * GET /api/admin/reports/member-activity (authenticated, role: zarzad/kr)
  * Ranking członków wg wypracowanych godzinek w zadanym zakresie czasu.
  */
-export const getAdminMemberActivity = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminMemberActivityRoute = async (req: Request, res: Response) => {
   return handleGetAdminMemberActivity(req, res, {
     db,
     sendPreflight,
@@ -1242,13 +1266,14 @@ export const getAdminMemberActivity = onRequest({invoker: "private"}, async (req
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminMemberActivity = onRequest({invoker: "private"}, getAdminMemberActivityRoute);
 
 /**
  * GET /api/admin/reports/member-dues (authenticated, role: zarzad/kr)
  * Składki pełnych członków: zaległości, opłacone, uprawnieni do głosowania.
  */
-export const getAdminMemberDues = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminMemberDuesRoute = async (req: Request, res: Response) => {
   return handleGetAdminMemberDues(req, res, {
     db,
     sendPreflight,
@@ -1258,13 +1283,14 @@ export const getAdminMemberDues = onRequest({invoker: "private"}, async (req, re
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminMemberDues = onRequest({invoker: "private"}, getAdminMemberDuesRoute);
 
 /**
  * GET /api/admin/reports/user-activity (authenticated, role: zarzad/kr)
  * Historia godzinek (przyznane + wydane) dowolnego użytkownika po e-mailu, w zakresie czasu.
  */
-export const getAdminUserActivity = onRequest({invoker: "private"}, async (req, res) => {
+const getAdminUserActivityRoute = async (req: Request, res: Response) => {
   return handleGetAdminUserActivity(req, res, {
     db,
     sendPreflight,
@@ -1274,13 +1300,14 @@ export const getAdminUserActivity = onRequest({invoker: "private"}, async (req, 
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getAdminUserActivity = onRequest({invoker: "private"}, getAdminUserActivityRoute);
 
 /**
  * POST /api/admin/events/sync-calendar (authenticated, role: zarzad/kr)
  * Kolejkuje job events.syncCalendar — synchronizuje zatwierdzone imprezy z Google Calendar.
  */
-export const adminEventsSyncCalendar = onRequest({invoker: "private"}, async (req, res) => {
+const adminEventsSyncCalendarRoute = async (req: Request, res: Response) => {
   return handleAdminEventsSyncCalendar(req, res, {
     db,
     sendPreflight,
@@ -1290,13 +1317,14 @@ export const adminEventsSyncCalendar = onRequest({invoker: "private"}, async (re
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const adminEventsSyncCalendar = onRequest({invoker: "private"}, adminEventsSyncCalendarRoute);
 
 /**
  * POST /api/admin/approve (authenticated, role: zarzad/kr)
  * Zatwierdza godzinkę lub imprezę z aplikacji + write-back do arkusza.
  */
-export const adminApprove = onRequest({invoker: "private"}, async (req, res) => {
+const adminApproveRoute = async (req: Request, res: Response) => {
   return handleAdminApprove(req, res, {
     db,
     sendPreflight,
@@ -1306,13 +1334,14 @@ export const adminApprove = onRequest({invoker: "private"}, async (req, res) => 
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const adminApprove = onRequest({invoker: "private"}, adminApproveRoute);
 
 /**
  * POST /api/admin/reject (authenticated, role: zarzad/kr)
  * Odrzuca godzinkę lub imprezę z aplikacji (ODRZUCONA w arkuszu, usunięcie z kalendarza).
  */
-export const adminReject = onRequest({invoker: "private"}, async (req, res) => {
+const adminRejectRoute = async (req: Request, res: Response) => {
   return handleAdminReject(req, res, {
     db,
     sendPreflight,
@@ -1322,12 +1351,13 @@ export const adminReject = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const adminReject = onRequest({invoker: "private"}, adminRejectRoute);
 
 /**
  * POST /api/admin/gear-damage/resolve (authenticated, role: zarzad/kr)
  */
-export const resolveGearDamageReport = onRequest({invoker: "private"}, async (req, res) => {
+const resolveGearDamageReportRoute = async (req: Request, res: Response) => {
   return handleResolveGearDamageReport(req, res, {
     db,
     sendPreflight,
@@ -1337,12 +1367,13 @@ export const resolveGearDamageReport = onRequest({invoker: "private"}, async (re
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const resolveGearDamageReport = onRequest({invoker: "private"}, resolveGearDamageReportRoute);
 
 /**
  * POST /api/events/submit (authenticated, role: czlonek/zarzad/kr)
  */
-export const submitEvent = onRequest({invoker: "private"}, async (req, res) => {
+const submitEventRoute = async (req: Request, res: Response) => {
   return handleSubmitEvent(req, res, {
     db,
     sendPreflight,
@@ -1353,7 +1384,8 @@ export const submitEvent = onRequest({invoker: "private"}, async (req, res) => {
     enqueueEventSheetWrite,
     memberRoleKeys,
   });
-});
+};
+export const submitEvent = onRequest({invoker: "private"}, submitEventRoute);
 
 /**
  * Kolejkuje powiadomienie o anulowaniu terminu/slotu basenowego.
@@ -1372,256 +1404,58 @@ async function enqueueBasenSessionCancelledNotify(sessionId: string, reason?: st
 }
 
 /**
- * GET /api/basen/sessions (authenticated)
+ * Wszystkie endpointy modułu Basen w JEDNEJ funkcji (perf 01.11.2026, P5): moduł jest
+ * najczęściej używaną częścią aplikacji, a osobna funkcja na każdą akcję oznaczała osobny
+ * zimny start (3,6–5,8 s) przy pierwszym kliknięciu każdej akcji. Jedna instancja rozgrzana
+ * otwarciem modułu obsługuje potem zapis, rezygnację, edycję itd. Routing po ścieżce
+ * (Hosting przekazuje oryginalną ścieżkę /api/basen/...).
  */
-export const getBasenSessions = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenSessions(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
+const basenDeps = {
+  db,
+  sendPreflight,
+  requireAllowedHost,
+  setCorsHeaders,
+  corsHandler,
+  requireIdToken,
+  adminRoleKeys,
+  memberRoleKeys,
+  enqueueBasenSessionCancelledNotify,
+};
 
-/**
- * POST /api/basen/enroll (authenticated, role: czlonek/zarzad/kr)
- */
-export const basenEnroll = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenEnroll(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    memberRoleKeys,
-  });
-});
+const BASEN_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
+  "/api/basen/sessions": (req, res) => handleGetBasenSessions(req, res, basenDeps),
+  "/api/basen/enroll": (req, res) => handleBasenEnroll(req, res, basenDeps),
+  "/api/basen/cancel-enrollment": (req, res) => handleBasenCancelEnrollment(req, res, basenDeps),
+  "/api/basen/sessions/create": (req, res) => handleBasenCreateSession(req, res, basenDeps),
+  "/api/basen/sessions/cancel": (req, res) => handleBasenCancelSession(req, res, basenDeps),
+  "/api/basen/sessions/add-sauna": (req, res) => handleBasenAddSauna(req, res, basenDeps),
+  "/api/basen/kayak": (req, res) => handleBasenSetKayak(req, res, basenDeps),
+  "/api/basen/instructor": (req, res) => handleBasenSetInstructor(req, res, basenDeps),
+  "/api/basen/instructor/claim": (req, res) => handleBasenClaimWaitingStudent(req, res, basenDeps),
+  "/api/basen/godziny/my": (req, res) => handleGetBasenMyGodziny(req, res, basenDeps),
+  "/api/basen/admin/godziny/users": (req, res) => handleGetBasenAdminGodzinyUsers(req, res, basenDeps),
+  "/api/basen/admin/godziny/history": (req, res) => handleGetBasenAdminGodzinyHistory(req, res, basenDeps),
+  "/api/basen/admin/godziny/add": (req, res) => handleBasenAdminAddGodziny(req, res, basenDeps),
+  "/api/basen/admin/godziny/extra": (req, res) => handleBasenAdminAddGodziny(req, res, basenDeps),
+  "/api/basen/order": (req, res) => handleBasenOrder(req, res, basenDeps),
+};
 
-/**
- * POST /api/basen/cancel-enrollment (authenticated)
- */
-export const basenCancelEnrollment = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenCancelEnrollment(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * POST /api/basen/sessions/create (authenticated, role: zarzad/kr)
- */
-export const basenCreateSession = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenCreateSession(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * POST /api/basen/sessions/cancel (authenticated, role: zarzad/kr)
- */
-export const basenCancelSession = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenCancelSession(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    enqueueBasenSessionCancelledNotify,
-    adminRoleKeys,
-  });
-});
-
-/**
- * POST /api/basen/sessions/add-sauna (authenticated, role: zarzad/kr/opiekun basenowy)
- * Dodaje saunę do istniejącego terminu, który powstał bez niej.
- */
-export const basenAddSauna = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenAddSauna(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * POST /api/basen/kayak (authenticated)
- * Właściciel zapisu wybiera/zmienia/zwalnia kajak basenowy dla swojego zapisu.
- */
-export const basenSetKayak = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenSetKayak(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * POST /api/basen/instructor (authenticated)
- * Właściciel zapisu dodaje/zmienia/usuwa parowanie z instruktorem na już aktywnym zapisie.
- */
-export const basenSetInstructor = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenSetInstructor(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * POST /api/basen/instructor/claim (authenticated)
- * Instruktor przypisuje siebie do studenta, który zapisał się bez wybranego instruktora.
- */
-export const basenClaimWaitingStudent = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenClaimWaitingStudent(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * GET /api/basen/godziny/my (authenticated)
- * Własna pełna historia godzin basenowych (wyciąg bankowy).
- */
-export const getBasenMyGodziny = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenMyGodziny(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * GET /api/basen/admin/godziny/users (authenticated, role: zarzad/kr/opiekun basenowy)
- * Lista zarejestrowanych userów z saldem godzin basenowych — wyszukiwanie po stronie klienta.
- */
-export const getBasenAdminGodzinyUsers = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenAdminGodzinyUsers(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * GET /api/basen/admin/godziny/history?userUid=... (authenticated, role: zarzad/kr/opiekun basenowy)
- * Pełna historia godzin basenowych wskazanego usera — dla przycisku "Pokaż historię"
- * w zakładce "Płatności".
- */
-export const getBasenAdminGodzinyHistory = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenAdminGodzinyHistory(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * POST /api/basen/admin/godziny/add (authenticated, role: zarzad/kr/opiekun basenowy)
- * Admin dopisuje godziny basenowe userowi po potwierdzeniu wpłaty poza aplikacją.
- */
-export const basenAdminAddGodziny = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenAdminAddGodziny(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * POST /api/basen/order (authenticated) — zamówienie godzin basenowych: create/cancel
- * (użytkownik), approve/reject (zarząd/KR/opiekun basenu). Patrz basen_orders.ts.
- */
-export const basenOrder = onRequest({invoker: "private"}, async (req, res) => {
-  return handleBasenOrder(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-    adminRoleKeys,
-  });
-});
-
-/**
- * GET /api/basen/kayaks (authenticated)
- * Lista dostępnych kajaków basenowych dla danego terminu+slotu (+ "Własny kajak").
- */
-export const getBasenKayaks = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenKayaks(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
-});
-
-/**
- * GET /api/basen/attendees (authenticated)
- * Lista uczestników/instruktorów danego terminu+slotu.
- */
-export const getBasenAttendees = onRequest({invoker: "private"}, async (req, res) => {
-  return handleGetBasenAttendees(req, res, {
-    db,
-    sendPreflight,
-    requireAllowedHost,
-    setCorsHeaders,
-    corsHandler,
-    requireIdToken,
-  });
+export const basenApi = onRequest({invoker: "private"}, async (req, res) => {
+  const path = String(req.path || "").replace(/\/+$/, "");
+  const route = BASEN_ROUTES[path];
+  if (!route) {
+    setCorsHeaders(req, res);
+    res.status(404).json({error: "Not found"});
+    return;
+  }
+  return route(req, res);
 });
 
 /**
  * POST /kmAddLog (authenticated)
  * Dodaje nowy wpis aktywności. Oblicza punkty ON WRITE.
  */
-export const kmAddLog = onRequest({invoker: "private"}, async (req, res) => {
+const kmAddLogRoute = async (req: Request, res: Response) => {
   return handleKmAddLog(req, res, {
     db,
     sendPreflight,
@@ -1631,13 +1465,14 @@ export const kmAddLog = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     memberRoleKeys,
   });
-});
+};
+export const kmAddLog = onRequest({invoker: "private"}, kmAddLogRoute);
 
 /**
  * GET /kmMyLogs (authenticated)
  * Moje wpisy aktywności (posortowane po dacie malejąco).
  */
-export const kmMyLogs = onRequest({invoker: "private"}, async (req, res) => {
+const kmMyLogsRoute = async (req: Request, res: Response) => {
   return handleKmMyLogs(req, res, {
     db,
     sendPreflight,
@@ -1646,13 +1481,14 @@ export const kmMyLogs = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const kmMyLogs = onRequest({invoker: "private"}, kmMyLogsRoute);
 
 /**
  * GET /kmMyStats (authenticated)
  * Moje statystyki z km_user_stats — odczyt O(1), brak przeliczania.
  */
-export const kmMyStats = onRequest({invoker: "private"}, async (req, res) => {
+const kmMyStatsRoute = async (req: Request, res: Response) => {
   return handleKmMyStats(req, res, {
     db,
     sendPreflight,
@@ -1661,13 +1497,14 @@ export const kmMyStats = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const kmMyStats = onRequest({invoker: "private"}, kmMyStatsRoute);
 
 /**
  * GET /kmRankings (authenticated)
  * Rankingi: type=km|points|hours, period=year|alltime.
  */
-export const kmRankings = onRequest({invoker: "private"}, async (req, res) => {
+const kmRankingsRoute = async (req: Request, res: Response) => {
   return handleKmRankings(req, res, {
     db,
     sendPreflight,
@@ -1676,13 +1513,14 @@ export const kmRankings = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const kmRankings = onRequest({invoker: "private"}, kmRankingsRoute);
 
 /**
  * GET /kmPlaces (authenticated)
  * Podpowiedzi nazw akwenów: ?q=rad (min 2 znaki).
  */
-export const kmPlaces = onRequest({invoker: "private"}, async (req, res) => {
+const kmPlacesRoute = async (req: Request, res: Response) => {
   return handleKmPlaces(req, res, {
     db,
     sendPreflight,
@@ -1691,13 +1529,14 @@ export const kmPlaces = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const kmPlaces = onRequest({invoker: "private"}, kmPlacesRoute);
 
 /**
  * GET /kmEventStats (authenticated)
  * Statystyki wywrotolotek per uczestnik dla danej imprezy: ?eventId=XXX
  */
-export const kmEventStats = onRequest({invoker: "private"}, async (req, res) => {
+const kmEventStatsRoute = async (req: Request, res: Response) => {
   return handleKmEventStats(req, res, {
     db,
     sendPreflight,
@@ -1706,13 +1545,14 @@ export const kmEventStats = onRequest({invoker: "private"}, async (req, res) => 
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const kmEventStats = onRequest({invoker: "private"}, kmEventStatsRoute);
 
 /**
  * GET /kmMapData (publiczny — bez auth, dane pre-computed)
  * Pre-computed cache lokalizacji aktywności km dla mapy.
  */
-export const kmMapData = onRequest({invoker: "private"}, async (req, res) => {
+const kmMapDataRoute = async (req: Request, res: Response) => {
   return handleKmMapData(req, res, {
     db,
     sendPreflight,
@@ -1720,13 +1560,14 @@ export const kmMapData = onRequest({invoker: "private"}, async (req, res) => {
     setCorsHeaders,
     corsHandler,
   });
-});
+};
+export const kmMapData = onRequest({invoker: "private"}, kmMapDataRoute);
 
 /**
  * POST /kmAdminMergePlaces (admin: rola_zarzad | rola_kr)
  * Scala zduplikowane miejsca w km_places.
  */
-export const kmAdminMergePlaces = onRequest({invoker: "private"}, async (req, res) => {
+const kmAdminMergePlacesRoute = async (req: Request, res: Response) => {
   return handleKmAdminMergePlaces(req, res, {
     db,
     sendPreflight,
@@ -1736,12 +1577,13 @@ export const kmAdminMergePlaces = onRequest({invoker: "private"}, async (req, re
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const kmAdminMergePlaces = onRequest({invoker: "private"}, kmAdminMergePlacesRoute);
 
 /**
  * GET /api/kurs/info (authenticated: rola_kursant, adminowie, testUsersAllow)
  */
-export const getKursInfo = onRequest({invoker: "private"}, async (req, res) => {
+const getKursInfoRoute = async (req: Request, res: Response) => {
   return handleGetKursInfo(req, res, {
     db,
     sendPreflight,
@@ -1751,12 +1593,13 @@ export const getKursInfo = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getKursInfo = onRequest({invoker: "private"}, getKursInfoRoute);
 
 /**
  * GET /api/km/kursant-stats (authenticated: rola_kursant, adminowie)
  */
-export const getKursantStats = onRequest({invoker: "private"}, async (req, res) => {
+const getKursantStatsRoute = async (req: Request, res: Response) => {
   return handleGetKursantStats(req, res, {
     db,
     sendPreflight,
@@ -1766,13 +1609,14 @@ export const getKursantStats = onRequest({invoker: "private"}, async (req, res) 
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getKursantStats = onRequest({invoker: "private"}, getKursantStatsRoute);
 
 /**
  * GET /api/klub (authenticated: każdy zalogowany)
  * Zwraca dane klubowe: zarząd (funkcje→nazwy), KR, konto/bank, linki.
  */
-export const getKlubInfo = onRequest({invoker: "private"}, async (req, res) => {
+const getKlubInfoRoute = async (req: Request, res: Response) => {
   return handleGetKlubInfo(req, res, {
     db,
     sendPreflight,
@@ -1782,63 +1626,70 @@ export const getKlubInfo = onRequest({invoker: "private"}, async (req, res) => {
     requireIdToken,
     adminRoleKeys,
   });
-});
+};
+export const getKlubInfo = onRequest({invoker: "private"}, getKlubInfoRoute);
 
 /**
  * GET /api/public/site (PUBLICZNY, bez logowania)
  * Dane dla statycznej wizytówki klubu (www.morzkulc.pg.gda.pl): imprezy, zarząd, socjale.
  */
-export const publicSiteInfo = onRequest({invoker: "private"}, async (req, res) => {
+const publicSiteInfoRoute = async (req: Request, res: Response) => {
   return handleGetPublicSite(req, res, {db, requireAllowedHost, setCorsHeaders});
-});
+};
+export const publicSiteInfo = onRequest({invoker: "private"}, publicSiteInfoRoute);
 
 /**
  * GET/POST /api/kurs/zgloszenie (authenticated Google, wołane z kurs.morzkulc.pl)
  * Formularz zgłoszeniowy na kurs + dane do przelewu. Własne CORS (originy strony kursu).
  */
-export const kursZgloszenie = onRequest({invoker: "private"}, async (req, res) => {
+const kursZgloszenieRoute = async (req: Request, res: Response) => {
   return handleKursZgloszenie(req, res, {db, requireAllowedHost, requireIdToken});
-});
+};
+export const kursZgloszenie = onRequest({invoker: "private"}, kursZgloszenieRoute);
 
 /**
  * GET /api/admin/kurs/zgloszenia (authenticated, role: zarzad/kr)
  * Lista zgłoszeń bieżącej edycji kursu (lista główna/rezerwowa, dane do przelewu).
  */
-export const adminKursZgloszenia = onRequest({invoker: "private"}, async (req, res) => {
+const adminKursZgloszeniaRoute = async (req: Request, res: Response) => {
   return handleAdminKursZgloszenia(req, res, {
     db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
   });
-});
+};
+export const adminKursZgloszenia = onRequest({invoker: "private"}, adminKursZgloszeniaRoute);
 
 /**
  * POST /api/admin/kurs/zgloszenie (authenticated, role: zarzad/kr)
  * Zadatek wpłacony / pełna wpłata / rezygnacja — przenosi kursanta do arkusza członków lub sprząta.
  */
-export const adminKursZgloszenieAction = onRequest({invoker: "private"}, async (req, res) => {
+const adminKursZgloszenieActionRoute = async (req: Request, res: Response) => {
   return handleAdminKursZgloszenieAction(req, res, {
     db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
   });
-});
+};
+export const adminKursZgloszenieAction = onRequest({invoker: "private"}, adminKursZgloszenieActionRoute);
 
 /**
  * POST /api/admin/blachy (authenticated, role: zarzad/kr)
  * Rejestr Blach: dodanie / poprawka / usunięcie błędnego wpisu.
  */
-export const adminBlachy = onRequest({invoker: "private"}, async (req, res) => {
+const adminBlachyRoute = async (req: Request, res: Response) => {
   return handleAdminBlachy(req, res, {
     db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys,
   });
-});
+};
+export const adminBlachy = onRequest({invoker: "private"}, adminBlachyRoute);
 
 /**
  * /api/blachy/* — procedura nadawania Blach (nominacje, Kapituła, Zarząd, potwierdzenie przyjęcia).
  * Trasa „przyjecie" działa bez logowania (token z maila); pozostałe wymagają ID tokenu.
  */
-export const blachyApi = onRequest({invoker: "private"}, async (req, res) => {
+const blachyApiRoute = async (req: Request, res: Response) => {
   return handleBlachyApi(req, res, {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken});
-});
+};
+export const blachyApi = onRequest({invoker: "private"}, blachyApiRoute);
 
-export const userWeight = onRequest({invoker: "private"}, async (req, res) => {
+const userWeightRoute = async (req: Request, res: Response) => {
   return handleUserWeight(req, res, {
     db,
     sendPreflight,
@@ -1847,13 +1698,14 @@ export const userWeight = onRequest({invoker: "private"}, async (req, res) => {
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const userWeight = onRequest({invoker: "private"}, userWeightRoute);
 
 /**
  * POST /api/test/role (authenticated, tylko konta z konta_testowe w Vars_MEMBERS)
  * Konto testowe przełącza sobie rolę — bez arkusza członków i grup Workspace.
  */
-export const testAccountSetRole = onRequest({invoker: "private"}, async (req, res) => {
+const testAccountSetRoleRoute = async (req: Request, res: Response) => {
   return handleTestAccountRole(req, res, {
     db,
     sendPreflight,
@@ -1862,12 +1714,13 @@ export const testAccountSetRole = onRequest({invoker: "private"}, async (req, re
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const testAccountSetRole = onRequest({invoker: "private"}, testAccountSetRoleRoute);
 
 /**
  * GET/POST /api/profile/notifications (authenticated)
  */
-export const notificationPrefs = onRequest({invoker: "private"}, async (req, res) => {
+const notificationPrefsRoute = async (req: Request, res: Response) => {
   return handleNotificationPrefs(req, res, {
     db,
     sendPreflight,
@@ -1876,12 +1729,13 @@ export const notificationPrefs = onRequest({invoker: "private"}, async (req, res
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const notificationPrefs = onRequest({invoker: "private"}, notificationPrefsRoute);
 
 /**
  * GET /api/events/interests (authenticated)
  */
-export const getEventInterests = onRequest({invoker: "private"}, async (req, res) => {
+const getEventInterestsRoute = async (req: Request, res: Response) => {
   return handleGetEventInterests(req, res, {
     db,
     sendPreflight,
@@ -1890,12 +1744,13 @@ export const getEventInterests = onRequest({invoker: "private"}, async (req, res
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const getEventInterests = onRequest({invoker: "private"}, getEventInterestsRoute);
 
 /**
  * POST /api/events/interest/toggle (authenticated)
  */
-export const eventInterestToggle = onRequest({invoker: "private"}, async (req, res) => {
+const eventInterestToggleRoute = async (req: Request, res: Response) => {
   return handleEventInterestToggle(req, res, {
     db,
     sendPreflight,
@@ -1904,7 +1759,8 @@ export const eventInterestToggle = onRequest({invoker: "private"}, async (req, r
     corsHandler,
     requireIdToken,
   });
-});
+};
+export const eventInterestToggle = onRequest({invoker: "private"}, eventInterestToggleRoute);
 
 /**
  * SERVICE MODULE EXPORTS
@@ -2149,3 +2005,84 @@ export const adminPendingNotifyDaily = onSchedule(
 // Ostatnia instrukcja pliku — domyka pomiar kosztu ładowania grafu modułów
 // (patrz service/boot_timer.ts i nagłówek Server-Timing: boot;dur).
 markModuleEvalDone();
+
+/**
+ * Całe API aplikacji w JEDNEJ funkcji (01.11.2026; poza appsScriptSync — sync z arkuszy).
+ * Logi 18.10–01.11: 62% otwarć aplikacji trafiało na zimny start, 30% na DWA kolejne
+ * (register/setup, potem ekran główny) — mediana 7,4 s czekania na serwer vs 0,5 s na ciepło.
+ * Jedna funkcja = jeden zimny start na otwarcie, a ruch wszystkich użytkowników grzeje tę samą
+ * instancję. Plan: DOCS/Sessions & TO DOs/01.11_konsolidacja_funkcji_PLAN.md
+ */
+const APP_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
+  "/api/register": registerUserRoute,
+  "/api/setup": getSetupRoute,
+  "/api/nickname-availability": checkNicknameAvailabilityRoute,
+  "/api/godzinki": getGodzinkiRoute,
+  "/api/events": getEventsRoute,
+  "/api/events/interests": getEventInterestsRoute,
+  "/api/admin/pending": getAdminPendingRoute,
+  "/api/km/stats": kmMyStatsRoute,
+  "/api/km/kursant-stats": getKursantStatsRoute,
+  "/api/kurs/info": getKursInfoRoute,
+  "/api/klub": getKlubInfoRoute,
+  "/api/profile/notifications": notificationPrefsRoute,
+  "/api/test/role": testAccountSetRoleRoute,
+  ...BASEN_ROUTES,
+  // Etapy 2–4 (01.11.2026): sprzęt, km, akcje godzinek/imprez/profilu, zarząd, strony publiczne.
+  "/api/admin/setup": adminPutSetupRoute,
+  "/api/admin/reports/gear-rentals": getAdminGearRentalsRoute,
+  "/api/admin/gear-reservations/cancel": adminCancelGearReservationRoute,
+  "/api/admin/reports/gear-top-rentals": getAdminGearTopRentalsRoute,
+  "/api/admin/reports/gear-damage": getAdminGearDamageReportsRoute,
+  "/api/admin/reports/member-activity": getAdminMemberActivityRoute,
+  "/api/admin/reports/member-dues": getAdminMemberDuesRoute,
+  "/api/admin/reports/user-activity": getAdminUserActivityRoute,
+  "/api/admin/events/sync-calendar": adminEventsSyncCalendarRoute,
+  "/api/admin/approve": adminApproveRoute,
+  "/api/admin/reject": adminRejectRoute,
+  "/api/admin/gear-damage/resolve": resolveGearDamageReportRoute,
+  "/api/gear/kayaks": getGearKayaksRoute,
+  "/api/gear/items": getGearItemsRoute,
+  "/api/gear/my-reservations": getGearMyReservationsRoute,
+  "/api/gear/reservations/create": createGearReservationRoute,
+  "/api/gear/reservations/create-bundle": createBundleGearReservationRoute,
+  "/api/gear/items/availability": getGearItemAvailabilityRoute,
+  "/api/gear/damage-report": submitGearDamageReportRoute,
+  "/api/gear/reservations/update": updateGearReservationRoute,
+  "/api/gear/reservations/update-items": updateBundleGearReservationItemsRoute,
+  "/api/gear/reservations/cancel": cancelGearReservationRoute,
+  "/api/gear/favorites": getGearFavoritesRoute,
+  "/api/gear/favorites/toggle": gearFavoriteToggleRoute,
+  "/api/gear/kayak-reservations": getKayakReservationsRoute,
+  "/api/events/submit": submitEventRoute,
+  "/api/events/interest/toggle": eventInterestToggleRoute,
+  "/api/godzinki/submit": submitGodzinkiRoute,
+  "/api/godzinki/purchase": purchaseGodzinkiRoute,
+  "/api/km/log/add": kmAddLogRoute,
+  "/api/km/log/update": kmAddLogRoute,
+  "/api/km/log/delete": kmAddLogRoute,
+  "/api/km/logs": kmMyLogsRoute,
+  "/api/km/rankings": kmRankingsRoute,
+  "/api/km/places": kmPlacesRoute,
+  "/api/km/event-stats": kmEventStatsRoute,
+  "/api/km/map-data": kmMapDataRoute,
+  "/api/admin/km/places/merge": kmAdminMergePlacesRoute,
+  "/api/user/weight": userWeightRoute,
+  "/api/kurs/zgloszenie": kursZgloszenieRoute,
+  "/api/admin/kurs/zgloszenia": adminKursZgloszeniaRoute,
+  "/api/admin/kurs/zgloszenie": adminKursZgloszenieActionRoute,
+  "/api/admin/blachy": adminBlachyRoute,
+  "/api/public/site": publicSiteInfoRoute,
+};
+
+export const appApi = onRequest({invoker: "private"}, async (req, res) => {
+  const path = String(req.path || "").replace(/\/+$/, "");
+  // /api/blachy/** — blachyApi sam rozpoznaje akcję po ostatnim segmencie ścieżki.
+  const route = APP_ROUTES[path] || (path.startsWith("/api/blachy/") ? blachyApiRoute : undefined);
+  if (!route) {
+    setCorsHeaders(req, res);
+    res.status(404).json({error: "Not found"});
+    return;
+  }
+  return route(req, res);
+});

@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {cancelSession, resolveBasenAdminGrant, ClientError} from "../modules/basen/basen_service";
+import {syncSessionInstructorCharges} from "../modules/basen/basen_instructor_charge";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -62,6 +63,7 @@ export async function handleBasenCancelSession(req: Request, res: Response, deps
       }
 
       const {enrollments} = await cancelSession(deps.db, sessionId, uid, "admin");
+      await syncSessionInstructorCharges(deps.db, sessionId);
 
       // Fire-and-forget email notification
       deps.enqueueBasenSessionCancelledNotify(sessionId, reason || undefined).catch(() => {

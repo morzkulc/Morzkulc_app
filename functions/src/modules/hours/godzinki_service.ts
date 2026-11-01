@@ -129,6 +129,16 @@ export function computeBalance(records: GodzinkiRecord[], now: Date = new Date()
   return positiveBalance - netOverdraft;
 }
 
+/**
+ * Saldo godzinek wypracowanych (zasady dofinansowania pkt 8): godzinki wykupione mogą
+ * spłacić debet, ale nie robią plusa. Zapracowane, bonusy funkcyjne i bilans otwarcia
+ * liczą się w całości. = min(saldo, suma niewygasłych pul earn).
+ */
+export function computeEarnedBalance(records: GodzinkiRecord[], now: Date = new Date()): number {
+  const earnOnly = computeBalance(records.filter((r) => r.type === "earn"), now);
+  return Math.min(computeBalance(records, now), earnOnly);
+}
+
 export type NegativeBalanceEntry = {
   uid: string;
   displayName: string;

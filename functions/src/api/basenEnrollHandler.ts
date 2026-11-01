@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
-import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError, resolveBasenAdminGrant} from "../modules/basen/basen_service";
+import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {precheckInstructorCharge, syncInstructorChargeSafe} from "../modules/basen/basen_instructor_charge";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 
 type Deps = {
@@ -61,7 +62,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       const body = req.body || {};
       const sessionId = String(body.sessionId || "").trim();
       const slot = String(body.slot || "").trim() as BasenSlotLabel;
-      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor" | "waitlist" | "ratownik";
+      const mode = String(body.mode || "regular").trim() as "regular" | "training" | "instructor" | "waitlist";
       const instructorUid = String(body.instructorUid || "").trim();
       const kayakId = String(body.kayakId || "").trim();
 
@@ -70,8 +71,8 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         return;
       }
 
-      if (!["regular", "training", "instructor", "waitlist", "ratownik"].includes(mode)) {
-        res.status(400).json({error: "mode musi być 'regular', 'training', 'instructor', 'waitlist' lub 'ratownik'."});
+      if (!["regular", "training", "instructor", "waitlist"].includes(mode)) {
+        res.status(400).json({error: "mode musi być 'regular', 'training', 'instructor' lub 'waitlist'."});
         return;
       }
 
@@ -100,26 +101,13 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         }
       }
 
-      // Ratownik terminu: WYŁĄCZNIE opiekun basenu (basen_admin_mail w SETUP + skarbnik) —
-      // sama rola zarząd/KR nie wystarcza (decyzja 29.10.2026).
-      if (mode === "ratownik") {
-        if (!(await resolveBasenAdminGrant(deps.db, userEmail))) {
-          res.status(403).json({error: "Ratownikiem może być tylko opiekun basenu."});
-          return;
-        }
-        if (slot === "SAUNA") {
-          res.status(400).json({error: "Ratownik zapisuje się na godzinę basenu, nie na saunę."});
-          return;
-        }
-      }
-
       if (mode === "training" && slot === "SAUNA") {
         res.status(400).json({error: "Sauna nie ma slotu instruktorskiego."});
         return;
       }
 
       // instructorUid dla mode="training" jest OPCJONALNY — brak → zapis powstaje jako
-      // "szuka instruktora" (patrz basen_service.ts::listSlotAttendees/claimWaitingStudent).
+      // "szuka instruktora" (patrz basen_service.ts::getAttendeesBySessionSlot/claimWaitingStudent).
 
       const vars = await getBasenVars(deps.db);
 
@@ -130,19 +118,24 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
         return;
       }
 
+      // Instruktor kosztuje godzinkę społeczną, sympatyka dodatkową godzinę basenową (regulamin § 6).
+      const withInstructor = mode === "training" && Boolean(instructorUid);
+      if (withInstructor) await precheckInstructorCharge(deps.db, uid, {enrolling: true});
+
       const {enrollmentId} = await enrollInSlot(deps.db, {
         sessionId,
         slot,
         uid,
         email: userEmail,
         displayName: userDisplayName,
-        mode: mode === "ratownik" ? "regular" : mode,
-        ratownik: mode === "ratownik",
+        mode,
         instructorUid: mode === "training" ? instructorUid : undefined,
         kayakId: kayakId || undefined,
         isKursant,
         vars,
       });
+
+      if (withInstructor) await syncInstructorChargeSafe(deps.db, enrollmentId);
 
       res.status(200).json({ok: true, enrollmentId});
     } catch (err) {

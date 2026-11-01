@@ -4,6 +4,9 @@ import {todayWarsawIso} from "../shared/date_range_utils";
 /** Pełni członkowie klubu (głosujący). Kandydaci, sympatycy i kursanci poza. */
 export const FULL_MEMBER_ROLE_KEYS = ["rola_czlonek", "rola_zarzad", "rola_kr"];
 
+/** Członkowie klubu łącznie z kandydatami (kandydat to też forma członkostwa) — np. prawo do karnetu basenowego. */
+export const MEMBER_ROLE_KEYS = [...FULL_MEMBER_ROLE_KEYS, "rola_kandydat"];
+
 /**
  * Role, które widzą dane kontaktowe innych osób (e-mail z listy kluczy, właściciela kajaka).
  * Sympatyk (każde konto Google po zalogowaniu) i kursant — nie (RODO: minimalizacja, 30.10.2026).

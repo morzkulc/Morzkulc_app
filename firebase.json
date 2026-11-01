@@ -106,518 +106,511 @@
       {
         "source": "/api/setup",
         "function": {
-          "functionId": "getSetup",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/setup",
         "function": {
-          "functionId": "adminPutSetup",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/pending",
         "function": {
-          "functionId": "getAdminPending",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/gear-rentals",
         "function": {
-          "functionId": "getAdminGearRentals",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/gear-reservations/cancel",
         "function": {
-          "functionId": "adminCancelGearReservation",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/gear-top-rentals",
         "function": {
-          "functionId": "getAdminGearTopRentals",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/gear-damage",
         "function": {
-          "functionId": "getAdminGearDamageReports",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/member-activity",
         "function": {
-          "functionId": "getAdminMemberActivity",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/member-dues",
         "function": {
-          "functionId": "getAdminMemberDues",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reports/user-activity",
         "function": {
-          "functionId": "getAdminUserActivity",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/events/sync-calendar",
         "function": {
-          "functionId": "adminEventsSyncCalendar",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/approve",
         "function": {
-          "functionId": "adminApprove",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/reject",
         "function": {
-          "functionId": "adminReject",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/gear-damage/resolve",
         "function": {
-          "functionId": "resolveGearDamageReport",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/register",
         "function": {
-          "functionId": "registerUser",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/nickname-availability",
         "function": {
-          "functionId": "checkNicknameAvailability",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/kayaks",
         "function": {
-          "functionId": "getGearKayaks",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/items",
         "function": {
-          "functionId": "getGearItems",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/my-reservations",
         "function": {
-          "functionId": "getGearMyReservations",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/reservations/create",
         "function": {
-          "functionId": "createGearReservation",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/reservations/create-bundle",
         "function": {
-          "functionId": "createBundleGearReservation",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/items/availability",
         "function": {
-          "functionId": "getGearItemAvailability",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/damage-report",
         "function": {
-          "functionId": "submitGearDamageReport",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/reservations/update",
         "function": {
-          "functionId": "updateGearReservation",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/reservations/update-items",
         "function": {
-          "functionId": "updateBundleGearReservationItems",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/reservations/cancel",
         "function": {
-          "functionId": "cancelGearReservation",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/favorites",
         "function": {
-          "functionId": "getGearFavorites",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/favorites/toggle",
         "function": {
-          "functionId": "gearFavoriteToggle",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/gear/kayak-reservations",
         "function": {
-          "functionId": "getKayakReservations",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/events",
         "function": {
-          "functionId": "getEvents",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/events/submit",
         "function": {
-          "functionId": "submitEvent",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/events/interests",
         "function": {
-          "functionId": "getEventInterests",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/events/interest/toggle",
         "function": {
-          "functionId": "eventInterestToggle",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/godzinki",
         "function": {
-          "functionId": "getGodzinki",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/godzinki/submit",
         "function": {
-          "functionId": "submitGodzinki",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/test/role",
         "function": {
-          "functionId": "testAccountSetRole",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/sessions",
         "function": {
-          "functionId": "getBasenSessions",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/enroll",
         "function": {
-          "functionId": "basenEnroll",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/cancel-enrollment",
         "function": {
-          "functionId": "basenCancelEnrollment",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/sessions/create",
         "function": {
-          "functionId": "basenCreateSession",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/sessions/cancel",
         "function": {
-          "functionId": "basenCancelSession",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/sessions/add-sauna",
         "function": {
-          "functionId": "basenAddSauna",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/godzinki/purchase",
         "function": {
-          "functionId": "purchaseGodzinki",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/kayak",
         "function": {
-          "functionId": "basenSetKayak",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/instructor",
         "function": {
-          "functionId": "basenSetInstructor",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/instructor/claim",
         "function": {
-          "functionId": "basenClaimWaitingStudent",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/godziny/my",
         "function": {
-          "functionId": "getBasenMyGodziny",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/admin/godziny/users",
         "function": {
-          "functionId": "getBasenAdminGodzinyUsers",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/admin/godziny/history",
         "function": {
-          "functionId": "getBasenAdminGodzinyHistory",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/admin/godziny/add",
         "function": {
-          "functionId": "basenAdminAddGodziny",
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/basen/admin/godziny/extra",
+        "function": {
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/basen/order",
         "function": {
-          "functionId": "basenOrder",
-          "region": "us-central1"
-        }
-      },
-      {
-        "source": "/api/basen/kayaks",
-        "function": {
-          "functionId": "getBasenKayaks",
-          "region": "us-central1"
-        }
-      },
-      {
-        "source": "/api/basen/attendees",
-        "function": {
-          "functionId": "getBasenAttendees",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/log/add",
         "function": {
-          "functionId": "kmAddLog",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/log/update",
         "function": {
-          "functionId": "kmAddLog",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/log/delete",
         "function": {
-          "functionId": "kmAddLog",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/logs",
         "function": {
-          "functionId": "kmMyLogs",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/stats",
         "function": {
-          "functionId": "kmMyStats",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/rankings",
         "function": {
-          "functionId": "kmRankings",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/places",
         "function": {
-          "functionId": "kmPlaces",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/event-stats",
         "function": {
-          "functionId": "kmEventStats",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/map-data",
         "function": {
-          "functionId": "kmMapData",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/km/places/merge",
         "function": {
-          "functionId": "kmAdminMergePlaces",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/kurs/info",
         "function": {
-          "functionId": "getKursInfo",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/km/kursant-stats",
         "function": {
-          "functionId": "getKursantStats",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/user/weight",
         "function": {
-          "functionId": "userWeight",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/profile/notifications",
         "function": {
-          "functionId": "notificationPrefs",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/klub",
         "function": {
-          "functionId": "getKlubInfo",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/kurs/zgloszenie",
         "function": {
-          "functionId": "kursZgloszenie",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/kurs/zgloszenia",
         "function": {
-          "functionId": "adminKursZgloszenia",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/kurs/zgloszenie",
         "function": {
-          "functionId": "adminKursZgloszenieAction",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/blachy/**",
         "function": {
-          "functionId": "blachyApi",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/admin/blachy",
         "function": {
-          "functionId": "adminBlachy",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/public/site",
         "function": {
-          "functionId": "publicSiteInfo",
+          "functionId": "appApi",
           "region": "us-central1"
         }
       }

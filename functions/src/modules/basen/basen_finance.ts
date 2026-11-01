@@ -88,13 +88,13 @@ function createdMs(r: LedgerLike): number {
 
 /**
  * Wartość (zł) następnego wejścia użytkownika: wejścia schodzą z partii w kolejności
- * zakupu (FIFO). Partie: admin_add (cena z zakupu) i instructor_reward (0 zł).
+ * zakupu (FIFO). Partie: admin_add (cena z zakupu), instructor_reward i manual_extra (0 zł).
  * Zużyte = liczba blokad − liczba zwrotów. Wpisy bez ceny (sprzed cennika) liczone
  * po cenie jednorazowej.
  */
 export function nextEntryValuePln(records: LedgerLike[], fallbackUnitPrice: number): number {
   const lots = records
-    .filter((r) => (r.type === "admin_add" || r.type === "instructor_reward") && Number(r.amount) > 0)
+    .filter((r) => (r.type === "admin_add" || r.type === "instructor_reward" || r.type === "manual_extra") && Number(r.amount) > 0)
     .sort((a, b) => createdMs(a) - createdMs(b) || String(a.id || "").localeCompare(String(b.id || "")));
   const blocks = records.filter((r) => r.type === "booking_block").length;
   const refunds = records.filter((r) => r.type === "booking_refund").length;
@@ -102,7 +102,7 @@ export function nextEntryValuePln(records: LedgerLike[], fallbackUnitPrice: numb
   for (const lot of lots) {
     const n = Number(lot.amount);
     if (consumed < n) {
-      if (lot.type === "instructor_reward") return 0;
+      if (lot.type === "instructor_reward" || lot.type === "manual_extra") return 0;
       const p = Number(lot.unitPricePln);
       return Number.isFinite(p) ? p : fallbackUnitPrice;
     }

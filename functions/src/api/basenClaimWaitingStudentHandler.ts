@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
-import {claimWaitingStudent, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {claimWaitingStudent, enrollmentId, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {precheckInstructorCharge, syncInstructorChargeSafe} from "../modules/basen/basen_instructor_charge";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -52,7 +53,9 @@ export async function handleBasenClaimWaitingStudent(req: Request, res: Response
         return;
       }
 
+      await precheckInstructorCharge(deps.db, targetUid);
       await claimWaitingStudent(deps.db, {sessionId, slot, instructorUid, targetUid});
+      await syncInstructorChargeSafe(deps.db, enrollmentId(sessionId, slot, targetUid));
 
       res.status(200).json({ok: true});
     } catch (err) {

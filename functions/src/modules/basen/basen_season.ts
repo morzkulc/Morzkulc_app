@@ -1,4 +1,5 @@
-import {BasenEnrollment, BasenSession, BasenVars, isSessionCancelled, sessionDecisionMs, todayIso} from "./basen_service";
+import * as admin from "firebase-admin";
+import {BasenEnrollment, BasenSession, BasenSessionFinal, BasenVars, isSessionCancelled, sessionDecisionMs, todayIso} from "./basen_service";
 import {Light, round2, seasonOf, sessionLight, sessionMoney} from "./basen_finance";
 
 /**
@@ -39,11 +40,22 @@ export interface SeasonSummary {
   cancelledAdmin: number;
 }
 
+/** Termin, którego wynik trzeba liczyć z zapisów: nieodwołany i jeszcze bez `final`. */
+function needsEnrollments(s: BasenSession): boolean {
+  return !isSessionCancelled(s) && !s.final;
+}
+
+/**
+ * Zapisy tylko terminów nierozliczonych (nadchodzące + odbyte przed nocną finalizacją).
+ * Odbyte mają wynik w `session.final`, odwołane nie potrzebują zapisów — bez tego każde
+ * otwarcie modułu czytało wszystkie zapisy sezonu (perf 01.11.2026, W2).
+ */
 export async function loadSeasonEnrollments(db: FirebaseFirestore.Firestore, sessions: BasenSession[]): Promise<BasenEnrollment[]> {
-  if (!sessions.length) return [];
-  // sessionId = data terminu (createSession) — zakres po sessionId = zakres dat sezonu.
-  const first = sessions[0].id;
-  const last = sessions[sessions.length - 1].id;
+  const needed = sessions.filter(needsEnrollments);
+  if (!needed.length) return [];
+  // sessionId = data terminu (createSession) — zakres po sessionId = zakres dat.
+  const first = needed[0].id;
+  const last = needed[needed.length - 1].id;
   const snap = await db.collection("basen_enrollments")
     .where("sessionId", ">=", first)
     .where("sessionId", "<=", last)
@@ -71,15 +83,18 @@ export function computeSeason(
   const rows: SeasonSessionRow[] = sessions.map((s) => {
     const list = bySession.get(s.id) || [];
     const cancelled = isSessionCancelled(s);
+    const fin = !cancelled ? s.final : undefined;
     const costPln = Number(s.costPln ?? vars.basen_koszt_terminu);
-    const money = cancelled ? {entries: 0, valuePln: 0, costPln: 0, resultPln: 0} : sessionMoney(list, costPln);
+    const money = cancelled ? {entries: 0, valuePln: 0, costPln: 0, resultPln: 0} :
+      fin ? {entries: fin.entries, valuePln: fin.valuePln, costPln: fin.costPln, resultPln: fin.resultPln} :
+        sessionMoney(list, costPln);
     let outcome: SessionOutcome;
     if (cancelled) outcome = "cancelled";
     else if (s.date < today) outcome = "held";
     else if (s.decision?.status === "confirmed") outcome = "confirmed";
     else outcome = "planned";
-    const zapisyH1 = cancelled ? 0 : activeParticipants(list, "H1");
-    const zapisyH2 = cancelled ? 0 : activeParticipants(list, "H2");
+    const zapisyH1 = cancelled ? 0 : fin ? fin.zapisyH1 : activeParticipants(list, "H1");
+    const zapisyH2 = cancelled ? 0 : fin ? fin.zapisyH2 : activeParticipants(list, "H2");
     return {
       id: s.id,
       date: s.date,
@@ -89,7 +104,7 @@ export function computeSeason(
       zapisy: cancelled ? Number(s.decision?.zapisy || 0) : zapisyH1 + zapisyH2,
       zapisyH1,
       zapisyH2,
-      sauna: cancelled ? 0 : activeParticipants(list, "SAUNA"),
+      sauna: cancelled ? 0 : fin ? fin.sauna : activeParticipants(list, "SAUNA"),
       ...money,
       light: null,
       decisionAtMs: sessionDecisionMs(s, vars.basen_okno_anulowania_h),
@@ -120,4 +135,31 @@ export function computeSeason(
       cancelledAdmin: rows.filter((r) => r.outcome === "cancelled" && r.cancelReason !== "frekwencja").length,
     },
   };
+}
+
+/**
+ * Zapisuje wynik odbytych terminów (data < dziś, nieodwołane, bez `final`) na dokumencie
+ * terminu. Po dacie terminu zapisy się nie zmieniają, więc wynik jest ostateczny.
+ * Wołane przez codzienne zadanie basen.grantInstructorRewards. Zwraca liczbę terminów.
+ */
+export async function finalizePastSessions(db: FirebaseFirestore.Firestore, vars: BasenVars, today: string = todayIso()): Promise<number> {
+  const snap = await db.collection("basen_sessions").where("date", "<", today).get();
+  const pending = snap.docs
+    .map((d) => ({id: d.id, ...d.data()} as BasenSession))
+    .filter(needsEnrollments);
+  let done = 0;
+  for (const s of pending) {
+    const eSnap = await db.collection("basen_enrollments").where("sessionId", "==", s.id).get();
+    const list = eSnap.docs.map((d) => ({id: d.id, ...d.data()} as BasenEnrollment));
+    const money = sessionMoney(list, Number(s.costPln ?? vars.basen_koszt_terminu));
+    const final: BasenSessionFinal = {
+      zapisyH1: activeParticipants(list, "H1"),
+      zapisyH2: activeParticipants(list, "H2"),
+      sauna: activeParticipants(list, "SAUNA"),
+      ...money,
+    };
+    await db.collection("basen_sessions").doc(s.id).update({final, updatedAt: admin.firestore.FieldValue.serverTimestamp()});
+    done++;
+  }
+  return done;
 }

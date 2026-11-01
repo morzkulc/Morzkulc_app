@@ -121,7 +121,6 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_1_godzina_domyslna: "19:00",
       basen_2_godzina_domyslna: "21:00",
       basen_sauna: false,
-      basen_sauna_cena: 0,
       basen_okno_anulowania_h: 30,
       basen_cena_za_godzine: 35,
       basen_cena_karnet_5: 140,
@@ -129,9 +128,11 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_koszt_terminu: 350,
       basen_max_strata_terminu: 105,
       basen_budzet_sezonu: 2000,
-      basen_min_zapisow: 12,
       basen_max_dni_naprzod: 4,
       basen_koniec_sezonu: seasonOf(warsawTodayIso()).karnetValidUntil,
+      basen_karnet_5_godzinki: 3,
+      basen_karnet_10_godzinki: 5,
+      basen_instruktor_godzinki: 1,
     });
   });
 
@@ -151,7 +152,6 @@ describe("getBasenVars — setup/vars_basen", () => {
         "basen_limit_uczestników": {value: "12"},
         "basen_1_godzina_domyslna": {value: "18:30"},
         "basen_sauna": {value: true},
-        "basen_sauna_cena": {value: 15},
         "basen_rezygnacja_za_darmo": {value: 12},
         "basen_cena_za_godzine": {value: 30},
         "basen_cena_karnet_10": {value: "250"},
@@ -165,7 +165,6 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_1_godzina_domyslna: "18:30",
       basen_2_godzina_domyslna: "21:00",
       basen_sauna: true,
-      basen_sauna_cena: 15,
       basen_okno_anulowania_h: 12,
       basen_cena_za_godzine: 30,
       basen_cena_karnet_10: 250,

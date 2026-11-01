@@ -79,7 +79,7 @@ export async function handleGetBasenMyGodziny(req: Request, res: Response, deps:
           },
           maxSingleCount: MAX_SINGLE_COUNT,
           seasonEnd: vars.basen_koniec_sezonu,
-          karnet: {member: karnet.member, eligible: karnet.eligible, reasons: karnet.reasons},
+          karnet: {member: karnet.member, eligible: karnet.eligible, byProduct: karnet.byProduct, godzinkiCost: karnet.godzinkiCost, reasons: karnet.reasons},
           account: appVars.clubAccount,
           bank: appVars.clubBank,
         },

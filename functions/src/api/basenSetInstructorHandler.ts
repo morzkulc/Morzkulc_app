@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
-import {setEnrollmentInstructor, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {setEnrollmentInstructor, enrollmentId, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {precheckInstructorCharge, syncInstructorChargeSafe} from "../modules/basen/basen_instructor_charge";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -46,7 +47,9 @@ export async function handleBasenSetInstructor(req: Request, res: Response, deps
         return;
       }
 
+      if (instructorUid) await precheckInstructorCharge(deps.db, uid);
       await setEnrollmentInstructor(deps.db, {sessionId, slot, uid, instructorUid, seeking});
+      await syncInstructorChargeSafe(deps.db, enrollmentId(sessionId, slot, uid));
 
       res.status(200).json({ok: true});
     } catch (err) {

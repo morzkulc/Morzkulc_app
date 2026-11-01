@@ -12,7 +12,7 @@ import {
 import {
   cancelEnrollment, cancelSession, enrollInSlot, getBasenVars, joinWaitlist, sessionDecisionMs,
 } from "../src/modules/basen/basen_service";
-import {computeSeason} from "../src/modules/basen/basen_season";
+import {computeSeason, finalizePastSessions, loadSeasonEnrollments} from "../src/modules/basen/basen_season";
 import {priceProduct} from "../src/modules/basen/basen_godziny_service";
 import {basenDecideSessionsTask} from "../src/service/tasks/basenDecideSessions";
 
@@ -227,5 +227,33 @@ describe("decyzja o terminie (basen.decideSessions)", () => {
     expect(summary).toMatchObject({netPln: 70, held: 1, cancelledLow: 1, planned: 1, budgetLeftPln: 2070});
     expect(rows[1].zapisy).toBe(4);
     expect(rows[2]).toMatchObject({resultPln: -105, light: "yellow"});
+  });
+
+  it("finalizacja: wynik odbytego terminu na terminie, potem bez czytania jego zapisów — ten sam wynik sezonu", async () => {
+    const vars: any = {basen_koszt_terminu: 350, basen_max_strata_terminu: 105, basen_budzet_sezonu: 2000, basen_okno_anulowania_h: 30};
+    const today = warsawTodayIso();
+    const past = addDaysIso(today, -3);
+    const future = addDaysIso(today, 4);
+    const cancelled = addDaysIso(today, -1);
+    const en = (sid: string, n: number, slot = "H1") => Array.from({length: n}, (_, i) =>
+      ({_docId: `${sid}_${slot}_u${i}`, id: `${sid}_${slot}_u${i}`, sessionId: sid, slot, type: "regular", status: "active", valuePln: 35, chargedGodziny: true}));
+    const db = new FakeFirestore({
+      basen_sessions: [session(past), session(cancelled, {slots: {H1: {timeStart: "21:00", status: "cancelled"}}, cancelReason: "admin"}), session(future)],
+      basen_enrollments: [...en(past, 6), ...en(past, 5, "H2"), ...en(cancelled, 3), ...en(future, 4)],
+    }).asDb();
+    const load = async () => (await db.collection("basen_sessions").orderBy("date", "asc").get()).docs.map((d: any) => ({id: d.id, ...d.data()}));
+    const before = await load();
+    expect((await loadSeasonEnrollments(db, before as any)).filter((e) => e.sessionId !== cancelled).length).toBe(15);
+    const ref = computeSeason(before as any, await loadSeasonEnrollments(db, before as any), vars, today);
+
+    expect(await finalizePastSessions(db, vars, today)).toBe(1);
+    expect(await finalizePastSessions(db, vars, today)).toBe(0);
+    const after = await load();
+    expect(after.find((s: any) => s.id === past)?.final).toMatchObject({zapisyH1: 6, zapisyH2: 5, entries: 11, valuePln: 385, resultPln: 35});
+    const enrollmentsAfter = await loadSeasonEnrollments(db, after as any);
+    expect(enrollmentsAfter.every((e) => e.sessionId === future)).toBe(true);
+    const res = computeSeason(after as any, enrollmentsAfter, vars, today);
+    expect(res.rows).toEqual(ref.rows);
+    expect(res.summary).toEqual(ref.summary);
   });
 });

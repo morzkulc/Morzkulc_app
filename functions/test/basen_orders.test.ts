@@ -30,8 +30,9 @@ function seed() {
       user("NODUES", "rola_czlonek", "2020-01-01"),
       user("ZERO", "rola_czlonek", "2099-12-31"),
       user("SYMP", "rola_sympatyk"),
+      user("KAND", "rola_kandydat", "2099-12-31"),
     ],
-    godzinki_ledger: [earn("OK", 5), earn("NODUES", 5)],
+    godzinki_ledger: [earn("OK", 5), earn("NODUES", 5), earn("KAND", 5)],
   });
   return {fake, db: fake.asDb()};
 }
@@ -56,6 +57,11 @@ describe("składki i reguła karnetu", () => {
   it("członek ze składkami i dodatnim saldem godzinek → karnet dostępny", async () => {
     const {db} = seed();
     expect(await getKarnetEligibility(db, "OK", await userData(db, "OK"))).toMatchObject({member: true, eligible: true, reasons: []});
+  });
+
+  it("kandydat ze składkami i dodatnim saldem godzinek → karnet dostępny", async () => {
+    const {db} = seed();
+    expect(await getKarnetEligibility(db, "KAND", await userData(db, "KAND"))).toMatchObject({member: true, eligible: true, reasons: []});
   });
 
   it("brak składek / zerowe saldo → nieaktywne z powodem; nie-członek → brak kafelków", async () => {

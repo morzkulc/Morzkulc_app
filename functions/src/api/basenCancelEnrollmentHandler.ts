@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {cancelEnrollment, leaveWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
+import {syncSessionInstructorCharges} from "../modules/basen/basen_instructor_charge";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -56,6 +57,8 @@ export async function handleBasenCancelEnrollment(req: Request, res: Response, d
         cancellationWindowHours: vars.basen_okno_anulowania_h,
         vars,
       });
+
+      await syncSessionInstructorCharges(deps.db, sessionId);
 
       res.status(200).json({ok: true, wasLate, refunded, replacedFromWaitlist: Boolean(promotedUid)});
     } catch (err) {

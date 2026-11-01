@@ -1,10 +1,12 @@
 import type {Request, Response} from "express";
 import {resolveBasenAdminGrant, getBasenVars} from "../modules/basen/basen_service";
-import {adminAddBasenGodziny, getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
+import {adminAddBasenGodziny, addManualExtraBasenGodziny, getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 import {BasenProduct} from "../modules/basen/basen_finance";
-import {getKarnetEligibility} from "../modules/basen/basen_orders";
+import {getKarnetEligibility, adminAddKarnet} from "../modules/basen/basen_orders";
 
 const PRODUCTS: BasenProduct[] = ["jednorazowe", "karnet5", "karnet10"];
+
+const MAX_MANUAL_EXTRA = 100;
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -20,7 +22,11 @@ type Deps = {
  * POST /api/basen/admin/godziny/add
  * Admin dopisuje wejścia po potwierdzeniu przelewu (regulamin basenu § 3).
  * Body: { userUid, product: "jednorazowe"|"karnet5"|"karnet10", count?: number (jednorazowe), reason? }
- * Karnet: tylko członek z opłaconymi składkami i dodatnim saldem godzinek (basen_orders.ts).
+ * Karnet: członek z opłaconymi składkami i saldem godzinek wypracowanych ≥ koszt karnetu;
+ * godzinki za karnet zdejmowane razem z dopisaniem (basen_orders.ts).
+ *
+ * POST /api/basen/admin/godziny/extra (ta sama funkcja, rozpoznawana po ścieżce)
+ * Body: { userUid, amount: liczba całkowita 1–100, note? } — ekstra godziny basenowe bez wpłaty.
  */
 export async function handleBasenAdminAddGodziny(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -57,6 +63,30 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
 
       const body = req.body || {};
       const targetUid = String(body.userUid || "").trim();
+
+      // POST /api/basen/admin/godziny/extra — ekstra godziny basenowe (0 zł), bez produktu.
+      if (/\/godziny\/extra\/?$/.test(String(req.path || ""))) {
+        const amount = Number(body.amount);
+        const note = String(body.note || "").trim().slice(0, 200);
+        if (!targetUid) {
+          res.status(400).json({error: "Brakuje userUid."});
+          return;
+        }
+        if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_MANUAL_EXTRA) {
+          res.status(400).json({error: `Liczba godzin basenowych musi być liczbą całkowitą od 1 do ${MAX_MANUAL_EXTRA}.`});
+          return;
+        }
+        const target = await deps.db.collection("users_active").doc(targetUid).get();
+        if (!target.exists) {
+          res.status(400).json({error: "Użytkownik nie istnieje."});
+          return;
+        }
+        const recordId = await addManualExtraBasenGodziny(deps.db, {uid: targetUid, amount, note, performedBy: adminUid});
+        const newBalance = computeBasenGodzinyBalance(await getBasenGodzinyRecords(deps.db, targetUid));
+        res.status(200).json({ok: true, recordId, newBalance});
+        return;
+      }
+
       const product = String(body.product || "") as BasenProduct;
       const count = Number(body.count || 0);
       const reason = String(body.reason || "").trim().slice(0, 200);
@@ -82,23 +112,17 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
 
       const vars = await getBasenVars(deps.db);
       if (product !== "jednorazowe") {
-        // Karnet = dofinansowanie klubu: pełny członek z opłaconymi składkami i dodatnim saldem godzinek.
+        // Karnet = dofinansowanie klubu (składki + godzinki wypracowane ≥ koszt karnetu).
         const karnet = await getKarnetEligibility(deps.db, targetUid, targetSnap.data() || {});
-        if (!karnet.eligible) {
+        if (!karnet.byProduct[product]) {
           res.status(400).json({error: `Karnet niedostępny: ${karnet.reasons.join(" ")}`});
           return;
         }
       }
 
-      const recordId = await adminAddBasenGodziny(deps.db, {
-        uid: targetUid,
-        product,
-        count,
-        reason,
-        performedBy: adminUid,
-        pricing: vars,
-        karnetValidUntil: vars.basen_koniec_sezonu,
-      });
+      const recordId = product !== "jednorazowe" ?
+        await adminAddKarnet(deps.db, {uid: targetUid, product, reason, performedBy: adminUid, vars}) :
+        await adminAddBasenGodziny(deps.db, {uid: targetUid, product, count, reason, performedBy: adminUid, pricing: vars});
 
       const records = await getBasenGodzinyRecords(deps.db, targetUid);
       const newBalance = computeBasenGodzinyBalance(records);

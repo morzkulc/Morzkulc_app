@@ -1,9 +1,10 @@
 import * as admin from "firebase-admin";
 import {BasenProduct} from "./basen_finance";
-import {ClientError, getBasenVars} from "./basen_service";
+import {BasenVars, ClientError, getBasenVars} from "./basen_service";
 import {adminAddBasenGodzinyInTx, priceProduct, ProductPricing} from "./basen_godziny_service";
-import {getBalance as getGodzinkiBalance} from "../hours/godzinki_service";
-import {FULL_MEMBER_ROLE_KEYS, isDuesPaid, isInGoodStanding} from "../users/member_standing";
+import {computeEarnedBalance, deductHoursInTx, getAllRecords, GodzinkiRecord} from "../hours/godzinki_service";
+import {getGodzinkiVars} from "../hours/godzinki_vars";
+import {MEMBER_ROLE_KEYS, isDuesPaid} from "../users/member_standing";
 
 /**
  * Zamówienia godzin basenowych (kolekcja basen_orders).
@@ -14,9 +15,16 @@ import {FULL_MEMBER_ROLE_KEYS, isDuesPaid, isInGoodStanding} from "../users/memb
  * (basen_godziny_ledger). Opiekun może odrzucić zamówienie (mail z powodem), a
  * użytkownik może anulować własne, jeszcze niezatwierdzone.
  *
- * Karnet to dofinansowanie klubu dla czynnych członków: tylko pełny członek z opłaconymi
- * składkami i dodatnim saldem godzinek (ta sama reguła co prawo głosu).
+ * Karnet to dofinansowanie klubu (zasady dofinansowania + regulamin basenu § 3): pełny członek
+ * z opłaconymi składkami i saldem godzinek WYPRACOWANYCH co najmniej równym kosztowi karnetu
+ * w godzinkach (basen_karnet_5/10_godzinki). Godzinki zdejmowane przy zatwierdzeniu wpłaty.
  */
+
+export type KarnetProduct = "karnet5" | "karnet10";
+
+export function karnetGodzinkiCost(product: KarnetProduct, vars: Pick<BasenVars, "basen_karnet_5_godzinki" | "basen_karnet_10_godzinki">): number {
+  return product === "karnet5" ? vars.basen_karnet_5_godzinki : vars.basen_karnet_10_godzinki;
+}
 
 export const ORDERS = "basen_orders";
 export const PRODUCTS: BasenProduct[] = ["jednorazowe", "karnet5", "karnet10"];
@@ -48,8 +56,13 @@ export interface BasenOrder {
 export interface KarnetEligibility {
   /** Pełny członek klubu — tylko on w ogóle widzi kafelki karnetów. */
   member: boolean;
+  /** Choć jeden karnet dostępny. */
   eligible: boolean;
+  byProduct: Record<KarnetProduct, boolean>;
+  /** Koszt karnetu w godzinkach (z SETUP). */
+  godzinkiCost: Record<KarnetProduct, number>;
   duesPaid: boolean;
+  /** Saldo godzinek wypracowanych (wykupione nie robią plusa). */
   godzinkiBalance: number;
   /** Powody nieaktywnych kafelków, gotowe do wyświetlenia. */
   reasons: string[];
@@ -60,16 +73,66 @@ export async function getKarnetEligibility(
   uid: string,
   userData: any
 ): Promise<KarnetEligibility> {
-  const member = FULL_MEMBER_ROLE_KEYS.includes(String(userData?.role_key || ""));
+  const vars = await getBasenVars(db);
+  const godzinkiCost = {karnet5: karnetGodzinkiCost("karnet5", vars), karnet10: karnetGodzinkiCost("karnet10", vars)};
+  const member = MEMBER_ROLE_KEYS.includes(String(userData?.role_key || ""));
   if (!member) {
-    return {member, eligible: false, duesPaid: false, godzinkiBalance: 0, reasons: ["Karnety są dostępne tylko dla członków klubu."]};
+    return {member, eligible: false, byProduct: {karnet5: false, karnet10: false}, godzinkiCost, duesPaid: false, godzinkiBalance: 0,
+      reasons: ["Karnety są dostępne tylko dla członków klubu."]};
   }
   const duesPaid = isDuesPaid(userData);
-  const godzinkiBalance = await getGodzinkiBalance(db, uid);
+  const godzinkiBalance = computeEarnedBalance(await getAllRecords(db, uid));
   const reasons: string[] = [];
   if (!duesPaid) reasons.push("Brak opłaconych składek członkowskich.");
-  if (godzinkiBalance <= 0) reasons.push(`Saldo godzinek musi być dodatnie (masz ${godzinkiBalance}).`);
-  return {member, eligible: isInGoodStanding(duesPaid, godzinkiBalance), duesPaid, godzinkiBalance, reasons};
+  const byProduct = {
+    karnet5: duesPaid && godzinkiBalance >= godzinkiCost.karnet5,
+    karnet10: duesPaid && godzinkiBalance >= godzinkiCost.karnet10,
+  };
+  if (godzinkiBalance < Math.max(godzinkiCost.karnet5, godzinkiCost.karnet10)) {
+    reasons.push(`Karnet wymaga godzinek wypracowanych: karnet 5 — ${godzinkiCost.karnet5}, karnet 10 — ${godzinkiCost.karnet10} (masz ${godzinkiBalance}).`);
+  }
+  return {member, eligible: byProduct.karnet5 || byProduct.karnet10, byProduct, godzinkiCost, duesPaid, godzinkiBalance, reasons};
+}
+
+/**
+ * Pobiera godzinki za karnet w ISTNIEJĄCEJ transakcji (przed jej zapisami): sprawdza saldo
+ * godzinek wypracowanych ≥ koszt i zdejmuje koszt (spend, reservationId basen_karnet_{wpis}).
+ */
+export async function chargeKarnetGodzinkiInTx(
+  tx: FirebaseFirestore.Transaction,
+  db: FirebaseFirestore.Firestore,
+  args: {uid: string; product: KarnetProduct; ledgerId: string; vars: BasenVars}
+): Promise<void> {
+  const cost = karnetGodzinkiCost(args.product, args.vars);
+  if (cost <= 0) return;
+  const snap = await tx.get(db.collection("godzinki_ledger").where("uid", "==", args.uid));
+  const earned = computeEarnedBalance(snap.docs.map((d) => ({id: d.id, ...d.data()} as GodzinkiRecord)));
+  if (earned < cost) {
+    throw new ClientError(`Karnet wymaga ${cost} godzinek wypracowanych — saldo użytkownika: ${earned}.`);
+  }
+  const r = await deductHoursInTx(tx, db, args.uid, {
+    amount: cost,
+    reason: `Karnet basenowy ${args.product === "karnet5" ? 5 : 10} — dofinansowanie`,
+    reservationId: `basen_karnet_${args.ledgerId}`,
+    force: true, // saldo wypracowane ≥ koszt, więc nie schodzi poniżej zera
+  }, await getGodzinkiVars(db));
+  if (!r.ok) throw new ClientError(r.message || "Nie udało się pobrać godzinek za karnet.");
+}
+
+/** Ręczne dopisanie karnetu przez opiekuna: godzinki za karnet + godziny basenowe w jednej transakcji. */
+export async function adminAddKarnet(
+  db: FirebaseFirestore.Firestore,
+  args: {uid: string; product: KarnetProduct; reason: string; performedBy: string; vars: BasenVars}
+): Promise<string> {
+  const ledgerRef = db.collection("basen_godziny_ledger").doc();
+  await db.runTransaction(async (tx) => {
+    await chargeKarnetGodzinkiInTx(tx, db, {uid: args.uid, product: args.product, ledgerId: ledgerRef.id, vars: args.vars});
+    adminAddBasenGodzinyInTx(tx, ledgerRef, {
+      uid: args.uid, product: args.product, count: 0, reason: args.reason, performedBy: args.performedBy,
+      pricing: args.vars, karnetValidUntil: args.vars.basen_koniec_sezonu,
+    });
+  });
+  return ledgerRef.id;
 }
 
 /** Liczba godzin basenowych w zamówieniu (karnet ma ją z góry). Rzuca ClientError. */
@@ -103,7 +166,7 @@ export async function createOrder(
   const input = validateOrderInput(args.product, args.count);
   if (input.product !== "jednorazowe") {
     const el = await getKarnetEligibility(db, args.uid, args.userData);
-    if (!el.eligible) throw new ClientError(el.reasons.join(" "));
+    if (!el.byProduct[input.product]) throw new ClientError(el.reasons.join(" ") || "Karnet niedostępny.");
   }
   const priced = priceProduct(input.product, input.count, args.pricing);
   const ref = db.collection(ORDERS).doc();
@@ -149,7 +212,8 @@ export async function cancelOwnOrder(db: FirebaseFirestore.Firestore, args: {uid
 export async function approveOrder(db: FirebaseFirestore.Firestore, args: {orderId: string; performedBy: string}): Promise<{ledgerId: string; uid: string}> {
   const ref = db.collection(ORDERS).doc(args.orderId);
   const ledgerRef = db.collection("basen_godziny_ledger").doc();
-  const {basen_koniec_sezonu: karnetValidUntil} = await getBasenVars(db);
+  const vars = await getBasenVars(db);
+  const karnetValidUntil = vars.basen_koniec_sezonu;
   let uid = "";
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -157,6 +221,10 @@ export async function approveOrder(db: FirebaseFirestore.Firestore, args: {order
     if (!snap.exists || !o) throw new ClientError("Zamówienie nie istnieje.");
     if (o.status !== "pending") throw new ClientError("Zamówienie zostało już rozpatrzone albo anulowane.");
     uid = o.uid;
+    // Karnet = dofinansowanie: godzinki zdejmowane dopiero przy zatwierdzeniu wpłaty.
+    if (o.product !== "jednorazowe") {
+      await chargeKarnetGodzinkiInTx(tx, db, {uid: o.uid, product: o.product, ledgerId: ledgerRef.id, vars});
+    }
     const pricing: ProductPricing = {
       basen_cena_za_godzine: o.unitPricePln,
       basen_cena_karnet_5: o.product === "karnet5" ? o.amountPln : 0,

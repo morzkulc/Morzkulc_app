@@ -6,6 +6,7 @@ import {
 } from "../../modules/basen/basen_service";
 import {computeSeason, loadSeasonEnrollments} from "../../modules/basen/basen_season";
 import {sessionLight} from "../../modules/basen/basen_finance";
+import {syncSessionInstructorCharges} from "../../modules/basen/basen_instructor_charge";
 
 /**
  * Decyzja o terminie basenowym (regulamin basenu § 5) — co godzinę (basenDecideHourly),
@@ -69,13 +70,14 @@ export const basenDecideSessionsTask: ServiceTask<Record<string, never>> = {
       }
 
       await cancelSession(db, s.id, "system", "frekwencja", {decision});
+      await syncSessionInstructorCharges(db, s.id, ctx.logger);
       const jobRef = db.collection("service_jobs").doc();
       await jobRef.set({
         id: jobRef.id,
         taskId: "basen.notifySessionCancelled",
         payload: {
           sessionId: s.id,
-          reason: `Za mało zapisów (${row.zapisy}, termin odbywa się przy co najmniej ${vars.basen_min_zapisow} zapisach na obu godzinach).`,
+          reason: `Za mało zapisów (${row.zapisy}).`,
         },
         status: "queued",
         attempts: 0,

@@ -64,7 +64,7 @@ describe("GET /api/basen/sessions", () => {
     expect(s.slots.H1.attendees).toHaveLength(1);
     expect(s.slots.H2).toMatchObject({userEnrolled: false, enrolledCount: 0, remaining: 2});
     expect(r.json.userGodzinyBalance).toBe(1);
-    expect(r.json.season).toMatchObject({minZapisow: 12, maxDniNaprzod: 4, oknoH: 30});
+    expect(r.json.season).toMatchObject({maxDniNaprzod: 4, oknoH: 30});
   });
 
   it("nieznany użytkownik → 403", async () => {

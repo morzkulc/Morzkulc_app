@@ -27,6 +27,7 @@ const ACTIVE_WINDOW_MONTHS = 4;
  * Lista AKTYWNYCH (ostatnie 4 miesiące — zapis na basen albo ruch na koncie godzin)
  * userów z saldem godzin basenowych. Wyszukiwanie po mailu/nazwisku/ksywce odbywa się
  * po stronie klienta spośród tej listy.
+ * ?scope=all — wszyscy zarejestrowani użytkownicy (bez sald), do ręcznego dodania godzinek.
  */
 export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -58,6 +59,20 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
       const adminEmail = String(adminData?.email || "");
       if (!deps.adminRoleKeys.includes(adminRoleKey) && !(await resolveBasenAdminGrant(deps.db, adminEmail))) {
         res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});
+        return;
+      }
+
+      // ?scope=all — wszyscy zarejestrowani (wyszukiwarka „Dopisz godzinki”), bez sald basenowych.
+      if (String(req.query?.scope || "") === "all") {
+        const allSnap = await deps.db.collection("users_active").get();
+        const all = allSnap.docs
+          .filter((d) => isRegistered(d.data()))
+          .map((d) => {
+            const u = d.data() as any;
+            return {userUid: d.id, userName: fullName(u), userNick: nickname(u), userEmail: normNullish(u?.email)};
+          });
+        all.sort((x, y) => x.userName.localeCompare(y.userName, "pl"));
+        res.status(200).json({ok: true, rows: all});
         return;
       }
 
@@ -122,6 +137,8 @@ export async function handleGetBasenAdminGodzinyUsers(req: Request, res: Respons
           jednorazowe: vars.basen_cena_za_godzine,
           karnet5: vars.basen_cena_karnet_5,
           karnet10: vars.basen_cena_karnet_10,
+          karnet5Godzinki: vars.basen_karnet_5_godzinki,
+          karnet10Godzinki: vars.basen_karnet_10_godzinki,
         },
       });
     } catch (err) {
