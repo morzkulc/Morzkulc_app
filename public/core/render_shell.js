@@ -2,7 +2,7 @@
 import { canSeeModule } from "/core/access_control.js";
 import { setHash, parseHash } from "/core/router.js";
 import { apiPostJson, apiGetJson } from "/core/api_client.js";
-import { mark, homeStart, homeDone } from "/core/perf.js";
+import { homeStart, homeDone } from "/core/perf.js";
 import { formatFreeText, isUrlOnly } from "/core/text_format.js";
 import { renderClubBadgeHtml } from "/core/club_badges.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";

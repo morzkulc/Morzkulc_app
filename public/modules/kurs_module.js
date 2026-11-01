@@ -56,7 +56,6 @@ async function renderChapter(innerEl, moduleId, chId) {
     return;
   }
 
-  const chapter = CHAPTERS[chapterIndex];
   const prev = CHAPTERS[chapterIndex - 1] || null;
   const next = CHAPTERS[chapterIndex + 1] || null;
 
@@ -119,7 +118,7 @@ export function createKursModule({ id, type, label, defaultRoute, order, enabled
     enabled,
     access,
 
-    async render({ viewEl, routeId, ctx }) {
+    async render({ viewEl, routeId }) {
       const route = String(routeId || "skrypt").trim();
 
       const isChapter = CHAPTERS.some((ch) => ch.id === route);

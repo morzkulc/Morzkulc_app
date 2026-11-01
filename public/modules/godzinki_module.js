@@ -522,7 +522,7 @@ async function renderGodzinkiView(viewEl, routeId, ctx, moduleId) {
 
 // ─── export ───────────────────────────────────────────────────────────────────
 
-export function createGodzinkiModule({ id, type, label, defaultRoute, order, enabled, access }) {
+export function createGodzinkiModule({ id, type, label, order, enabled, access }) {
   return {
     id,
     type,

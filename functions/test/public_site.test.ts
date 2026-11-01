@@ -92,10 +92,21 @@ describe("publicSite", () => {
     }
   });
 
+  it("finanse: konto, składka semestralna i semestry z SETUP; cennik basenu z vars_basen", async () => {
+    const db = seed() as any;
+    await db.collection("setup").doc("vars_members").set({vars: {"konto_klubowe": {value: "19 1870 1045"}, "bank_klubowy": {value: "Nest Bank"},
+      "składka": {value: 75}, "semestr_1 start": {value: "09-01"}, "semestr_2_start": {value: "03-01"}}});
+    await db.collection("setup").doc("vars_basen").set({vars: {basen_cena_za_godzine: {value: 35}, basen_cena_karnet_5: {value: "140"}}});
+    const {body} = await run(db);
+    expect(body.finanse).toEqual({konto: "1918701045", bank: "Nest Bank", skladkaSemestr: 75, semestry: ["09-01", "03-01"]});
+    expect(body.basenCennik).toEqual({godzina: 35, karnet5: 140, karnet10: null});
+  });
+
   it("adres + socjale z SETUP; link inny niż http(s) odrzucony", async () => {
     const {body} = await run(seed());
     expect(body.adres).toBe("Do Studzienki 34A");
-    expect(body.social).toEqual({facebook: "https://facebook.com/morzkulc"});
+    expect(body.social).toEqual({facebook: "https://facebook.com/morzkulc", discord: "https://discord.gg/PNK4dQPm2E"});
+    expect(body.film).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/.+Morzkulc_d%C5%82ugi\.mp4/);
   });
 
   it("CORS: ACAO * niezależnie od originu (odporne na cache CDN); odpowiedź cache'owalna", async () => {
@@ -156,5 +167,67 @@ describe("kurs_public parsery", () => {
     expect(parseHarmonogram("2027-04-06 | impreza | X")).toBeNull();
     expect(parseHarmonogram("2027-04-06/zle | wyjazd | X")).toBeNull();
     expect(parseHarmonogram("2027-04-06 | wyjazd | ")).toBeNull();
+  });
+});
+
+describe("publicSite — dane na żywo dla strony klubu", () => {
+  function liveSeed(basenMode: string, basenRoles: string[] = ["rola_czlonek"], basenEnabled = true) {
+    const db = seed() as any;
+    const add = (col: string, docs: any[]) => docs.forEach((d) => db.collection(col).doc(d._docId).set(d));
+    add("users_active", [
+      {_docId: "c1", role_key: "rola_czlonek", status_key: "status_aktywny"},
+      {_docId: "c2", role_key: "rola_kandydat", status_key: "status_aktywny"},
+      {_docId: "c3", role_key: "rola_czlonek", status_key: "status_zawieszony"},
+      {_docId: "s1", role_key: "rola_sympatyk", status_key: "status_aktywny"},
+    ]);
+    add("gear_kayaks", [
+      {_docId: "k1", type: "river runner / creek", isActive: true},
+      {_docId: "k2", type: "zwałki / niziny", isActive: true},
+      {_docId: "k3", type: "morski", isActive: true},
+      {_docId: "k4", type: "playboat", isPrivate: true},
+      {_docId: "k5", type: "kanada", gearScrapped: true},
+    ]);
+    add("blachy", [
+      {_docId: "b1", imie: "Jan", nazwisko: "Nowak", ksywa: "Nowy", rok: 1990, nr: 1, email: "jan@gmail.com", uzasadnienie: "tajne uzasadnienie", zrodlo: "archiwum_2025", poz: 1},
+    ]);
+    add("setup", [{_docId: "app", modules: {modul_6: {enabled: basenEnabled, access: {mode: basenMode, rolesAllowed: basenRoles}}}}]);
+    add("basen_sessions", [
+      {_docId: "2099-01-02", date: "2099-01-02", slots: {H1: {status: "open"}}},
+      {_docId: "2099-01-05", date: "2099-01-05", slots: {H1: {status: "cancelled"}}},
+      {_docId: "2000-01-01", date: "2000-01-01", slots: {H1: {status: "open"}}},
+    ]);
+    add("km_map_cache", [{_docId: "v1", locations: [
+      {placeName: "Wda", logCount: 5, yearsActive: [2020, 2024], topUsers: [{name: "X"}]},
+      {placeName: "Radunia", logCount: 9, yearsActive: [2010, 2025]},
+    ]}]);
+    return db;
+  }
+
+  it("stats: aktywni członkowie z kandydatami, kajaki klubowe według typu (bez prywatnych i złomowanych)", async () => {
+    const {body} = await run(liveSeed("prod"));
+    expect(body.stats.czlonkowie).toBe(2);
+    expect(body.stats.kajaki).toEqual({gorskie: 1, freestyle: 0, nizinne: 1, morskie: 1, kanadyjki: 0, razem: 3});
+  });
+
+  it("blachy: rejestr bez e-maili i uzasadnień", async () => {
+    const {body} = await run(liveSeed("prod"));
+    expect(body.blachy).toEqual([{imie: "Jan", ksywa: "Nowy", nazwisko: "Nowak", rok: 1990, nr: 1, honorowa: false, sp: false, klub: "", okazja: "", miejsce: ""}]);
+    const raw = JSON.stringify(body);
+    expect(raw).not.toContain("jan@gmail.com");
+    expect(raw).not.toContain("tajne");
+  });
+
+  it("basen: terminy (bez odwołanych i minionych), gdy członek widzi moduł w aplikacji (reguła canSeeModule)", async () => {
+    expect((await run(liveSeed("prod"))).body.basen).toEqual({ruszyl: true, terminy: ["2099-01-02"]});
+    expect((await run(liveSeed("test"))).body.basen.ruszyl).toBe(true);
+    expect((await run(liveSeed("test", ["rola_czlonek"], false))).body.basen.ruszyl).toBe(true);
+    expect((await run(liveSeed("test", ["rola_zarzad"]))).body.basen).toEqual({ruszyl: false, terminy: []});
+    expect((await run(liveSeed("off"))).body.basen.ruszyl).toBe(false);
+    expect((await run(liveSeed("prod", ["rola_czlonek"], false))).body.basen.ruszyl).toBe(false);
+  });
+
+  it("miejsca: akweny według liczby wpisów, bez osób", async () => {
+    const {body} = await run(liveSeed("prod"));
+    expect(body.miejsca).toEqual([{nazwa: "Radunia", od: 2010, do: 2025}, {nazwa: "Wda", od: 2020, do: 2024}]);
   });
 });

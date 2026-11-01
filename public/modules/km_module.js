@@ -119,14 +119,6 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = String(iso).slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return esc(iso);
-  const [y, m, day] = d.split("-");
-  return `${day}.${m}.${y}`;
-}
-
 function fmtNum(n, decimals = 1) {
   const v = parseFloat(n) || 0;
   return v % 1 === 0 ? String(v) : parseFloat(v.toFixed(decimals)).toString();
@@ -386,7 +378,6 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
   let suggestionsList = null;
   let dict = null;
   loadPlacesDict(ctx).then((d) => { dict = d; }).catch(() => { /* fallback: zapytania do backendu */ });
-  let selectedPlaceId = null;
 
   function closeSuggestions() {
     if (suggestionsList) {
@@ -409,7 +400,6 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
       li.addEventListener("mousedown", (e) => {
         e.preventDefault(); // Zapobiega blur przed kliknięciem
         input.value = p.name;
-        selectedPlaceId = p.placeId;
         hiddenPlaceId.value = p.placeId;
         if (hiddenLat) hiddenLat.value = p.lat != null ? p.lat : "";
         if (hiddenLng) hiddenLng.value = p.lng != null ? p.lng : "";
@@ -426,7 +416,6 @@ function attachPlacesAutocomplete(input, hiddenPlaceId, ctx, hiddenLat, hiddenLn
   }
 
   input.addEventListener("input", () => {
-    selectedPlaceId = null;
     hiddenPlaceId.value = "";
     if (hiddenLat) hiddenLat.value = "";
     if (hiddenLng) hiddenLng.value = "";

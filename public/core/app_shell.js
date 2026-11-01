@@ -3,7 +3,6 @@ import {
   authLoginPopup,
   authLogout,
   authGetIdToken,
-  authGetBasicUser,
   authHandleRedirectResult
 } from "/core/firebase_client.js";
 import { apiPostJson, apiGetJson, setApiTokenGetter } from "/core/api_client.js";
