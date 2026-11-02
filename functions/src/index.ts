@@ -75,6 +75,8 @@ import {handleAdminBlachy} from "./api/adminBlachyHandler";
 import {handleBlachyApi} from "./api/blachyApiHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
+import {handleDues} from "./api/duesHandler";
+import {handleAdminDues} from "./api/adminDuesHandler";
 import {handleTestAccountRole} from "./api/testAccountRoleHandler";
 import {handleEventInterestToggle} from "./api/eventInterestToggleHandler";
 import {handleGetEventInterests} from "./api/getEventInterestsHandler";
@@ -1010,6 +1012,12 @@ export const appsScriptSync = onRequest({invoker: "private"}, async (req, res) =
     // Synchronicznie — żeby zwrócić użytkownikowi realne podsumowanie wyniku.
     const result = await (await loadRunTaskById())(taskId, payload, {dryRun: false});
 
+    // Zmiana wymagająca decyzji osoby uruchamiającej sync (np. cofnięcie składek) — arkusz pyta i ponawia z potwierdzeniem.
+    if (!result.ok && (result.details as any)?.needsConfirmation) {
+      // `error` — czytelny komunikat także dla starszej wersji skryptu, która nie umie zapytać o potwierdzenie.
+      res.status(409).json({ok: false, needsConfirmation: true, message: result.message, error: result.message, confirm: (result.details as any).confirmDuesRollback || []});
+      return;
+    }
     if (!result.ok) {
       logger.warn("appsScriptSync: task failed", {taskId, who: who.email, message: result.message});
       res.status(422).json({ok: false, error: result.message || "Synchronizacja nie powiodła się"});
@@ -1734,6 +1742,17 @@ const notificationPrefsRoute = async (req: Request, res: Response) => {
 export const notificationPrefs = onRequest({invoker: "private"}, notificationPrefsRoute);
 
 /**
+ * GET/POST /api/dues (authenticated) — składki/wpisowe członka: stan, zgłoszenie wpłaty, anulowanie.
+ * GET/POST /api/admin/dues (zarząd/KR podgląd; akcje tylko skarbnik) — panel „Składki".
+ */
+const duesRoute = async (req: Request, res: Response) => {
+  return handleDues(req, res, {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken});
+};
+const adminDuesRoute = async (req: Request, res: Response) => {
+  return handleAdminDues(req, res, {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, adminRoleKeys});
+};
+
+/**
  * GET /api/events/interests (authenticated)
  */
 const getEventInterestsRoute = async (req: Request, res: Response) => {
@@ -1860,6 +1879,19 @@ export const usersIncompleteRegistrationDaily = onSchedule(
     logger.info("usersIncompleteRegistrationDaily: start");
     const result = await (await loadRunTaskById())("users.incompleteRegistration", {});
     logger.info("usersIncompleteRegistrationDaily: done", result as unknown as Record<string, unknown>);
+  }
+);
+
+/**
+ * SCHEDULER: składki — alert do skarbnika o zgłoszeniach czekających > N dni oraz przypomnienia
+ * dla osób, które same je włączyły w profilu (decyzja 02.11.2026: bez automatu dla wszystkich).
+ */
+export const duesDaily = onSchedule(
+  {schedule: "40 7 * * *", timeZone: "Europe/Warsaw", timeoutSeconds: 540},
+  async () => {
+    logger.info("duesDaily: start");
+    const result = await (await loadRunTaskById())("dues.daily", {});
+    logger.info("duesDaily: done", result as unknown as Record<string, unknown>);
   }
 );
 
@@ -2056,6 +2088,8 @@ const APP_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
   "/api/kurs/info": getKursInfoRoute,
   "/api/klub": getKlubInfoRoute,
   "/api/profile/notifications": notificationPrefsRoute,
+  "/api/dues": duesRoute,
+  "/api/admin/dues": adminDuesRoute,
   "/api/test/role": testAccountSetRoleRoute,
   ...BASEN_ROUTES,
   // Etapy 2–4 (01.11.2026): sprzęt, km, akcje godzinek/imprez/profilu, zarząd, strony publiczne.

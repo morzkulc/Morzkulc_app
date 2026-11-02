@@ -51,7 +51,7 @@ export function addDaysIso(iso: string, days: number): string {
 // ─── Sezon ───────────────────────────────────────────────────────────────────
 // Sezon basenowy = listopad–marzec; granica roku rozliczeniowego 1 lipca.
 
-export interface SeasonRange { key: string; start: string; end: string; karnetValidUntil: string }
+export interface SeasonRange { key: string; start: string; end: string }
 
 export function seasonOf(dateIso: string): SeasonRange {
   const year = Number(dateIso.slice(0, 4));
@@ -61,7 +61,6 @@ export function seasonOf(dateIso: string): SeasonRange {
     key: `${startYear}/${String((startYear + 1) % 100).padStart(2, "0")}`,
     start: `${startYear}-07-01`,
     end: `${startYear + 1}-06-30`,
-    karnetValidUntil: `${startYear + 1}-03-31`,
   };
 }
 

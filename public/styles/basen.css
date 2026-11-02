@@ -1025,6 +1025,11 @@ button.basenClaimTagBtn:disabled {
   font-size: 13px;
   margin: 4px 0;
 }
+.basenPendingTop { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--warn, #e0a030); border-radius: 12px; }
+.basenPendingRow { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--border); }
+.basenPendingRow:first-of-type { border-top: 0; }
+.basenPendingRow button { justify-self: start; }
+.basenShopPending { font-size: 13px; font-weight: 600; color: var(--text-muted); padding: 6px 0; }
 .basenClubAccount { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 12px; }
 .basenClubAccountRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0 4px; }
 .basenClubAccountNr { font-size: 17px; font-weight: 700; letter-spacing: .02em; font-variant-numeric: tabular-nums; word-break: break-word; }

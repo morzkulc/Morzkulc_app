@@ -2041,7 +2041,9 @@ function formatZl(n) {
 
 // Kafelki „Kup": pojedyncze godziny basenowe dla każdego; karnety tylko dla członka
 // klubu — nieaktywne (z powodem), gdy brak opłaconych składek albo dodatniego salda godzinek.
-function renderShopHtml(shop) {
+const PENDING_BUY_HTML = `<div class="basenShopPending">Czeka na potwierdzenie wpłaty</div>`;
+
+function renderShopHtml(shop, pendingProducts = new Set()) {
   const p = shop?.pricing || {};
   const karnet = shop?.karnet || {};
   const karnetTile = (product, n, price) => {
@@ -2054,7 +2056,7 @@ function renderShopHtml(shop) {
         <div class="basenShopPrice">${esc(formatZl(price))}</div>
         <div class="basenHint">${n} godzin basenowych · ${esc(formatZl(price / n))} za godzinę</div>
         ${cost ? `<div class="basenHint">dofinansowanie klubu: −${esc(cost)} godzinek</div>` : ""}
-        <button type="button" class="primary small" data-shop-buy="${product}" ${disabled ? "disabled" : ""}>Kup</button>
+        ${pendingProducts.has(product) ? PENDING_BUY_HTML : `<button type="button" class="primary small" data-shop-buy="${product}" ${disabled ? "disabled" : ""}>Kup</button>`}
       </div>`;
   };
   const someDisabled = karnet.byProduct ? !(karnet.byProduct.karnet5 && karnet.byProduct.karnet10) : !karnet.eligible;
@@ -2072,7 +2074,7 @@ function renderShopHtml(shop) {
           <label for="shopCount">Ile</label>
           <input type="number" id="shopCount" min="1" max="${esc(shop?.maxSingleCount || 20)}" step="1" value="1" />
         </div>
-        <button type="button" class="primary small" data-shop-buy="jednorazowe">Kup</button>
+        ${pendingProducts.has("jednorazowe") ? PENDING_BUY_HTML : `<button type="button" class="primary small" data-shop-buy="jednorazowe">Kup</button>`}
       </div>
       ${karnetTile("karnet5", 5, p.karnet5)}
       ${karnetTile("karnet10", 10, p.karnet10)}
@@ -2097,19 +2099,36 @@ function renderPaymentInfoHtml(shop, order) {
     </div>`;
 }
 
-function renderOrdersHtml(orders) {
+// Oczekujące zamówienia — na górze „Moje konto”, z danymi do przelewu (jedno na produkt).
+function renderPendingOrdersTopHtml(orders) {
+  const pending = orders.filter((o) => o.status === "pending");
+  if (!pending.length) return "";
+  return `
+    <div class="basenPendingTop">
+      <div class="basenAttendeesGroupTitle">Czeka na potwierdzenie wpłaty</div>
+      <div class="basenHint">Godziny basenowe pojawią się na koncie po potwierdzeniu wpłaty przez opiekuna basenu. Nie zamawiaj ponownie — poczekaj albo anuluj zamówienie.</div>
+      ${pending.map((o) => `
+        <div class="basenPendingRow">
+          <div><strong>${esc(o.label)}</strong> · ${esc(formatZl(o.amountPln))}</div>
+          <div>Tytuł przelewu: <strong>${esc(o.transferTitle)}</strong></div>
+          <button type="button" class="ghost small" data-order-cancel="${esc(o.id)}">Anuluj</button>
+        </div>`).join("")}
+    </div>`;
+}
+
+// Historia zamówień (rozpatrzone i anulowane); oczekujące są na górze ekranu.
+function renderOrdersHtml(allOrders) {
+  const orders = allOrders.filter((o) => o.status !== "pending");
   if (!orders.length) return "";
   const rows = orders.map((o) => `
     <div class="basenLedgerRow">
       <div class="basenLedgerMain">
         <div class="basenLedgerType">${esc(o.label)}</div>
         <div class="basenLedgerReason">${esc(ORDER_STATUS_LABELS[o.status] || o.status)}${o.status === "rejected" && o.rejectReason ? ` — ${esc(o.rejectReason)}` : ""}</div>
-        ${o.status === "pending" ? `<div class="basenHint">Tytuł przelewu: ${esc(o.transferTitle)}</div>` : ""}
         <div class="basenLedgerDate">${esc(formatGodzinyDate(o.createdAt))}</div>
       </div>
       <div class="basenShopOrderSide">
         <div>${esc(formatZl(o.amountPln))}</div>
-        ${o.status === "pending" ? `<button type="button" class="ghost small" data-order-cancel="${esc(o.id)}">Anuluj</button>` : ""}
       </div>
     </div>`).join("");
   return `
@@ -2177,11 +2196,12 @@ async function renderAccountTab(innerEl, ctx, notice = "") {
 
   innerEl.innerHTML = `
     ${renderClubAccountHtml(shop)}
+    ${renderPendingOrdersTopHtml(orders)}
     <div class="row" style="margin-top:12px;">
       <div class="basenAttendeesGroupTitle">Saldo godzin basenowych</div>
       <div class="${balance > 0 ? "basenGodzinyBalance" : "basenGodzinyBalanceZero"}" style="font-size:20px;">${balance} h</div>
     </div>
-    ${shop ? renderShopHtml(shop) : ""}
+    ${shop ? renderShopHtml(shop, new Set(orders.filter((o) => o.status === "pending").map((o) => o.product))) : ""}
     ${renderOrdersHtml(orders)}
     <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Historia (wyciąg)</div>
     <div class="basenLedgerList">${rowsHtml}</div>

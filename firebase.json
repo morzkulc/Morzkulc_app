@@ -160,6 +160,20 @@
         }
       },
       {
+        "source": "/api/dues",
+        "function": {
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/admin/dues",
+        "function": {
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/admin/reports/member-dues",
         "function": {
           "functionId": "appApi",

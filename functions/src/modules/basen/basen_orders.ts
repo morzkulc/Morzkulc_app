@@ -1,10 +1,10 @@
 import * as admin from "firebase-admin";
 import {BasenProduct} from "./basen_finance";
-import {BasenVars, ClientError, getBasenVars} from "./basen_service";
+import {BasenVars, ClientError, getBasenVars, karnetSeasonProblem, requireKarnetValidUntil} from "./basen_service";
 import {adminAddBasenGodzinyInTx, priceProduct, ProductPricing} from "./basen_godziny_service";
 import {computeEarnedBalance, deductHoursInTx, getAllRecords, GodzinkiRecord} from "../hours/godzinki_service";
 import {getGodzinkiVars} from "../hours/godzinki_vars";
-import {MEMBER_ROLE_KEYS, isDuesOrEntryFeePaid} from "../users/member_standing";
+import {MEMBER_ROLE_KEYS, isDuesPaid} from "../users/member_standing";
 
 /**
  * Zamówienia godzin basenowych (kolekcja basen_orders).
@@ -80,14 +80,16 @@ export async function getKarnetEligibility(
     return {member, eligible: false, byProduct: {karnet5: false, karnet10: false}, godzinkiCost, duesPaid: false, godzinkiBalance: 0,
       reasons: ["Karnety są dostępne tylko dla członków klubu."]};
   }
-  // Ważne wpisowe kandydata liczy się jak opłacona składka.
-  const duesPaid = isDuesOrEntryFeePaid(userData);
+  // Wpisowe kandydata (2 semestry) jest wpisane w „Składki”, więc liczy się jak opłacona składka.
+  const duesPaid = isDuesPaid(userData);
   const godzinkiBalance = computeEarnedBalance(await getAllRecords(db, uid));
   const reasons: string[] = [];
+  const seasonProblem = karnetSeasonProblem(vars.basen_koniec_sezonu);
+  if (seasonProblem) reasons.push(seasonProblem);
   if (!duesPaid) reasons.push("Brak opłaconej składki członkowskiej ani ważnego wpisowego.");
   const byProduct = {
-    karnet5: duesPaid && godzinkiBalance >= godzinkiCost.karnet5,
-    karnet10: duesPaid && godzinkiBalance >= godzinkiCost.karnet10,
+    karnet5: !seasonProblem && duesPaid && godzinkiBalance >= godzinkiCost.karnet5,
+    karnet10: !seasonProblem && duesPaid && godzinkiBalance >= godzinkiCost.karnet10,
   };
   if (godzinkiBalance < Math.max(godzinkiCost.karnet5, godzinkiCost.karnet10)) {
     reasons.push(`Karnet wymaga godzinek wypracowanych: karnet 5 — ${godzinkiCost.karnet5}, karnet 10 — ${godzinkiCost.karnet10} (masz ${godzinkiBalance}).`);
@@ -125,12 +127,13 @@ export async function adminAddKarnet(
   db: FirebaseFirestore.Firestore,
   args: {uid: string; product: KarnetProduct; reason: string; performedBy: string; vars: BasenVars}
 ): Promise<string> {
+  const karnetValidUntil = requireKarnetValidUntil(args.vars);
   const ledgerRef = db.collection("basen_godziny_ledger").doc();
   await db.runTransaction(async (tx) => {
     await chargeKarnetGodzinkiInTx(tx, db, {uid: args.uid, product: args.product, ledgerId: ledgerRef.id, vars: args.vars});
     adminAddBasenGodzinyInTx(tx, ledgerRef, {
       uid: args.uid, product: args.product, count: 0, reason: args.reason, performedBy: args.performedBy,
-      pricing: args.vars, karnetValidUntil: args.vars.basen_koniec_sezonu,
+      pricing: args.vars, karnetValidUntil,
     });
   });
   return ledgerRef.id;
@@ -188,6 +191,13 @@ export async function createOrder(
     updatedAt: now,
   };
   await db.runTransaction(async (tx) => {
+    // Jedno oczekujące zamówienie danego produktu na osobę (incydent 01.11.2026: 3× karnet 10 —
+    // ponowne kliknięcia przy braku potwierdzenia na telefonie).
+    const pending = await tx.get(db.collection(ORDERS).where("uid", "==", args.uid).where("status", "==", "pending"));
+    const same = pending.docs.map((d) => d.data() as BasenOrder).find((o) => o.product === input.product);
+    if (same) {
+      throw new ClientError(`Masz już zamówienie (${same.label}). Anuluj albo poczekaj na zatwierdzenie.`);
+    }
     tx.set(ref, order);
     queueJob(tx, db, "basen.notifyOrder", {orderId: ref.id, kind: "created"});
   });
@@ -214,8 +224,8 @@ export async function approveOrder(db: FirebaseFirestore.Firestore, args: {order
   const ref = db.collection(ORDERS).doc(args.orderId);
   const ledgerRef = db.collection("basen_godziny_ledger").doc();
   const vars = await getBasenVars(db);
-  const karnetValidUntil = vars.basen_koniec_sezonu;
   let uid = "";
+  let karnetValidUntil: string | undefined;
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const o = snap.data() as BasenOrder | undefined;
@@ -224,6 +234,7 @@ export async function approveOrder(db: FirebaseFirestore.Firestore, args: {order
     uid = o.uid;
     // Karnet = dofinansowanie: godzinki zdejmowane dopiero przy zatwierdzeniu wpłaty.
     if (o.product !== "jednorazowe") {
+      karnetValidUntil = requireKarnetValidUntil(vars);
       await chargeKarnetGodzinkiInTx(tx, db, {uid: o.uid, product: o.product, ledgerId: ledgerRef.id, vars});
     }
     const pricing: ProductPricing = {

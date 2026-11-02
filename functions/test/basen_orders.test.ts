@@ -9,7 +9,7 @@ import {
   listUserOrders, rejectOrder, validateOrderInput,
 } from "../src/modules/basen/basen_orders";
 import {computeBasenGodzinyBalance, getBasenGodzinyRecords} from "../src/modules/basen/basen_godziny_service";
-import {isDuesOrEntryFeePaid, isDuesPaid, isEntryFeeValid, parseContributionsPaidUntil} from "../src/modules/users/member_standing";
+import {isDuesPaid, parseContributionsPaidUntil, parseEntryFeeMonth} from "../src/modules/users/member_standing";
 
 const PRICING = {basen_cena_za_godzine: 35, basen_cena_karnet_5: 140, basen_cena_karnet_10: 245};
 
@@ -31,10 +31,11 @@ function seed() {
       user("ZERO", "rola_czlonek", "2099-12-31"),
       user("SYMP", "rola_sympatyk"),
       user("KAND", "rola_kandydat", "2099-12-31"),
-      // Kandydat z wygasłą składką, ale wpisowym wpłaconym w bieżącym miesiącu (ważne 12 mc).
+      // Kandydat: wpisowe wpłacone w bieżącym miesiącu, ale „Składki” wygasłe — wpisowe NIE liczy się osobno.
       {...user("KANDFEE", "rola_kandydat"), admin: {contributions: "2020-01-01", entryFeePaidAt: new Date().toISOString().slice(0, 7)}},
     ],
     godzinki_ledger: [earn("OK", 5), earn("NODUES", 5), earn("KAND", 5), earn("KANDFEE", 5)],
+    setup: [{_docId: "vars_basen", vars: {basen_koniec_sezonu: {value: "2099-04-15"}}}],
   });
   return {fake, db: fake.asDb()};
 }
@@ -61,18 +62,18 @@ describe("składki i reguła karnetu", () => {
     expect(await getKarnetEligibility(db, "OK", await userData(db, "OK"))).toMatchObject({member: true, eligible: true, reasons: []});
   });
 
-  it("wpisowe ważne 12 mc (do końca miesiąca rok później) liczy się jak składka", () => {
-    expect(isEntryFeeValid({admin: {entryFeePaidAt: "2026-06"}}, "2027-06-30")).toBe(true);
-    expect(isEntryFeeValid({admin: {entryFeePaidAt: "2026-06"}}, "2027-07-01")).toBe(false);
-    expect(isEntryFeeValid({admin: {}}, "2026-11-01")).toBe(false);
-    const wlodek = {admin: {contributions: "2026-09-30", entryFeePaidAt: "2026-06"}};
-    expect(isDuesPaid(wlodek, "2026-11-01")).toBe(false);
-    expect(isDuesOrEntryFeePaid(wlodek, "2026-11-01")).toBe(true);
+  it("wpisowe: miesiąc wpłaty MM.RRRR; ważność tylko z „Składki” (wpisowe = 2 semestry wpisane tam)", () => {
+    expect(parseEntryFeeMonth("08.2026")).toBe("2026-08");
+    expect(parseEntryFeeMonth("6.2026")).toBe("2026-06");
+    expect(parseEntryFeeMonth("2026-06")).toBe("2026-06");
+    for (const v of ["2026", "13.2026", "01.08.2026", ""]) expect(parseEntryFeeMonth(v)).toBe("");
+    expect(isDuesPaid({admin: {contributions: "2027-02-28", entryFeePaidAt: "2026-06"}}, "2026-11-01")).toBe(true);
+    expect(isDuesPaid({admin: {contributions: "2026-09-30", entryFeePaidAt: "2026-06"}}, "2026-11-01")).toBe(false);
   });
 
-  it("kandydat z ważnym wpisowym (składka wygasła) i dodatnim saldem → karnet dostępny", async () => {
+  it("kandydat z wpisowym, ale wygasłymi „Składki” → karnet niedostępny (jedna zasada z profilem)", async () => {
     const {db} = seed();
-    expect(await getKarnetEligibility(db, "KANDFEE", await userData(db, "KANDFEE"))).toMatchObject({member: true, eligible: true, duesPaid: true, reasons: []});
+    expect(await getKarnetEligibility(db, "KANDFEE", await userData(db, "KANDFEE"))).toMatchObject({member: true, eligible: false, duesPaid: false});
   });
 
   it("kandydat ze składkami i dodatnim saldem godzinek → karnet dostępny", async () => {
@@ -122,7 +123,7 @@ describe("zamówienia godzin basenowych", () => {
     const recs = await getBasenGodzinyRecords(db, "OK");
     expect(computeBasenGodzinyBalance(recs)).toBe(5);
     expect(recs[0]).toMatchObject({type: "admin_add", product: "karnet5", amount: 5, amountPln: 140, unitPricePln: 28, orderId: o.id, performedBy: "ADMIN"});
-    expect(recs[0].validUntil).toMatch(/-03-31$/); // brak basen_koniec_sezonu w SETUP → 31.03
+    expect(recs[0].validUntil).toBe("2099-04-15");
     await expect(approveOrder(db, {orderId: o.id, performedBy: "ADMIN"})).rejects.toThrow(/rozpatrzone/);
     expect(await listPendingOrders(db)).toEqual([]);
   });
@@ -134,6 +135,19 @@ describe("zamówienia godzin basenowych", () => {
     await approveOrder(db, {orderId: o.id, performedBy: "ADMIN"});
     expect((await getBasenGodzinyRecords(db, "OK"))[0].validUntil).toBe("2027-04-15");
     expect(fake.dump("basen_orders")[0]).toMatchObject({status: "approved"});
+  });
+
+  it("karnet bez końca sezonu w SETUP albo po jego upływie → niedostępny; zatwierdzenie odmawia", async () => {
+    const {db} = seed();
+    const o = await order(db, "OK", "karnet5");
+    await db.collection("setup").doc("vars_basen").set({vars: {}});
+    await expect(approveOrder(db, {orderId: o.id, performedBy: "ADMIN"})).rejects.toThrow(/basen_koniec_sezonu/);
+    await expect(order(db, "OK", "karnet10")).rejects.toThrow(/basen_koniec_sezonu/);
+    await db.collection("setup").doc("vars_basen").set({vars: {basen_koniec_sezonu: {value: "2020-03-31"}}});
+    const el = await getKarnetEligibility(db, "OK", await userData(db, "OK"));
+    expect(el.eligible).toBe(false);
+    expect(el.reasons.join(" ")).toMatch(/zakończył się 2020-03-31/);
+    expect((await order(db, "OK", "jednorazowe", 1)).status).toBe("pending"); // pojedyncze godziny bez zmian
   });
 
   it("odrzucenie wymaga powodu, kolejkuje mail; potem nie da się zatwierdzić", async () => {
@@ -153,5 +167,15 @@ describe("zamówienia godzin basenowych", () => {
     await cancelOwnOrder(db, {uid: "OK", orderId: o.id});
     await expect(cancelOwnOrder(db, {uid: "OK", orderId: o.id})).rejects.toThrow(/niezatwierdzone/);
     await expect(approveOrder(db, {orderId: o.id, performedBy: "ADMIN"})).rejects.toThrow(/rozpatrzone/);
+  });
+
+  it("drugie zamówienie tego samego produktu, gdy pierwsze czeka → krótki komunikat; inny produkt i po anulowaniu → można", async () => {
+    const {db} = seed();
+    const first = await order(db, "OK", "karnet10");
+    await expect(order(db, "OK", "karnet10")).rejects.toThrow(`Masz już zamówienie (${first.label}). Anuluj albo poczekaj na zatwierdzenie.`);
+    const single = await order(db, "OK", "jednorazowe", 1);
+    expect(single.status).toBe("pending");
+    await cancelOwnOrder(db, {uid: "OK", orderId: first.id});
+    expect((await order(db, "OK", "karnet10")).status).toBe("pending");
   });
 });

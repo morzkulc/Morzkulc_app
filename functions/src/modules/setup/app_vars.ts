@@ -20,6 +20,16 @@ export type AppVars = {
   /** Konto klubowe do przelewów (setup/vars_members.konto_klubowe / bank_klubowy) */
   clubAccount: string;
   clubBank: string;
+  /** Końce semestrów „mm-dd” (setup/vars_members.semestr_1_stop / semestr_2_stop) — jedyne dopuszczalne daty „Składki”. */
+  semesterEnds: string[];
+  /** Składka za semestr w zł (setup/vars_members.składka); 0 = brak w SETUP. Wpisowe = 2 × składka. */
+  duesFeePln: number;
+  /** Zaległość (w semestrach) powyżej której wpłata tylko po kontakcie z Zarządem (skladki_max_zaleglosc_semestrow). */
+  duesMaxOverdueSemesters: number;
+  /** Po ilu dniach niezatwierdzonego zgłoszenia mail do skarbnika (skladki_dni_alert_skarbnik). */
+  duesTreasurerAlertDays: number;
+  /** Ile dni przed końcem opłaconego okresu przypomnienie dla chętnych (skladki_dni_przypomnienia). */
+  duesReminderDays: number;
 };
 
 function getVar(doc: AppVarsDoc | null, key: string): any {
@@ -51,6 +61,13 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
       .filter(Boolean),
     clubAccount: toStr(getVar(raw, "konto_klubowe"), ""),
     clubBank: toStr(getVar(raw, "bank_klubowy"), ""),
+    semesterEnds: ["semestr_1_stop", "semestr_2_stop"]
+      .map((k) => String(getVar(raw, k) ?? "").trim())
+      .filter((v) => /^\d{2}-\d{2}$/.test(v)),
+    duesFeePln: toNumber(getVar(raw, "składka"), 0),
+    duesMaxOverdueSemesters: toNumber(getVar(raw, "skladki_max_zaleglosc_semestrow"), 8),
+    duesTreasurerAlertDays: toNumber(getVar(raw, "skladki_dni_alert_skarbnik"), 3),
+    duesReminderDays: toNumber(getVar(raw, "skladki_dni_przypomnienia"), 14),
   };
 }
 

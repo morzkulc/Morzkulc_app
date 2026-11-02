@@ -217,15 +217,30 @@ export async function getBasenVars(db: FirebaseFirestore.Firestore): Promise<Bas
 
 /**
  * Koniec sezonu basenowego z SETUP (RRRR-MM-DD albo DD.MM.RRRR) — nie jest sztywny
- * (koniec marca, czasem połowa kwietnia). Brak/niepoprawna wartość → 31.03 bieżącego sezonu.
+ * (koniec marca, czasem połowa kwietnia). Brak/niepoprawna wartość → "" — bez domyślnej daty
+ * w kodzie (decyzja 02.11.2026); karnetu nie da się wtedy kupić ani dopisać (requireKarnetValidUntil).
  */
-export function parseSeasonEnd(raw: any, todayIso: string = warsawTodayIso()): string {
+export function parseSeasonEnd(raw: any): string {
   const s = String(raw ?? "").trim();
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
   m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  return seasonOf(todayIso).karnetValidUntil;
+  return "";
+}
+
+/** Powód, dla którego karnetu nie można teraz sprzedać (brak / miniony basen_koniec_sezonu), albo "". */
+export function karnetSeasonProblem(seasonEnd: string, todayIso: string = warsawTodayIso()): string {
+  if (!seasonEnd) return "Brak końca sezonu basenowego w SETUP (basen_koniec_sezonu) — karnety niedostępne.";
+  if (seasonEnd < todayIso) return `Sezon basenowy zakończył się ${seasonEnd} — karnety niedostępne do czasu ustawienia nowego końca sezonu w SETUP.`;
+  return "";
+}
+
+/** Koniec ważności karnetu z SETUP; rzuca ClientError, gdy brak albo minął. */
+export function requireKarnetValidUntil(vars: Pick<BasenVars, "basen_koniec_sezonu">, todayIso: string = warsawTodayIso()): string {
+  const problem = karnetSeasonProblem(vars.basen_koniec_sezonu, todayIso);
+  if (problem) throw new ClientError(problem);
+  return vars.basen_koniec_sezonu;
 }
 
 // Wartość liczbowa zmiennej albo domyślna (brak wiersza / pusta komórka / nie-liczba).

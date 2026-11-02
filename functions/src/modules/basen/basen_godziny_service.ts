@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import {BasenProduct, seasonOf, warsawTodayIso} from "./basen_finance";
+import {BasenProduct} from "./basen_finance";
 
 /**
  * Saldo godzin basenowych — osobna "waluta" od klubowych godzinek
@@ -74,7 +74,7 @@ export function priceProduct(product: BasenProduct, count: number, v: ProductPri
 
 type AdminAddArgs = {
   uid: string; product: BasenProduct; count: number; reason: string; performedBy: string; pricing: ProductPricing; orderId?: string;
-  /** Koniec ważności karnetu (basen_koniec_sezonu z SETUP); brak → 31.03 bieżącego sezonu. */
+  /** Koniec ważności karnetu (basen_koniec_sezonu z SETUP) — wymagany dla karnetu, bez domyślnej daty w kodzie. */
   karnetValidUntil?: string;
 };
 
@@ -82,6 +82,9 @@ function adminAddRecord(id: string, args: AdminAddArgs): Record<string, unknown>
   const priced = priceProduct(args.product, args.count, args.pricing);
   if (!priced.entries || priced.entries <= 0) {
     throw new Error("Liczba godzin basenowych musi być większa od 0.");
+  }
+  if (args.product !== "jednorazowe" && !args.karnetValidUntil) {
+    throw new Error("Karnet wymaga końca ważności (basen_koniec_sezonu w SETUP).");
   }
   const now = admin.firestore.FieldValue.serverTimestamp();
   return {
@@ -92,7 +95,7 @@ function adminAddRecord(id: string, args: AdminAddArgs): Record<string, unknown>
     product: args.product,
     unitPricePln: priced.unitPricePln,
     amountPln: priced.amountPln,
-    ...(args.product !== "jednorazowe" ? {validUntil: args.karnetValidUntil || seasonOf(warsawTodayIso()).karnetValidUntil} : {}),
+    ...(args.product !== "jednorazowe" ? {validUntil: args.karnetValidUntil} : {}),
     ...(args.orderId ? {orderId: args.orderId} : {}),
     reason: args.reason ? `${priced.label} — ${args.reason}` : priced.label,
     performedBy: args.performedBy,

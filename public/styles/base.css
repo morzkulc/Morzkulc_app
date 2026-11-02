@@ -660,6 +660,13 @@ textarea {
 .reportDetailTitle { margin: 0; font-size: 16px; }
 .duesOk { color: var(--ok); font-weight: 700; }
 .duesBad { color: var(--danger); font-weight: 700; }
+.duesState { margin: 4px 0 8px; }
+.duesTransfer { display: grid; gap: 6px; margin: 8px 0; text-align: left; overflow-wrap: anywhere; }
+.duesCopy { margin-left: 6px; padding: 2px 8px; font-size: 0.85em; }
+.duesForm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.duesActions { white-space: nowrap; }
+.duesActions button { margin: 2px; }
+.duesSeparator { margin: 20px 0 12px; border: 0; border-top: 2px solid var(--border, #ccc); }
 .reportPdfBtn { margin-left: auto; }
 
 /* Nagłówek widoczny tylko na wydruku/PDF (ekran: ukryty). */

@@ -19,7 +19,6 @@ import {
   parseSeasonEnd,
   BasenSlot,
 } from "../src/modules/basen/basen_service";
-import {seasonOf, warsawTodayIso} from "../src/modules/basen/basen_finance";
 import {computeBasenGodzinyBalance, BasenGodzinyRecord} from "../src/modules/basen/basen_godziny_service";
 
 function slot(o: Partial<BasenSlot> = {}): BasenSlot {
@@ -129,19 +128,19 @@ describe("getBasenVars — setup/vars_basen", () => {
       basen_max_strata_terminu: 105,
       basen_budzet_sezonu: 2000,
       basen_max_dni_naprzod: 4,
-      basen_koniec_sezonu: seasonOf(warsawTodayIso()).karnetValidUntil,
+      basen_koniec_sezonu: "",
       basen_karnet_5_godzinki: 3,
       basen_karnet_10_godzinki: 5,
       basen_instruktor_godzinki: 1,
     });
   });
 
-  it("basen_koniec_sezonu: RRRR-MM-DD albo DD.MM.RRRR; brak/śmieci → 31.03 sezonu", () => {
+  it("basen_koniec_sezonu: RRRR-MM-DD albo DD.MM.RRRR; brak/śmieci → \"\" (bez domyślnej daty w kodzie)", () => {
     expect(parseSeasonEnd("2027-04-15")).toBe("2027-04-15");
     expect(parseSeasonEnd("15.04.2027")).toBe("2027-04-15");
     expect(parseSeasonEnd("5.4.2027")).toBe("2027-04-05");
-    expect(parseSeasonEnd("", "2026-10-29")).toBe("2027-03-31");
-    expect(parseSeasonEnd("kwiecień", "2026-10-29")).toBe("2027-03-31");
+    expect(parseSeasonEnd("")).toBe("");
+    expect(parseSeasonEnd("kwiecień")).toBe("");
   });
 
   it("czyta klucze arkusza z polskimi znakami i historyczną nazwą okna anulowania; maile rozdziela i normalizuje", async () => {

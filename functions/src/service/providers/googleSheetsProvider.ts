@@ -241,7 +241,8 @@ export class GoogleSheetsProvider {
   async writeRowCells(
     cfg: SheetTableConfig,
     rowNumber1based: number,
-    patch: Record<string, string>
+    patch: Record<string, string>,
+    valueInputOption: "RAW" | "USER_ENTERED" = "RAW"
   ): Promise<void> {
     const spreadsheetId = normalizeStr(cfg.spreadsheetId);
     const tabName = normalizeStr(cfg.tabName);
@@ -263,7 +264,7 @@ export class GoogleSheetsProvider {
     const sheets = await this.getSheetsClient();
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
-      requestBody: {valueInputOption: "RAW", data},
+      requestBody: {valueInputOption, data},
     });
   }
 

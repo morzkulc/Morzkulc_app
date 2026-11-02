@@ -17,15 +17,57 @@ export function canSeeMemberContacts(roleKey: string): boolean {
   return CONTACT_VISIBLE_ROLE_KEYS.includes(String(roleKey || ""));
 }
 
-/** Parsuje „składki opłacone do" (YYYY-MM-DD | DD-MM-YYYY | DD.MM.YYYY) → Date (UTC) lub null. */
-export function parseContributionsPaidUntil(raw: any): Date | null {
+/**
+ * „Składki opłacone do" (YYYY-MM-DD | DD-MM-YYYY | DD.MM.YYYY) → "YYYY-MM-DD" lub "".
+ * Nieistniejąca data (np. 2027-02-29) → "" — Date.UTC po cichu przesunęłaby ją na 01.03.
+ */
+export function contributionsIso(raw: any): string {
   const s = normNullish(raw);
-  if (!s) return null;
+  if (!s) return "";
+  let y: number; let mo: number; let d: number;
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-  m = s.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
-  if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
-  return null;
+  if (m) {
+    [y, mo, d] = [+m[1], +m[2], +m[3]];
+  } else {
+    m = s.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
+    if (!m) return "";
+    [y, mo, d] = [+m[3], +m[2], +m[1]];
+  }
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return "";
+  return dt.toISOString().slice(0, 10);
+}
+
+function isLeapYear(y: number): boolean {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
+/**
+ * „Opłacone do" w praktyce: jak contributionsIso, ale 28.02 w roku przestępnym = 29.02
+ * (koniec semestru to ostatni dzień lutego; w arkuszu wpisuje się 28 — decyzja 02.11.2026).
+ */
+export function effectivePaidUntilIso(raw: any): string {
+  const iso = contributionsIso(raw);
+  if (iso.slice(5) === "02-28" && isLeapYear(Number(iso.slice(0, 4)))) return `${iso.slice(0, 4)}-02-29`;
+  return iso;
+}
+
+/** Parsuje „składki opłacone do" → Date (UTC) lub null (także dla nieistniejącej daty). */
+export function parseContributionsPaidUntil(raw: any): Date | null {
+  const iso = effectivePaidUntilIso(raw);
+  return iso ? new Date(iso + "T00:00:00.000Z") : null;
+}
+
+/**
+ * Data „opłacone do" musi być końcem semestru z SETUP (semestr_1_stop / semestr_2_stop, „mm-dd”).
+ * „02-28” w SETUP dopuszcza też 29.02 w roku przestępnym. False dla daty nieczytelnej/nieistniejącej
+ * albo przy braku końców semestrów.
+ */
+export function isSemesterEndDate(raw: any, semesterEnds: string[]): boolean {
+  const iso = contributionsIso(raw);
+  if (!iso) return false;
+  const mmdd = iso.slice(5);
+  return semesterEnds.includes(mmdd) || (mmdd === "02-29" && semesterEnds.includes("02-28"));
 }
 
 /** Surowa wartość „składki opłacone do" z dokumentu users_active. */
@@ -40,23 +82,24 @@ export function isDuesPaid(userData: any, todayIso: string = todayWarsawIso()): 
 }
 
 /**
- * Wpisowe ważne: 12 miesięcy od wpłaty, do końca tego samego miesiąca rok później
- * (admin.entryFeePaidAt „YYYY-MM”; „2026-06” → ważne do czerwca 2027 — jak „Wpisowe ważne do” w profilu).
+ * Miesiąc wpłaty wpisowego z kolumny „Wpisowe (mm.yyyy)” → "YYYY-MM" lub "" (decyzja 02.11.2026).
+ * Przyjmuje „MM.RRRR” / „M.RRRR” i „RRRR-MM”. Ważność wpisowego nie wynika z tej daty — wpisowe
+ * (2 semestry) jest wpisane w kolumnie „Składki”, tak jak składka.
  */
-export function isEntryFeeValid(userData: any, todayIso: string = todayWarsawIso()): boolean {
-  const m = /^(\d{4})-(\d{2})$/.exec(normNullish(userData?.admin?.entryFeePaidAt));
-  if (!m) return false;
-  const validUntil = `${Number(m[1]) + 1}-${m[2]}`;
-  return todayIso.slice(0, 7) <= validUntil;
-}
-
-/**
- * Składka „opłacona” dla uprawnień członkowskich (karnet basenowy): opłacone składki
- * ALBO ważne wpisowe — wpisowe kandydata traktujemy jak składkę (decyzja 01.11.2026).
- * Raport składek / prawo głosu nadal liczy wyłącznie składki (isDuesPaid).
- */
-export function isDuesOrEntryFeePaid(userData: any, todayIso: string = todayWarsawIso()): boolean {
-  return isDuesPaid(userData, todayIso) || isEntryFeeValid(userData, todayIso);
+export function parseEntryFeeMonth(raw: any): string {
+  const s = normNullish(raw);
+  let m = s.match(/^(\d{1,2})\.(\d{4})$/);
+  let y = 0;
+  let mo = 0;
+  if (m) {
+    [mo, y] = [Number(m[1]), Number(m[2])];
+  } else {
+    m = s.match(/^(\d{4})-(\d{2})$/);
+    if (!m) return "";
+    [y, mo] = [Number(m[1]), Number(m[2])];
+  }
+  if (mo < 1 || mo > 12 || y < 1975) return "";
+  return `${y}-${String(mo).padStart(2, "0")}`;
 }
 
 /**

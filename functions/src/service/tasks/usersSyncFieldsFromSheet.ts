@@ -8,8 +8,8 @@ import {KURSANT_LIMITS, normalizeSheetHeader} from "../../modules/kurs/kurs_zglo
 import {BLACHY_COLLECTION, BlachaDoc, findInRegistry, parseBlacha} from "../../modules/blachy/blachy_registry";
 import {ARCHIWUM_DO_ROKU} from "../../modules/blachy/blachy_archiwum_2025";
 import {emailConflictMessage, findMemberEmailConflicts} from "../../modules/users/member_email_conflicts";
-import {MEMBER_ROLE_KEYS, parseContributionsPaidUntil} from "../../modules/users/member_standing";
-import {isTestAccount} from "../../modules/setup/app_vars";
+import {MEMBER_ROLE_KEYS, contributionsIso, isSemesterEndDate, parseContributionsPaidUntil, parseEntryFeeMonth} from "../../modules/users/member_standing";
+import {getAppVars, isTestAccount} from "../../modules/setup/app_vars";
 import {isProfileComplete} from "../../modules/users/profile_complete";
 
 /**
@@ -30,7 +30,32 @@ import {isProfileComplete} from "../../modules/users/profile_complete";
 type Payload = {
   dry?: boolean;
   requestedBy?: string;
+  /** Potwierdzone cofnięcia składek (tokeny z details.confirmDuesRollback poprzedniego wywołania). */
+  confirmDuesRollback?: string[];
 };
+
+export type DuesRollback = {memberId: string; name: string; from: string; to: string; token: string};
+
+/**
+ * Wiersze, w których data „Składki" cofa się względem bazy (wcześniejsza) albo znika (pusta),
+ * gdy w bazie jest wpis. Token = memberId|z|na — potwierdzenie dotyczy dokładnie tej zmiany.
+ */
+export function findDuesRollbacks(
+  rows: Array<{memberId: string; name: string; skladki: string}>,
+  accountsByMemberId: Map<string, any>
+): DuesRollback[] {
+  const out: DuesRollback[] = [];
+  for (const r of rows) {
+    if (!r.memberId) continue;
+    const u = accountsByMemberId.get(r.memberId);
+    const from = contributionsIso(u?.admin?.contributions);
+    if (!from) continue;
+    const to = contributionsIso(r.skladki);
+    if (to && to >= from) continue;
+    out.push({memberId: r.memberId, name: r.name, from, to, token: `${r.memberId}|${from}|${to}`});
+  }
+  return out;
+}
 
 const normalizeHeader = normalizeSheetHeader;
 
@@ -143,10 +168,12 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
 
     const required = [
       "id", "ksywa", "imie", "nazwisko", "telefon", "e_mail", "data_urodzenia",
-      "rok_szkoleniowki", "wpisowe_rok", "klucze_do_siedziby", "rola", "status",
+      "rok_szkoleniowki", "klucze_do_siedziby", "rola", "status",
       "blacha", "uwagi", "zgody_rodo", "skladki", "godzinki",
     ];
-    const missing = required.filter((h) => !(h in hmap));
+    // Kolumna wpisowego: „Wpisowe (mm.yyyy)” (od 02.11.2026; dawniej „wpisowe rok”) — po prefiksie nagłówka.
+    const feeKey = Object.keys(hmap).find((k) => k.startsWith("wpisowe")) || "";
+    const missing = [...required.filter((h) => !(h in hmap)), ...(feeKey ? [] : ["wpisowe_(mm.yyyy)"])];
     if (missing.length) {
       throw new Error(`Users sheet headers mismatch. Missing: ${JSON.stringify(missing)} Found: ${JSON.stringify(Object.keys(hmap))}`);
     }
@@ -278,6 +305,11 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
     // dla aplikacji, a każde konto członka musi mieć swój wiersz. Inaczej sync PRZERWANY, zero zapisów.
     {
       const issues: string[] = [];
+      // Data „Składki" musi być końcem semestru z SETUP (decyzja 02.11.2026) — inna wartość to błąd wpisu.
+      const {semesterEnds} = await getAppVars(firestore);
+      if (semesterEnds.length === 0) {
+        issues.push("SETUP (Vars_MEMBERS): brak semestr_1_stop / semestr_2_stop w formacie mm-dd — nie da się sprawdzić dat składek");
+      }
       const sheetEmailsWithId = new Set<string>();
       for (const row of table.rows) {
         const roleKey = mapRoleDisplayToKey(g(row, "rola"));
@@ -289,8 +321,14 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         }
         if (g(row, "e_mail")) sheetEmailsWithId.add(g(row, "e_mail").toLowerCase());
         const skladki = g(row, "skladki");
+        const wpisowe = g(row, feeKey);
+        if (wpisowe && !parseEntryFeeMonth(wpisowe)) {
+          issues.push(`#${memberIdRaw} ${name}: „Wpisowe" = „${wpisowe}" — wpisz miesiąc wpłaty jako MM.RRRR (np. 08.2026)`);
+        }
         if (skladki && !parseContributionsPaidUntil(skladki)) {
-          issues.push(`#${memberIdRaw} ${name}: „Składki" = „${skladki}" — wpisz datę jako RRRR-MM-DD albo DD.MM.RRRR`);
+          issues.push(`#${memberIdRaw} ${name}: „Składki" = „${skladki}" — wpisz istniejącą datę jako RRRR-MM-DD albo DD.MM.RRRR`);
+        } else if (skladki && semesterEnds.length && !isSemesterEndDate(skladki, semesterEnds)) {
+          issues.push(`#${memberIdRaw} ${name}: „Składki" = „${skladki}" — to nie jest koniec semestru z SETUP (${semesterEnds.join(" / ")})`);
         }
       }
       // Konta członków w aplikacji bez ID: łączymy je z wierszem po e-mailu (główna pętla) —
@@ -318,6 +356,47 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
           "Popraw wskazane wiersze i ponów synchronizację.";
         logger.error("usersSyncFieldsFromSheet: ABORT — ID/składki", {count: issues.length, issues});
         return {ok: false, message, details: {validationError: true, duesIssuesCount: issues.length, duesIssues: issues}};
+      }
+    }
+
+    // ── COFNIĘCIE SKŁADEK (decyzja 02.11.2026): data „Składki" wcześniejsza niż w bazie albo
+    // usunięta, gdy w bazie jest wpis — może być celowa, ale nie musi. Sync PRZERWANY bez zapisów,
+    // dopóki osoba uruchamiająca sync nie potwierdzi dokładnie tych zmian (confirmDuesRollback).
+    // Sync nocny nie potwierdza, więc czeka na decyzję człowieka.
+    {
+      const byMemberId = new Map<string, any>();
+      for (const d of (await firestore.collection("users_active").get()).docs) {
+        const u = d.data() as any;
+        if (u?.memberId != null) byMemberId.set(String(u.memberId), u);
+      }
+      const rollbacks = findDuesRollbacks(
+        table.rows.map((row) => ({
+          memberId: g(row, "id"),
+          name: g(row, "ksywa") || `${g(row, "imie")} ${g(row, "nazwisko")}`.trim() || g(row, "e_mail") || "(bez nazwy)",
+          skladki: g(row, "skladki"),
+        })),
+        byMemberId
+      );
+      const confirmed = new Set((Array.isArray(payload?.confirmDuesRollback) ? payload.confirmDuesRollback : []).map(String));
+      const unconfirmed = rollbacks.filter((r) => !confirmed.has(r.token));
+      if (unconfirmed.length) {
+        const MAX_LIST = 25;
+        const shown = rollbacks.slice(0, MAX_LIST).map((r) =>
+          `• #${r.memberId} ${r.name}: ${r.from} → ${r.to || "(puste)"}`).join("\n") +
+          (rollbacks.length > MAX_LIST ? `\n• …i ${rollbacks.length - MAX_LIST} więcej` : "");
+        const message =
+          "Uwaga — synchronizacja cofnie albo usunie datę opłaconych składek.\n" +
+          `Zmiany (${rollbacks.length}):\n${shown}\n` +
+          "Jeśli to celowe (np. korekta błędnego wpisu), potwierdź. Jeśli nie — popraw arkusz i ponów synchronizację.";
+        logger.warn("usersSyncFieldsFromSheet: STOP — cofnięcie składek wymaga potwierdzenia", {count: rollbacks.length, rollbacks});
+        return {
+          ok: false,
+          message,
+          details: {validationError: true, needsConfirmation: true, duesRollbacks: rollbacks, confirmDuesRollback: rollbacks.map((r) => r.token)},
+        };
+      }
+      if (rollbacks.length) {
+        logger.warn("usersSyncFieldsFromSheet: cofnięcie składek potwierdzone", {who, rollbacks});
       }
     }
 
@@ -479,7 +558,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         },
         admin: {
           schoolYear: g(row, "rok_szkoleniowki"),
-          entryFeeYear: g(row, "wpisowe_rok"),
+          entryFee: g(row, feeKey),
           hasClubKeys: normalizeBoolish(g(row, "klucze_do_siedziby")),
           notes: g(row, "uwagi"),
           contributions: g(row, "skladki"),
@@ -516,7 +595,7 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         ["profile.dateOfBirth", sheetUser.profile.dateOfBirth],
         ["profile.consentRodo", sheetUser.profile.consentRodo],
         ["admin.schoolYear", sheetUser.admin.schoolYear],
-        ["admin.entryFeeYear", sheetUser.admin.entryFeeYear],
+        ["admin.entryFee", sheetUser.admin.entryFee],
         ["admin.hasClubKeys", sheetUser.admin.hasClubKeys],
         ["admin.notes", sheetUser.admin.notes],
         ["admin.contributions", sheetUser.admin.contributions],
@@ -565,15 +644,11 @@ export const usersSyncFieldsFromSheetTask: ServiceTask<Payload> = {
         }
       }
 
-      // Data wpłaty wpisowego (rok+miesiąc) — z daty syncu, przy PIERWSZYM pojawieniu
-      // się wpisowego oraz przy ZMIANIE wartości kolumny (odnowienie po 12 mc).
-      // Niezmieniona wartość → nie ruszamy (istniejące konta uzupełnia jednorazowy backfill,
-      // żeby nie nadpisać daty wpłaty bieżącym miesiącem).
-      const incomingFee = normNullish(sheetUser.admin.entryFeeYear);
-      const existingFee = normNullish(getPath(data, "admin.entryFeeYear"));
-      if (incomingFee && existingFee !== incomingFee) {
-        patch["admin.entryFeePaidAt"] = now.slice(0, 7); // YYYY-MM
-      }
+      // Miesiąc wpłaty wpisowego wprost z kolumny „Wpisowe (mm.yyyy)” (walidacja wyżej) → "YYYY-MM".
+      const feeMonth = parseEntryFeeMonth(sheetUser.admin.entryFee);
+      if (!valuesEqual(feeMonth, getPath(data, "admin.entryFeePaidAt"))) patch["admin.entryFeePaidAt"] = feeMonth;
+      // Dawne pole (sam rok, do 02.11.2026) — zastąpione przez admin.entryFee.
+      if (getPath(data, "admin.entryFeeYear") !== undefined) patch["admin.entryFeeYear"] = admin.firestore.FieldValue.delete();
 
       // Wykryj zmianę roli/statusu (faktyczny sync robi users.syncRolesFromSheet)
       const roleChanged = roleKey !== normNullish(data?.role_key);

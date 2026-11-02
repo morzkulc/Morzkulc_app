@@ -42,7 +42,14 @@ export const FUNCTION_ROLES: Array<{key: string; label: string; mailbox: string}
   {key: "szkoleniowiec", label: "Szkoleniowiec", mailbox: "szkoleniowiec@morzkulc.pl"},
 ];
 
-export type ZarzadEntry = {funkcja: string; name: string; mailbox: string};
+/** Skrzynka funkcyjna (np. skarbnik@morzkulc.pl) — service_state/function_roles.<key>.mailbox albo domyślna. */
+export async function resolveFunctionRoleMailbox(db: FirebaseFirestore.Firestore, key: string): Promise<string> {
+  const snap = await db.collection("service_state").doc("function_roles").get();
+  const fromState = String((snap.exists ? (snap.data() as any) : null)?.[key]?.mailbox || "").trim();
+  return fromState || FUNCTION_ROLES.find((r) => r.key === key)?.mailbox || "";
+}
+
+export type ZarzadEntry ={funkcja: string; name: string; mailbox: string};
 
 /** Składa imię+nazwisko z profilu, z fallbackiem na ksywę/displayName. */
 export function fullNameFromUser(u: any, fallback: string): string {

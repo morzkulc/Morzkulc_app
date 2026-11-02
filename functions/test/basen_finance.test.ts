@@ -26,8 +26,8 @@ describe("czas warszawski i sezon", () => {
     expect(decision).toBe(warsawLocalMs("2026-11-09", "15:00"));
   });
 
-  it("sezon od 1 lipca; karnet ważny do 31 marca", () => {
-    expect(seasonOf("2026-11-10")).toEqual({key: "2026/27", start: "2026-07-01", end: "2027-06-30", karnetValidUntil: "2027-03-31"});
+  it("sezon od 1 lipca", () => {
+    expect(seasonOf("2026-11-10")).toEqual({key: "2026/27", start: "2026-07-01", end: "2027-06-30"});
     expect(seasonOf("2027-03-01").key).toBe("2026/27");
     expect(seasonOf("2027-07-01").key).toBe("2027/28");
   });

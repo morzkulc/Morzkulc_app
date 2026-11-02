@@ -47,6 +47,11 @@ function callBackendSync_(taskId, payload) {
   var parsed = null;
   try { parsed = JSON.parse(text); } catch (e) { parsed = null; }
 
+  // 409 + needsConfirmation: backend wstrzymał sync i czeka na decyzję (np. cofnięcie składek) — obsługuje runSync_.
+  if (code === 409 && parsed && parsed.needsConfirmation) {
+    return parsed;
+  }
+
   if (code < 200 || code >= 300) {
     if (code === 401 || code === 403) {
       throw new Error("Brak uprawnień — synchronizację mogą uruchamiać tylko osoby z zarządu lub KR.");
@@ -64,6 +69,18 @@ function runSync_(taskId) {
   var ui = SpreadsheetApp.getUi();
   try {
     var r = callBackendSync_(taskId, {});
+    if (r && r.needsConfirmation) {
+      var answer = ui.alert("⚠️ Wymagana decyzja", r.message + "\n\nWykonać te zmiany?", ui.ButtonSet.YES_NO);
+      if (answer !== ui.Button.YES) {
+        ui.alert("Synchronizacja anulowana — nic nie zostało zmienione.");
+        return;
+      }
+      r = callBackendSync_(taskId, { confirmDuesRollback: r.confirm || [] });
+      if (r && r.needsConfirmation) {
+        ui.alert("⚠️ Arkusz zmienił się w międzyczasie — nic nie zostało zmienione. Uruchom synchronizację ponownie.\n\n" + r.message);
+        return;
+      }
+    }
     ui.alert("✅ Gotowe!\n\n" + (r && r.summary ? r.summary : "Synchronizacja zakończona."));
   } catch (e) {
     ui.alert("❌ Nie udało się zsynchronizować.\n\n" + (e && e.message ? e.message : String(e)));

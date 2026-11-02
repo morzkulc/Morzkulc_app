@@ -553,7 +553,7 @@ function renderHomeProfile({ viewEl, ctx }) {
           <div class="startStatChip">
             ${dash.isKandydat ? `
             <span class="startStatChipKey">Wpisowe ważne do</span>
-            <span class="startStatChipVal" id="profileContribUntil">${escapeHtml(formatEntryFeeValidUntil(ctx?.session?.entryFeePaidAt) || "—")}</span>
+            <span class="startStatChipVal" id="profileContribUntil">${escapeHtml(formatContribDate(ctx?.session?.contributionsPaidUntil) || "—")}</span>
             ` : `
             <span class="startStatChipKey">Składki opłacone do</span>
             <span class="startStatChipVal" id="profileContribUntil">${escapeHtml(formatContribDate(ctx?.session?.contributionsPaidUntil) || "—")}</span>
@@ -597,6 +597,10 @@ function renderHomeProfile({ viewEl, ctx }) {
           <span class="startStatChipVal" id="profileKursantPesel">…</span>
         </div>
       </div>
+      ` : ""}
+
+      ${(!isKursant && !dash.isSympatyk) ? `
+      <div class="profileBlock" id="duesBox">${spinnerHtml("Ładowanie składek...")}</div>
       ` : ""}
 
       ${dash.isKandydat ? `
@@ -644,6 +648,12 @@ function renderHomeProfile({ viewEl, ctx }) {
           <input id="notifyEventsUpcomingInteresting" type="checkbox" />
           <label for="notifyEventsUpcomingInteresting">Zbliżająca się impreza, która mnie interesuje</label>
         </div>
+        ${(!isKursant && !dash.isSympatyk) ? `
+        <div class="checkRow">
+          <input id="notifyDuesReminder" type="checkbox" />
+          <label for="notifyDuesReminder" id="notifyDuesReminderLabel">Przypomnienie o kończącym się okresie opłaconych składek</label>
+        </div>
+        ` : ""}
         <p class="hint" id="notifyPrefsErr"></p>
       </div>
 
@@ -702,6 +712,10 @@ function renderHomeProfile({ viewEl, ctx }) {
 
   // Box „Klub" — leniwie ładowane ogólne informacje klubowe (widoczny dla wszystkich).
   wireKlubBox(viewEl, ctx);
+
+  // Składki / wpisowe — blok ładowany leniwie (moduł spoza precache).
+  const duesEl = viewEl.querySelector("#duesBox");
+  if (duesEl) import("/modules/dues_box.js").then((m) => m.renderDuesBox(duesEl, ctx)).catch(() => duesEl.classList.add("hidden"));
 
   // Powiadomienia e-mail — domyślnie wyłączone, użytkownik sam włącza w profilu.
   wireNotificationPrefs(viewEl, ctx);
@@ -852,6 +866,7 @@ function wireNotificationPrefs(viewEl, ctx) {
     eventsNew: viewEl.querySelector("#notifyEventsNew"),
     eventsUpcoming: viewEl.querySelector("#notifyEventsUpcoming"),
     eventsUpcomingInteresting: viewEl.querySelector("#notifyEventsUpcomingInteresting"),
+    duesReminder: viewEl.querySelector("#notifyDuesReminder"),
   };
   if (!checkboxes.eventsNew && !checkboxes.eventsUpcoming && !checkboxes.eventsUpcomingInteresting) return;
 
@@ -865,6 +880,10 @@ function wireNotificationPrefs(viewEl, ctx) {
       });
       if (introEl && Number.isFinite(data?.reminderDays)) {
         introEl.textContent = `Powiadomienia będą wysyłane na twój adres e-mail na ${data.reminderDays} dni przed wydarzeniem`;
+      }
+      const duesLabel = viewEl.querySelector("#notifyDuesReminderLabel");
+      if (duesLabel && Number.isFinite(data?.duesReminderDays)) {
+        duesLabel.textContent = `Przypomnienie o składkach — ${data.duesReminderDays} dni przed końcem opłaconego okresu (i gdy mam zaległość)`;
       }
     })
     .catch(() => setErr("Nie udało się wczytać ustawień powiadomień."));
@@ -1879,31 +1898,21 @@ function formatContribDate(raw) {
   const s = String(raw == null ? "" : raw).trim();
   if (!s) return "";
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+  if (m) {
+    // Koniec semestru = ostatni dzień lutego: 28.02 w roku przestępnym pokazujemy jako 29.02.
+    const y = Number(m[1]);
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    if (m[2] === "02" && m[3] === "28" && leap) return `29.02.${m[1]}`;
+    return `${m[3]}.${m[2]}.${m[1]}`;
+  }
   m = s.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
   if (m) return `${m[1]}.${m[2]}.${m[3]}`;
   return s;
 }
 
-const POLISH_MONTHS = [
-  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
-];
-
 // Kandydat ma w trakcie stażu wypracować tę liczbę godzinek (suma zarobionych,
 // niezależnie od bieżącego salda). Po jej osiągnięciu staż uznajemy za zaliczony.
 const KANDYDAT_STAZ_TARGET_HOURS = 20;
-
-// „Wpisowe ważne do" — wpisowe ważne 12 mc od wpłaty. Wejście: data wpłaty „YYYY-MM"
-// (admin.entryFeePaidAt). Zwraca np. „czerwiec 2027" (ten sam miesiąc, rok+1). Pusto/błąd → "".
-function formatEntryFeeValidUntil(paidAt) {
-  const s = String(paidAt == null ? "" : paidAt).trim();
-  const m = s.match(/^(\d{4})-(\d{2})$/);
-  if (!m) return "";
-  const monthIdx = Number(m[2]) - 1;
-  if (monthIdx < 0 || monthIdx > 11) return "";
-  return `${POLISH_MONTHS[monthIdx]} ${Number(m[1]) + 1}`;
-}
 
 function roleKeyToLabel(roleKey, roleMappings) {
   const k = String(roleKey || "").trim();

@@ -3,6 +3,7 @@ import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { setHash } from "/core/router.js";
 import { renderReportsPanel } from "/modules/raporty/reports_panel.js";
 import { renderKursZgloszeniaPanel } from "/modules/kurs_zgloszenia_panel.js";
+import { renderDuesAdminPanel } from "/modules/dues_admin_panel.js";
 import { CLUB_DISPLAY_NAMES } from "/core/club_badges.js";
 import { escapeHtml } from "/core/html_utils.js";
 import { formatDatePL } from "/core/format_utils.js";
@@ -52,6 +53,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
 
           <div class="modTabs" role="tablist">
             <button type="button" class="modTab active" data-tab="administracja">Administracja</button>
+            <button type="button" class="modTab" data-tab="skladki">Składki</button>
             <button type="button" class="modTab" data-tab="raporty">Raporty</button>
             <button type="button" class="modTab" data-tab="kurs">Kurs</button>
           </div>
@@ -70,6 +72,10 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
 
           <div id="adminPendingErr" class="err hidden" style="margin-top:12px;"></div>
           <div id="adminPendingContent" style="margin-top:16px;"></div>
+          </div>
+
+          <div class="modTabPanel hidden" data-panel="skladki">
+            <div id="duesAdminPanel"></div>
           </div>
 
           <div class="modTabPanel hidden" data-panel="raporty">
@@ -632,6 +638,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
       const panels = Array.from(viewEl.querySelectorAll(".modTabPanel"));
       let reportsMounted = false;
       let kursMounted = false;
+      let duesMounted = false;
       tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
           const name = tab.getAttribute("data-tab");
@@ -640,6 +647,10 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           if (name === "raporty" && !reportsMounted) {
             reportsMounted = true;
             renderReportsPanel({ container: viewEl.querySelector("#reportsPanel"), ctx });
+          }
+          if (name === "skladki" && !duesMounted) {
+            duesMounted = true;
+            renderDuesAdminPanel({ container: viewEl.querySelector("#duesAdminPanel"), ctx });
           }
           if (name === "kurs" && !kursMounted) {
             kursMounted = true;

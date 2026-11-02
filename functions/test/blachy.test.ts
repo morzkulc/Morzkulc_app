@@ -26,8 +26,11 @@ import {usersSyncFieldsFromSheetTask} from "../src/service/tasks/usersSyncFields
 import {handleAdminBlachy} from "../src/api/adminBlachyHandler";
 import {handleGetKlubInfo} from "../src/api/getKlubInfoHandler";
 
+// Końce semestrów z SETUP — sync arkusza członków sprawdza z nimi daty „Składki".
+const SEMESTER_SETUP = {_docId: "vars_members", vars: {semestr_1_stop: {value: "02-28"}, semestr_2_stop: {value: "09-30"}}};
+
 function seedDb(data: Record<string, any[]>) {
-  return new FakeFirestore(data);
+  return new FakeFirestore({setup: [SEMESTER_SETUP], ...data});
 }
 
 function ctx(db: FakeFirestore) {
@@ -128,7 +131,7 @@ describe("archiwum klubowe 2025", () => {
 });
 
 describe("sync arkusza członków", () => {
-  const H = ["ID", "ksywa", "imię", "nazwisko", "telefon", "e-mail", "data urodzenia", "rok szkoleniówki", "wpisowe rok",
+  const H = ["ID", "ksywa", "imię", "nazwisko", "telefon", "e-mail", "data urodzenia", "rok szkoleniówki", "Wpisowe (mm.yyyy)",
     "klucze do siedziby", "Rola", "Status", "blacha", "uwagi", "Zgody RODO", "składki", "godzinki"];
   const row = (o: Record<string, string>) => ({"Rola": "Członek", "Status": "Aktywny", ...o});
 
@@ -171,7 +174,7 @@ describe("sync arkusza członków", () => {
     sheet.rows = [
       row({"ID": "1", "imię": "Ala", "nazwisko": "Zła", "e-mail": "ala@x.pl", "składki": "wrzesień 2026"}),
       row({"ID": "", "imię": "Bez", "nazwisko": "Id", "e-mail": "bez@x.pl"}),
-      row({"ID": "3", "imię": "Ok", "nazwisko": "Dobra", "e-mail": "ok@x.pl", "składki": "31.03.2027"}),
+      row({"ID": "3", "imię": "Ok", "nazwisko": "Dobra", "e-mail": "ok@x.pl", "składki": "28.02.2027"}),
     ];
     const db = seedDb({users_active: [
       {_docId: "u1", memberId: 1, email: "ala@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-09-30"}},
@@ -192,7 +195,7 @@ describe("sync arkusza członków", () => {
   });
 
   it("konto członka bez ID z e-mailem w arkuszu → połączone z wierszem, składki z arkusza", async () => {
-    sheet.rows = [row({"ID": "40", "imię": "Karo", "nazwisko": "Bezid", "e-mail": "karo@x.pl", "składki": "2027-03-31"})];
+    sheet.rows = [row({"ID": "40", "imię": "Karo", "nazwisko": "Bezid", "e-mail": "karo@x.pl", "składki": "2027-02-28"})];
     const db = seedDb({users_active: [
       {_docId: "u40", email: "karo@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-09-30"}},
     ]});
@@ -201,7 +204,76 @@ describe("sync arkusza członków", () => {
     expect((r.details as any).linkedByEmail).toBe(1);
     const u = (db.dump("users_active") as any[])[0];
     expect(u.memberId).toBe(40);
-    expect(u.admin.contributions).toBe("2027-03-31");
+    expect(u.admin.contributions).toBe("2027-02-28");
+  });
+
+  it("składki: data spoza końców semestrów z SETUP albo nieistniejąca → sync przerwany ze wskazaniem osoby", async () => {
+    sheet.rows = [
+      row({"ID": "91", "imię": "Bartek", "nazwisko": "Luty", "e-mail": "b@x.pl", "składki": "2027-02-29"}),
+      row({"ID": "119", "imię": "Waldek", "nazwisko": "Dwudziesty", "e-mail": "w@x.pl", "składki": "20.02.2027"}),
+      row({"ID": "5", "imię": "Ewa", "nazwisko": "Marzec", "e-mail": "e@x.pl", "składki": "2026-03-31"}),
+      row({"ID": "6", "imię": "Ok", "nazwisko": "Wrzesien", "e-mail": "o@x.pl", "składki": "30.09.2026"}),
+    ];
+    const db = seedDb({users_active: [
+      {_docId: "u5", memberId: 5, email: "e@x.pl", role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: "2026-02-28"}},
+    ]});
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/#91 Bartek Luty: .*2027-02-29.*istniejącą datę/);
+    expect(r.message).toMatch(/#119 Waldek Dwudziesty: .*20\.02\.2027.*koniec semestru z SETUP \(02-28 \/ 09-30\)/);
+    expect(r.message).toMatch(/#5 Ewa Marzec: .*2026-03-31/);
+    expect(r.message).not.toMatch(/Wrzesien/);
+    expect((db.dump("users_active") as any[])[0].admin.contributions).toBe("2026-02-28");
+  });
+
+  it("składki: cofnięcie albo usunięcie daty → stop bez zapisów; potwierdzenie dokładnie tych zmian → zapis", async () => {
+    sheet.rows = [
+      row({"ID": "1", "imię": "Ala", "nazwisko": "Cofnieta", "e-mail": "a@x.pl", "składki": "2026-02-28"}),
+      row({"ID": "2", "imię": "Ola", "nazwisko": "Pusta", "e-mail": "o@x.pl", "składki": ""}),
+      row({"ID": "3", "imię": "Ewa", "nazwisko": "Dalej", "e-mail": "e@x.pl", "składki": "2027-02-28"}),
+    ];
+    const acc = (id: number, c: string) => ({_docId: `u${id}`, memberId: id, email: ["a", "o", "e"][id - 1] + "@x.pl",
+      role_key: "rola_czlonek", status_key: "status_aktywny", profile: {}, admin: {contributions: c}});
+    const db = seedDb({users_active: [acc(1, "2026-09-30"), acc(2, "2026-09-30"), acc(3, "2026-09-30")]});
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(false);
+    expect((r.details as any).needsConfirmation).toBe(true);
+    expect(r.message).toMatch(/#1 Ala Cofnieta: 2026-09-30 → 2026-02-28/);
+    expect(r.message).toMatch(/#2 Ola Pusta: 2026-09-30 → \(puste\)/);
+    expect(r.message).not.toMatch(/Dalej/);
+    const contrib = () => (db.dump("users_active") as any[]).map((u) => u.admin.contributions);
+    expect(contrib()).toEqual(["2026-09-30", "2026-09-30", "2026-09-30"]);
+
+    // Potwierdzenie tylko części zmian → nadal stop.
+    const tokens: string[] = (r.details as any).confirmDuesRollback;
+    expect((await usersSyncFieldsFromSheetTask.run({confirmDuesRollback: [tokens[0]]}, ctx(db))).ok).toBe(false);
+
+    const ok = await usersSyncFieldsFromSheetTask.run({confirmDuesRollback: tokens}, ctx(db));
+    expect(ok.ok).toBe(true);
+    expect(contrib()).toEqual(["2026-02-28", "", "2027-02-28"]);
+  });
+
+  it("wpisowe: MM.RRRR → miesiąc wpłaty w bazie, stare pole entryFeeYear usuwane; inny format → sync przerwany", async () => {
+    sheet.rows = [row({"ID": "7", "imię": "Kan", "nazwisko": "Dydat", "e-mail": "k@x.pl", "Rola": "Kandydat", "Wpisowe (mm.yyyy)": "08.2026", "składki": "2027-02-28"})];
+    const db = seedDb({users_active: [{_docId: "u7", memberId: 7, email: "k@x.pl", role_key: "rola_kandydat", status_key: "status_aktywny",
+      profile: {}, admin: {contributions: "2027-02-28", entryFeeYear: "2026", entryFeePaidAt: "2026-11"}}]});
+    expect((await usersSyncFieldsFromSheetTask.run({}, ctx(db))).ok).toBe(true);
+    const u = (db.dump("users_active") as any[])[0];
+    expect(u.admin).toMatchObject({entryFee: "08.2026", entryFeePaidAt: "2026-08"});
+    expect(u.admin.entryFeeYear).toBeUndefined();
+
+    sheet.rows = [row({"ID": "7", "imię": "Kan", "nazwisko": "Dydat", "e-mail": "k@x.pl", "Rola": "Kandydat", "Wpisowe (mm.yyyy)": "2026", "składki": "2027-02-28"})];
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/#7 Kan Dydat: „Wpisowe" = „2026" — wpisz miesiąc wpłaty jako MM\.RRRR/);
+  });
+
+  it("składki: brak końców semestrów w SETUP → sync przerwany", async () => {
+    sheet.rows = [row({"ID": "6", "imię": "Ok", "nazwisko": "Wrzesien", "e-mail": "o@x.pl", "składki": "2026-09-30"})];
+    const db = new FakeFirestore({users_active: []});
+    const r = await usersSyncFieldsFromSheetTask.run({}, ctx(db));
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/semestr_1_stop/);
   });
 });
 

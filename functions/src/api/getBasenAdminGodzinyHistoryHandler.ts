@@ -60,10 +60,12 @@ export async function handleGetBasenAdminGodzinyHistory(req: Request, res: Respo
       const records = await getBasenGodzinyRecords(deps.db, targetUid);
       const balance = computeBasenGodzinyBalance(records);
 
+      // Chronologicznie (od najstarszych): najpierw wpływ godzin, potem zapisy — zapis bez godzin
+      // nie jest możliwy, więc odwrotna kolejność wyglądała jak zapis „na minusie" (decyzja 02.11.2026).
       const sorted = [...records].sort((a, b) => {
         const at = (a.createdAt as any)?.toMillis?.() ?? 0;
         const bt = (b.createdAt as any)?.toMillis?.() ?? 0;
-        return bt - at;
+        return at - bt;
       });
 
       const serialized = sorted.map((r) => ({

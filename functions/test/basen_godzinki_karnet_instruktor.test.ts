@@ -27,9 +27,12 @@ async function data(db: any, uid: string) {
   return (await db.collection("users_active").doc(uid).get()).data();
 }
 
+// Koniec sezonu basenowego tylko z SETUP — bez niego karnet jest niedostępny.
+const SEASON = {_docId: "vars_basen", vars: {basen_koniec_sezonu: {value: "2099-04-15"}}};
+
 describe("karnet — dofinansowanie za godzinki", () => {
   it("dostępność wg kosztu karnetu (3 / 5) i salda wypracowanego", async () => {
-    const db = new FakeFirestore({users_active: [user("A", "rola_czlonek")], godzinki_ledger: [earn("A", 4)]}).asDb();
+    const db = new FakeFirestore({users_active: [user("A", "rola_czlonek")], godzinki_ledger: [earn("A", 4)], setup: [SEASON]}).asDb();
     const el = await getKarnetEligibility(db, "A", await data(db, "A"));
     expect(el).toMatchObject({byProduct: {karnet5: true, karnet10: false}, godzinkiCost: {karnet5: 3, karnet10: 5}, godzinkiBalance: 4});
   });
@@ -45,7 +48,7 @@ describe("karnet — dofinansowanie za godzinki", () => {
 
   it("zatwierdzenie karnetu 10 zdejmuje 5 godzinek; gdy saldo spadło poniżej kosztu — odmowa", async () => {
     const db = new FakeFirestore({users_active: [user("A", "rola_czlonek"), user("B", "rola_czlonek")],
-      godzinki_ledger: [earn("A", 5), earn("B", 5)]}).asDb();
+      godzinki_ledger: [earn("A", 5), earn("B", 5)], setup: [SEASON]}).asDb();
     const oA = await createOrder(db, {uid: "A", userData: await data(db, "A"), userName: "A", product: "karnet10", count: undefined, pricing: PRICING});
     await approveOrder(db, {orderId: oA.id, performedBy: "ADMIN"});
     const recA = await getAllRecords(db, "A");

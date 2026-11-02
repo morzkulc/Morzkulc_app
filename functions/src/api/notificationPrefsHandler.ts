@@ -4,6 +4,7 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {getEventsVars} from "../modules/setup/events_vars";
+import {getAppVars} from "../modules/setup/app_vars";
 
 type TokenCheck =
   | {error: string}
@@ -18,7 +19,7 @@ export type NotificationPrefsDeps = {
   requireIdToken: (req: Request) => Promise<TokenCheck>;
 };
 
-const PREF_KEYS = ["eventsNew", "eventsUpcoming", "eventsUpcomingInteresting"] as const;
+const PREF_KEYS = ["eventsNew", "eventsUpcoming", "eventsUpcomingInteresting", "duesReminder"] as const;
 type PrefKey = typeof PREF_KEYS[number];
 
 export async function handleNotificationPrefs(req: Request, res: Response, deps: NotificationPrefsDeps) {
@@ -47,14 +48,15 @@ export async function handleNotificationPrefs(req: Request, res: Response, deps:
           eventsNew: false,
           eventsUpcoming: false,
           eventsUpcomingInteresting: false,
+          duesReminder: false,
         };
         for (const key of PREF_KEYS) {
           prefs[key] = stored[key] === true;
         }
 
-        const {reminderDays} = await getEventsVars(db);
+        const [{reminderDays}, appVars] = await Promise.all([getEventsVars(db), getAppVars(db)]);
 
-        res.status(200).json({ok: true, prefs, reminderDays});
+        res.status(200).json({ok: true, prefs, reminderDays, duesReminderDays: appVars.duesReminderDays});
         return;
       }
 
