@@ -285,6 +285,8 @@ form.addEventListener("submit", async (e) => {
     if (status === 200 || json.code === "already_submitted") {
       data = {...data, ...json, zgloszenie: json.zgloszenie || data.zgloszenie};
       if (data.zgloszenie) {
+        // Konwersja Google Ads (consent.js; bez zgody — nic nie wysyła). Tylko nowe zgłoszenie.
+        if (status === 200) window.mkTrack?.("zapis");
         renderDone(data.zgloszenie);
         window.scrollTo({top: 0});
         return;

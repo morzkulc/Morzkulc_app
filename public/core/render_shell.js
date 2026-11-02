@@ -1614,7 +1614,7 @@ function renderProfileForm({ viewEl, ctx }) {
 
       <div class="checkRow">
         <input id="consentRodo" type="checkbox" />
-        <label for="consentRodo">Zapoznałem(-am) się z <a href="https://drive.google.com/file/d/1GHvC5pbLQpFJA41BgyiZmnPr5A18XHs4/view?usp=drive_link" target="_blank" rel="noopener">polityką prywatności</a> i akceptuję.</label>
+        <label for="consentRodo">Zapoznałem(-am) się z <a href="https://morzkulc.pl/dokumenty/polityka-prywatnosci.pdf" target="_blank" rel="noopener">polityką prywatności</a> i akceptuję.</label>
       </div>
 
       <div class="checkRow">

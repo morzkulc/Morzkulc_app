@@ -124,7 +124,7 @@ const LANG = {
       ["/rzutki", "Rzutki"], ["/dokumenty", "Dokumenty"], ["/polityka-prywatnosci", "Polityka prywatności"],
       ["https://kurs.morzkulc.pl", "kurs.morzkulc.pl"], ["https://app.morzkulc.pl", "Aplikacja klubowa"]],
     t: {SKIP: "Przejdź do treści", HOME_LABEL: "SKK Morzkulc — strona główna", MENU_LABEL: "Menu główne", FOOT_LABEL: "Stopka",
-      TAGLINE: "klub kajakowy z Gdańska od 1975 roku", CRUMBS: "Okruszki", ROOT: "Start", SWITCH: "EN", SWITCH_LABEL: "English version"},
+      TAGLINE: "klub kajakowy z Gdańska od 1975 roku", CRUMBS: "Okruszki", ROOT: "Start", SWITCH: "EN", SWITCH_LABEL: "English version", COOKIES: "Ustawienia cookies"},
   },
   en: {
     home: "/en",
@@ -135,7 +135,7 @@ const LANG = {
       ["/en/links", "Links"], ["/en/documents", "Documents"], ["/en/privacy", "Privacy"],
       ["https://kurs.morzkulc.pl", "kurs.morzkulc.pl (PL)"], ["https://app.morzkulc.pl", "Club app"]],
     t: {SKIP: "Skip to content", HOME_LABEL: "SKK Morzkulc — home", MENU_LABEL: "Main menu", FOOT_LABEL: "Footer",
-      TAGLINE: "kayaking club from Gdańsk since 1975", CRUMBS: "Breadcrumbs", ROOT: "Home", SWITCH: "PL", SWITCH_LABEL: "Wersja polska"},
+      TAGLINE: "kayaking club from Gdańsk since 1975", CRUMBS: "Breadcrumbs", ROOT: "Home", SWITCH: "PL", SWITCH_LABEL: "Wersja polska", COOKIES: "Cookie settings"},
   },
 };
 const langOf = (meta) => (meta.lang === "en" ? "en" : "pl");
@@ -199,7 +199,10 @@ function navHtml(meta, altPath) {
 }
 
 function footNavHtml(meta) {
-  return LANG[langOf(meta)].foot.map(([href, label]) => `<a href="${href}">${label}</a>`).join("\n      ");
+  const L = LANG[langOf(meta)];
+  // „Ustawienia cookies” — ukryty, odsłania go consent.js, gdy tag Google jest skonfigurowany.
+  return L.foot.map(([href, label]) => `<a href="${href}">${label}</a>`)
+    .concat(`<a href="#" data-consent-open hidden>${L.t.COOKIES}</a>`).join("\n      ");
 }
 
 function crumbsHtml(meta) {
@@ -483,6 +486,8 @@ async function main() {
   fs.mkdirSync(out, {recursive: true});
   for (const e of fs.readdirSync(out)) fs.rmSync(path.join(out, e), {recursive: true, force: true});
   copyDir(src, out, cfg.layout ? [cfg.layout, cfg.pagesDir] : []);
+  // Pliki wspólne obu serwisów (zgoda na cookies + tag Google Ads).
+  copyDir(path.join(ROOT, "site_shared"), out);
 
   const script = fs.readFileSync(path.join(src, cfg.script), "utf8");
   if (cfg.layout) {
