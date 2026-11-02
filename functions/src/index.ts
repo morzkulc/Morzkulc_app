@@ -1015,7 +1015,10 @@ export const appsScriptSync = onRequest({invoker: "private"}, async (req, res) =
     // Zmiana wymagająca decyzji osoby uruchamiającej sync (np. cofnięcie składek) — arkusz pyta i ponawia z potwierdzeniem.
     if (!result.ok && (result.details as any)?.needsConfirmation) {
       // `error` — czytelny komunikat także dla starszej wersji skryptu, która nie umie zapytać o potwierdzenie.
-      res.status(409).json({ok: false, needsConfirmation: true, message: result.message, error: result.message, confirm: (result.details as any).confirmDuesRollback || []});
+      res.status(409).json({
+        ok: false, needsConfirmation: true, message: result.message, confirm: (result.details as any).confirmDuesRollback || [],
+        error: result.message + "\n\n(Jeśli widzisz tylko przycisk OK, ta wersja menu arkusza nie umie potwierdzić — zgłoś to administratorowi aplikacji.)",
+      });
       return;
     }
     if (!result.ok) {

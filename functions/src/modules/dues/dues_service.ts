@@ -106,11 +106,11 @@ export function duesKindFor(userData: any): DuesKind {
   return String(userData?.role_key || "") === "rola_kandydat" ? "wpisowe" : "skladka";
 }
 
-/** Tytuł przelewu: „Składka Jan Kowalski (12); AB12CD” — kod = numer zgłoszenia (decyzja 02.11.2026). */
+/** Tytuł przelewu: „Składka Jan Kowalski (ID: 12); AB12CD” — kod = numer zgłoszenia (decyzja 02.11.2026). */
 export function transferTitle(kind: DuesKind, userName: string, memberId: number, orderId: string): string {
   const what = kind === "wpisowe" ? "Wpisowe" : "Składka";
   const name = userName.replace(/[^\p{L}0-9 -]/gu, "").replace(/\s+/g, " ").trim();
-  return `${what} ${name} (${memberId}); ${orderId.slice(0, 6).toUpperCase()}`;
+  return `${what} ${name} (ID: ${memberId}); ${orderId.slice(0, 6).toUpperCase()}`;
 }
 
 export interface DuesStatus {

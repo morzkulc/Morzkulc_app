@@ -84,9 +84,9 @@ describe("daty semestrów", () => {
     expect(isSemesterEndDate("2028-02-28", ENDS)).toBe(true);
   });
 
-  it("tytuł przelewu: „Składka Imię Nazwisko (ID); kod zgłoszenia”", () => {
-    expect(transferTitle("skladka", "Krzysztof Świtek", 18, "2gxjnw123")).toBe("Składka Krzysztof Świtek (18); 2GXJNW");
-    expect(transferTitle("wpisowe", "Ala  Kot×", 7, "xyz999")).toBe("Wpisowe Ala Kot (7); XYZ999");
+  it("tytuł przelewu: „Składka Imię Nazwisko (ID: n); kod zgłoszenia”", () => {
+    expect(transferTitle("skladka", "Krzysztof Świtek", 18, "2gxjnw123")).toBe("Składka Krzysztof Świtek (ID: 18); 2GXJNW");
+    expect(transferTitle("wpisowe", "Ala  Kot×", 7, "xyz999")).toBe("Wpisowe Ala Kot (ID: 7); XYZ999");
   });
 });
 

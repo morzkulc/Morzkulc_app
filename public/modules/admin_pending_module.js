@@ -3,7 +3,7 @@ import { mapUserFacingApiError } from "/core/user_error_messages.js";
 import { setHash } from "/core/router.js";
 import { renderReportsPanel } from "/modules/raporty/reports_panel.js";
 import { renderKursZgloszeniaPanel } from "/modules/kurs_zgloszenia_panel.js";
-import { renderDuesAdminPanel } from "/modules/dues_admin_panel.js";
+import { renderDuesAdminPanel, duesSummaryHtml } from "/modules/dues_admin_panel.js";
 import { CLUB_DISPLAY_NAMES } from "/core/club_badges.js";
 import { escapeHtml } from "/core/html_utils.js";
 import { formatDatePL } from "/core/format_utils.js";
@@ -51,14 +51,16 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
             </div>
           </div>
 
+          <div id="duesSummaryBar" class="duesSummaryBar hidden"></div>
+
           <div class="modTabs" role="tablist">
-            <button type="button" class="modTab active" data-tab="administracja">Administracja</button>
-            <button type="button" class="modTab" data-tab="skladki">Składki</button>
-            <button type="button" class="modTab" data-tab="raporty">Raporty</button>
+            <button type="button" class="modTab active" data-tab="skladki">Składki</button>
             <button type="button" class="modTab" data-tab="kurs">Kurs</button>
+            <button type="button" class="modTab" data-tab="raporty">Raporty</button>
+            <button type="button" class="modTab" data-tab="administracja">Administracja</button>
           </div>
 
-          <div class="modTabPanel" data-panel="administracja">
+          <div class="modTabPanel hidden" data-panel="administracja">
           <div class="actions" style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <button id="adminPendingReloadBtn" type="button" class="moduleNavBtn" title="Odśwież dane"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.79"/></svg></button>
             <button id="adminSyncCalendarBtn" type="button">Synchronizuj zatwierdzenia (arkusze + kalendarz)</button>
@@ -74,7 +76,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           <div id="adminPendingContent" style="margin-top:16px;"></div>
           </div>
 
-          <div class="modTabPanel hidden" data-panel="skladki">
+          <div class="modTabPanel" data-panel="skladki">
             <div id="duesAdminPanel"></div>
           </div>
 
@@ -234,19 +236,22 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           html += `<p class="err" style="margin-bottom:16px;">Sprzęt — ostrzeżenia synchronizacji: ${escapeHtml(gearSync.error)}</p>`;
         }
 
+        // Panel pokazuje tylko sekcje, w których jest coś do zrobienia (lub błąd) — pusta sekcja
+        // nie renderuje nawet nagłówka (decyzja 02.11.2026: „czysty panel”).
+
         // Sekcja godzinki
-        html += `<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;">`;
-        html += `<h3 style="margin:0;">Godzinki do zatwierdzenia (${escapeHtml(String(godzinki.count))})</h3>`;
-        if (godzinkiSheetUrl) {
-          html += `<a href="${escapeHtml(godzinkiSheetUrl)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600;">→ Otwórz arkusz</a>`;
-        }
-        html += `</div>`;
         const godzinkiPending = godzinki.pending || [];
+        if (godzinki.error || godzinkiPending.length) {
+          html += `<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;">`;
+          html += `<h3 style="margin:0;">Godzinki do zatwierdzenia (${escapeHtml(String(godzinki.count))})</h3>`;
+          if (godzinkiSheetUrl) {
+            html += `<a href="${escapeHtml(godzinkiSheetUrl)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600;">→ Otwórz arkusz</a>`;
+          }
+          html += `</div>`;
+        }
         if (godzinki.error) {
           html += `<p class="err" style="margin-bottom:20px;">${escapeHtml(godzinki.error)}</p>`;
-        } else if (!godzinkiPending.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak oczekujących.</p>`;
-        } else {
+        } else if (godzinkiPending.length) {
           html += `<div style="margin:0 0 20px;">`;
           for (const item of godzinkiPending) {
             const label = item.type === "purchase" ? "wykup salda ujemnego" : "godzinki";
@@ -282,12 +287,12 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja imprezy
-        html += `<h3 style="margin:0 0 8px;">Imprezy do zatwierdzenia (${escapeHtml(String(events.count))})</h3>`;
+        if (events.error || events.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Imprezy do zatwierdzenia (${escapeHtml(String(events.count))})</h3>`;
+        }
         if (events.error) {
           html += `<p class="err" style="margin-bottom:20px;">${escapeHtml(events.error)}</p>`;
-        } else if (!events.items?.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak oczekujących.</p>`;
-        } else {
+        } else if (events.items?.length) {
           html += `<div style="margin-bottom:20px;">`;
           for (const item of events.items) {
             const startStr = item.startDate ? formatDatePL(item.startDate) : "—";
@@ -329,10 +334,8 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja: prywatne kajaki — braki danych (email / data wejścia do klubu)
-        html += `<h3 style="margin:0 0 8px;">Prywatne kajaki — braki danych właściciela (${escapeHtml(String(emailIssues.count))})</h3>`;
-        if (!emailIssues.items?.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak problemów.</p>`;
-        } else {
+        if (emailIssues.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Prywatne kajaki — braki danych właściciela (${escapeHtml(String(emailIssues.count))})</h3>`;
           html += `<div style="margin-bottom:20px;">`;
           for (const item of emailIssues.items) {
             html += `
@@ -355,11 +358,9 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja: właściciele prywatnych kajaków — możliwe zaległości składkowe
-        html += `<h3 style="margin:0 0 8px;">Prywatne kajaki — możliwe zaległości składkowe (${escapeHtml(String(unpaidContributions.count))})</h3>`;
-        if (!unpaidContributions.items?.length) {
-          html += `<p class="hint">Brak zaległości.</p>`;
-        } else {
-          html += `<div>`;
+        if (unpaidContributions.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Prywatne kajaki — możliwe zaległości składkowe (${escapeHtml(String(unpaidContributions.count))})</h3>`;
+          html += `<div style="margin-bottom:20px;">`;
           for (const item of unpaidContributions.items) {
             const contributionsLabel = item.contributions ? `składki: ${escapeHtml(item.contributions)}` : "brak danych o składkach";
             html += `
@@ -381,10 +382,8 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja: martwe service joby
-        html += `<h3 style="margin:16px 0 8px;">Martwe service joby (${escapeHtml(String(deadJobs.count))})</h3>`;
-        if (!deadJobs.items?.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak.</p>`;
-        } else {
+        if (deadJobs.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Martwe service joby (${escapeHtml(String(deadJobs.count))})</h3>`;
           html += `<div style="margin-bottom:20px;">`;
           for (const item of deadJobs.items) {
             const dateStr = item.updatedAt ? formatDatePL(item.updatedAt.slice(0, 10)) : "—";
@@ -409,11 +408,9 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja: nieudane naliczenia za sprzęt prywatny
-        html += `<h3 style="margin:0 0 8px;">Nieudane naliczenia za sprzęt prywatny (${escapeHtml(String(failedCharges.count))})</h3>`;
-        if (!failedCharges.items?.length) {
-          html += `<p class="hint">Brak.</p>`;
-        } else {
-          html += `<div>`;
+        if (failedCharges.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Nieudane naliczenia za sprzęt prywatny (${escapeHtml(String(failedCharges.count))})</h3>`;
+          html += `<div style="margin-bottom:20px;">`;
           for (const item of failedCharges.items) {
             const dateStr = item.createdAt ? formatDatePL(item.createdAt.slice(0, 10)) : "—";
             html += `
@@ -437,14 +434,14 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         }
 
         // Sekcja: ujemne salda godzinek (liczone na żywo, nie snapshot).
-        html += `<h3 style="margin:16px 0 8px;">Ujemne salda godzinek (${escapeHtml(String(negativeBalances.count || 0))})</h3>`;
+        if (negativeBalances.error || negativeBalances.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Ujemne salda godzinek (${escapeHtml(String(negativeBalances.count || 0))})</h3>`;
+        }
         if (negativeBalances.error) {
           html += `<p class="err" style="margin-bottom:20px;">${escapeHtml(negativeBalances.error)}</p>`;
-        } else if (!negativeBalances.items?.length) {
-          html += `<p class="hint">Brak.</p>`;
-        } else {
+        } else if (negativeBalances.items?.length) {
           html += `<p class="hint" style="margin:0 0 8px;">Stan na żywo. Pozycje oznaczone czerwono przekraczają limit ujemnego salda.</p>`;
-          html += `<div>`;
+          html += `<div style="margin-bottom:20px;">`;
           for (const item of negativeBalances.items) {
             const over = item.belowLimit;
             const sign = item.balance > 0 ? "+" : "";
@@ -467,12 +464,12 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         // Sekcja: kursanci po terminie (utracili dostęp do wypożyczeń po 30.09 roku
         // szkoleniówki). role_key nie jest zmieniany automatem — zarząd nadaje rolę
         // docelową ręcznie w arkuszu członków.
-        html += `<h3 style="margin:16px 0 8px;">Kursanci po terminie (${escapeHtml(String(expiredKursants.count || 0))})</h3>`;
+        if (expiredKursants.error || expiredKursants.items?.length) {
+          html += `<h3 style="margin:0 0 8px;">Kursanci po terminie (${escapeHtml(String(expiredKursants.count || 0))})</h3>`;
+        }
         if (expiredKursants.error) {
           html += `<p class="err" style="margin-bottom:20px;">${escapeHtml(expiredKursants.error)}</p>`;
-        } else if (!expiredKursants.items?.length) {
-          html += `<p class="hint" style="margin-bottom:20px;">Brak.</p>`;
-        } else {
+        } else if (expiredKursants.items?.length) {
           html += `<p class="hint" style="margin:0 0 8px;">Utracili dostęp do wypożyczeń (minął 30 września roku kursu). Nadaj im rolę docelową w arkuszu członków.</p>`;
           html += `<div style="margin-bottom:20px;">`;
           for (const item of expiredKursants.items) {
@@ -495,7 +492,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
           html += `</div>`;
         }
 
-        contentEl.innerHTML = html;
+        contentEl.innerHTML = html || `<p class="hint">Nic do zrobienia.</p>`;
       };
 
       const load = async () => {
@@ -633,24 +630,36 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
 
       reloadBtn.addEventListener("click", load);
 
-      // ── Przełączanie zakładek (Raporty i Kurs montowane leniwie) ───────────
+      // ── Przełączanie zakładek (wszystkie montowane leniwie; startowa = Składki) ──
       const tabs = Array.from(viewEl.querySelectorAll(".modTab"));
       const panels = Array.from(viewEl.querySelectorAll(".modTabPanel"));
       let reportsMounted = false;
       let kursMounted = false;
       let duesMounted = false;
+      let adminLoaded = false;
       tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
           const name = tab.getAttribute("data-tab");
           tabs.forEach((t) => t.classList.toggle("active", t === tab));
           panels.forEach((p) => p.classList.toggle("hidden", p.getAttribute("data-panel") !== name));
+          if (name === "administracja" && !adminLoaded) {
+            adminLoaded = true;
+            load();
+          }
           if (name === "raporty" && !reportsMounted) {
             reportsMounted = true;
             renderReportsPanel({ container: viewEl.querySelector("#reportsPanel"), ctx });
           }
           if (name === "skladki" && !duesMounted) {
             duesMounted = true;
-            renderDuesAdminPanel({ container: viewEl.querySelector("#duesAdminPanel"), ctx });
+            const bar = viewEl.querySelector("#duesSummaryBar");
+            renderDuesAdminPanel({
+              container: viewEl.querySelector("#duesAdminPanel"), ctx,
+              onSummary: (d) => {
+                bar.innerHTML = duesSummaryHtml(d.summary, d.feePln);
+                bar.classList.toggle("hidden", !bar.innerHTML);
+              },
+            });
           }
           if (name === "kurs" && !kursMounted) {
             kursMounted = true;
@@ -659,7 +668,7 @@ export function createAdminPendingModule({ id, type, label, defaultRoute, order,
         });
       });
 
-      await load();
+      tabs[0].click();
     }
   };
 }

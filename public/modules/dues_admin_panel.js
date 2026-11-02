@@ -82,7 +82,7 @@ function overdueTable(rows, canAct, idPrefix) {
   </tr></thead><tbody>
   ${rows.map((r) => `<tr>
     ${canAct ? `<td><input type="checkbox" data-dues-pick="${idPrefix}" value="${escapeAttr(r.uid)}" /></td>` : ""}
-    <td>${escapeHtml(personLabel(r))}${r.kind === "wpisowe" ? ` <span class="muted">(kandydat — wpisowe)</span>` : ""}</td>
+    <td>${escapeHtml(personLabel(r))}${r.kind === "wpisowe" ? ` <span class="muted">(kandydat — płaci wpisowe)</span>` : ""}</td>
     <td><strong>${r.overdue === null ? "brak wpłat" : semestersLabel(r.overdue)}</strong></td>
     <td class="muted">${r.paidUntil ? fmtDate(r.paidUntil) : "—"}</td>
     <td class="muted">${r.reminderSentAt ? `wysłane ${fmtDate(r.reminderSentAt)}` : "—"}</td>
@@ -99,7 +99,7 @@ function render(container, d) {
     <p class="err hidden" id="duesAdminErr"></p>
     <p class="hint hidden" id="duesAdminMsg"></p>
     <h4>Zgłoszenia do potwierdzenia (${d.pending.length})</h4>
-    <p class="muted">Potwierdzenie od razu wpisuje nową datę do kolumny „Składki” w arkuszu członków (wpisowe także „wpisowe rok”), potem do aplikacji i wysyła mail do osoby.</p>
+    <p class="muted">Potwierdzenie od razu wpisuje nową datę do kolumny „Składki” w arkuszu członków (wpisowe także miesiąc wpłaty w „Wpisowe (mm.yyyy)”), potem do aplikacji i wysyła mail do osoby.</p>
     ${pendingTable(d.pending, canAct)}
     ${recentTable(d.recent)}
     <h4>Zaległości (${d.overdue.length})</h4>
@@ -112,7 +112,18 @@ function render(container, d) {
   `;
 }
 
-export function renderDuesAdminPanel({ container, ctx }) {
+/** Zbiorczy stan składek — pasek na górze panelu Zarządu. */
+export function duesSummaryHtml(s, feePln) {
+  if (!s) return "";
+  const parts = [
+    `<span>Opłacone składki: <strong>${s.paid} z ${s.total}</strong></span>`,
+    `<span>Zaległości: <strong>${pln(s.overduePln)}</strong> <span class="muted">(${semestersLabel(s.overdueSemesters)} × ${pln(feePln)}, ${s.withOverdue} os.)</span></span>`,
+  ];
+  if (s.neverPaid) parts.push(`<span>Bez żadnej wpłaty: <strong>${s.neverPaid} os.</strong></span>`);
+  return parts.join("");
+}
+
+export function renderDuesAdminPanel({ container, ctx, onSummary }) {
   if (!container) return;
   const show = (id, msg) => {
     const el = container.querySelector(id);
@@ -123,7 +134,9 @@ export function renderDuesAdminPanel({ container, ctx }) {
 
   const load = async () => {
     try {
-      render(container, await apiGetJson({ url: URL_ADMIN, idToken: ctx.idToken }));
+      const d = await apiGetJson({ url: URL_ADMIN, idToken: ctx.idToken });
+      render(container, d);
+      onSummary?.(d);
     } catch (e) {
       container.innerHTML = `<p class="err">${escapeHtml(mapUserFacingApiError(e, "Nie udało się wczytać składek."))}</p>`;
     }

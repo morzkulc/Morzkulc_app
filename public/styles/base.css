@@ -667,6 +667,7 @@ textarea {
 .duesActions { white-space: nowrap; }
 .duesActions button { margin: 2px; }
 .duesSeparator { margin: 20px 0 12px; border: 0; border-top: 2px solid var(--border, #ccc); }
+.duesSummaryBar { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--border, #ccc); border-radius: 8px; font-size: 14px; }
 .reportPdfBtn { margin-left: auto; }
 
 /* Nagłówek widoczny tylko na wydruku/PDF (ekran: ukryty). */

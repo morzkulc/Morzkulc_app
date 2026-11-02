@@ -81,7 +81,7 @@ export async function handleAdminDues(req: Request, res: Response, deps: Deps): 
           .sort((a, b) => String(b.decidedAt).localeCompare(String(a.decidedAt)));
 
         const testAccounts = new Set(vars.testAccounts);
-        const overdue = usersSnap.docs
+        const people = usersSnap.docs
           .map((d) => ({id: d.id, u: d.data() as any}))
           .filter(({u}) => u?.status_key === "status_aktywny" && isRegistered(u) && !testAccounts.has(normNullish(u?.email).toLowerCase()))
           .map(({id, u}) => {
@@ -91,14 +91,26 @@ export async function handleAdminDues(req: Request, res: Response, deps: Deps): 
               roleKey: u?.role_key, kind: st.kind, paidUntil: st.paidUntil, overdue: st.overdue, blocked: st.blocked,
               reminderSentAt: iso(u?.service?.duesReminderSentAt),
             };
-          })
+          });
+        // Podsumowanie na górę panelu Zarządu: kwota zaległości = zaległe semestry × składka;
+        // osoby bez żadnej wpłaty liczone osobno (nie wiadomo, od kiedy liczyć zaległość).
+        const overdueSemesters = people.reduce((s, r) => s + (r.overdue && r.overdue > 0 ? r.overdue : 0), 0);
+        const summary = {
+          total: people.length,
+          paid: people.filter((r) => r.overdue === 0).length,
+          withOverdue: people.filter((r) => r.overdue !== null && r.overdue > 0).length,
+          neverPaid: people.filter((r) => r.overdue === null).length,
+          overdueSemesters,
+          overduePln: overdueSemesters * vars.duesFeePln,
+        };
+        const overdue = people
           .filter((r) => r.overdue === null || r.overdue > 0)
           // „Brak wpłat" (null) na górze — najpilniejsze; dalej od najmniejszej zaległości do największej.
           .sort((a, b) => (a.overdue ?? -1) - (b.overdue ?? -1) || a.userName.localeCompare(b.userName, "pl"));
 
         res.status(200).json({
           ok: true, isTreasurer: treasurer, feePln: vars.duesFeePln, maxOverdue: vars.duesMaxOverdueSemesters,
-          pending, recent,
+          pending, recent, summary,
           overdue: overdue.filter((r) => !r.blocked),
           overdueBlocked: overdue.filter((r) => r.blocked),
         });
