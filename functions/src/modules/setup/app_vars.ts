@@ -26,6 +26,8 @@ export type AppVars = {
   duesFeePln: number;
   /** Zaległość (w semestrach) powyżej której wpłata tylko po kontakcie z Zarządem (skladki_max_zaleglosc_semestrow). */
   duesMaxOverdueSemesters: number;
+  /** Pop-up przypomnienia przy otwarciu aplikacji, gdy zaległość > N semestrów (skladki_popup_zaleglosc_semestrow). */
+  duesPopupOverdueSemesters: number;
   /** Po ilu dniach niezatwierdzonego zgłoszenia mail do skarbnika (skladki_dni_alert_skarbnik). */
   duesTreasurerAlertDays: number;
   /** Ile dni przed końcem opłaconego okresu przypomnienie dla chętnych (skladki_dni_przypomnienia). */
@@ -66,6 +68,7 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
       .filter((v) => /^\d{2}-\d{2}$/.test(v)),
     duesFeePln: toNumber(getVar(raw, "składka"), 0),
     duesMaxOverdueSemesters: toNumber(getVar(raw, "skladki_max_zaleglosc_semestrow"), 8),
+    duesPopupOverdueSemesters: toNumber(getVar(raw, "skladki_popup_zaleglosc_semestrow"), 2),
     duesTreasurerAlertDays: toNumber(getVar(raw, "skladki_dni_alert_skarbnik"), 3),
     duesReminderDays: toNumber(getVar(raw, "skladki_dni_przypomnienia"), 14),
   };

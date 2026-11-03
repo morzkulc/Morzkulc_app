@@ -23,7 +23,7 @@ vi.mock("../src/service/providers/googleSheetsProvider", async (orig) => {
 });
 
 import {
-  approveDuesOrder, computeDuesStatus, createDuesOrder, overdueSemesters, paidUntilAfterPayment, rejectDuesOrder,
+  approveDuesOrder, computeDuesStatus, createDuesOrder, duesOverdueReminder, overdueSemesters, paidUntilAfterPayment, rejectDuesOrder,
   cancelOwnDuesOrder, transferTitle,
 } from "../src/modules/dues/dues_service";
 import {getAppVars} from "../src/modules/setup/app_vars";
@@ -101,6 +101,19 @@ describe("status i zgłoszenie", () => {
     const blocked = computeDuesStatus(user("B", "rola_czlonek", "2022-09-30"), vars, "2026-11-02");
     expect(blocked).toMatchObject({canOrder: false, blocked: true, overdue: 9});
     expect(blocked.reason).toMatch(/kontakt|skontaktuj/);
+  });
+
+  it("pop-up przypomnienia: tylko zaległość > skladki_popup_zaleglosc_semestrow (domyślnie 2)", async () => {
+    const {db} = seed([]);
+    const vars = await getAppVars(db);
+    expect(vars.duesPopupOverdueSemesters).toBe(2);
+    const today = "2026-11-02";
+    expect(duesOverdueReminder(user("A", "rola_czlonek", "2027-02-28"), vars, today)).toBeNull();
+    expect(duesOverdueReminder(user("A", "rola_czlonek", "2026-02-28"), vars, today)).toBeNull(); // 2 semestry
+    expect(duesOverdueReminder(user("A", "rola_czlonek", "2025-09-30"), vars, today)).toEqual({overdue: 3, paidUntil: "2025-09-30"});
+    expect(duesOverdueReminder(user("B", "rola_czlonek", "2022-09-30"), vars, today)).toMatchObject({overdue: 9});
+    expect(duesOverdueReminder(user("K", "rola_kandydat"), vars, today)).toBeNull(); // brak daty
+    expect(duesOverdueReminder(user("S", "rola_sympatyk", "2020-09-30"), vars, today)).toBeNull();
   });
 
   it("zgłoszenie: pending + mail z danymi przelewu; drugie zgłoszenie odrzucone; anulowanie własnego", async () => {

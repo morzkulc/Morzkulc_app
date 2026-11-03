@@ -161,6 +161,16 @@ export function computeDuesStatus(userData: any, vars: AppVars, todayIso: string
   return {...base, applicable: true, canOrder: true, reason: "", overdue, blocked};
 }
 
+/**
+ * Przypomnienie (pop-up przy każdym otwarciu aplikacji, bez konsekwencji): zaległość
+ * większa niż skladki_popup_zaleglosc_semestrow. Brak daty (null) — bez pop-upu.
+ */
+export function duesOverdueReminder(userData: any, vars: AppVars, todayIso: string = todayWarsawIso()): {overdue: number; paidUntil: string} | null {
+  const st = computeDuesStatus(userData, vars, todayIso);
+  if (!st.applicable || st.overdue === null || st.overdue <= vars.duesPopupOverdueSemesters) return null;
+  return {overdue: st.overdue, paidUntil: st.paidUntil};
+}
+
 /** Podgląd: nowa data i kwota dla 1..maxN semestrów (wpisowe: tylko 2). */
 export function duesPreviews(status: DuesStatus, semesterEnds: string[], todayIso: string, maxN = 12): Array<{semesters: number; paidUntil: string; amountPln: number}> {
   const ns = status.fixedSemesters ? [status.fixedSemesters] : Array.from({length: maxN}, (_, i) => i + 1);

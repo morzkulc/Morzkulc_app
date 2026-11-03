@@ -9,7 +9,8 @@ import {getObHours, buildOpeningBalanceAdminPatch, obValueExact, obEmailKey} fro
 import {isProfileComplete} from "../modules/users/profile_complete";
 import {getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
-import {isTestAccount} from "../modules/setup/app_vars";
+import {isTestAccount, getAppVars} from "../modules/setup/app_vars";
+import {duesOverdueReminder} from "../modules/dues/dues_service";
 import {findActiveKierownikEvents} from "../modules/calendar/events_service";
 
 type TokenCheck =
@@ -816,11 +817,13 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         // szkoleniowiec (rozwiązywany tylko dla kandydata — ogranicza odczyty).
         // Trzy niezależne odczyty równolegle — wcześniej czekały jeden na drugi,
         // a /api/register jest pierwszym żądaniem przy każdym otwarciu aplikacji.
-        const [szkoleniowiec, kierownikSummary, isBasenAdmin, testAccount] = await Promise.all([
+        const [szkoleniowiec, kierownikSummary, isBasenAdmin, testAccount, duesReminder] = await Promise.all([
           roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
           resolveKierownikSummary(db, uid, roleKey, deps.memberRoleKeys),
           resolveBasenAdminGrant(db, email),
           isTestAccount(db, email),
+          // Pop-up „zalegasz ze składkami” — tylko przypomnienie; błąd SETUP nie może blokować startu.
+          getAppVars(db).then((vars) => duesOverdueReminder({...data, role_key: roleKey}, vars)).catch(() => null),
         ]);
 
         const allowedActions = deps.computeAllowedActions(roleKey);
@@ -854,6 +857,7 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           openingEmailCollision,
           // Konto testowe (konta_testowe w Vars_MEMBERS) — przełącznik roli w aplikacji.
           isTestAccount: testAccount,
+          duesReminder,
         });
         return;
       }

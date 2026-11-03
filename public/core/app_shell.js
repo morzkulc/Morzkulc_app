@@ -310,6 +310,7 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
     }
     await renderView({ viewEl, ctx });
     mark("view");
+    showDuesReminder(ctx.session?.duesReminder);
 
 
   } catch (e) {
@@ -384,4 +385,40 @@ function hardResetUi() {
   window.__APP_CTX__ = ctx;
 
   location.hash = "";
+}
+
+// Przypomnienie o zaległych składkach (> skladki_popup_zaleglosc_semestrow z SETUP).
+// Pokazywane przy każdym otwarciu aplikacji, bez konsekwencji — zamyka się i tyle.
+function showDuesReminder(rem) {
+  const n = Number(rem?.overdue);
+  if (!Number.isFinite(n) || n <= 0 || document.getElementById("duesReminderModal")) return;
+  const sem = n === 1 ? "1 semestr"
+    : `${n} ${n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "semestry" : "semestrów"}`;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rem?.paidUntil || "");
+  const paid = m ? ` (opłacone do ${m[3]}.${m[2]}.${m[1]})` : "";
+  const wrap = document.createElement("div");
+  wrap.id = "duesReminderModal";
+  wrap.className = "gearModal";
+  wrap.setAttribute("role", "dialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.innerHTML = `
+    <div class="gearModalBackdrop" data-close></div>
+    <div class="gearModalCard" style="max-width:440px;">
+      <div class="gearModalTop"><h3 style="margin:0;">Zaległe składki</h3></div>
+      <div class="gearModalBody" style="display:block;">
+        <p style="margin-top:0;">Zalegasz ze składkami członkowskimi: <strong>${sem}</strong>${paid}.</p>
+        <p class="muted" style="margin-bottom:0;">To tylko przypomnienie. Szczegóły i zgłoszenie wpłaty znajdziesz w profilu (blok „Składki”).</p>
+      </div>
+      <div class="gearModalActions">
+        <button type="button" class="ghost ghostCancel" data-close>Zamknij</button>
+        <button type="button" class="primary" data-profile>Przejdź do profilu</button>
+      </div>
+    </div>`;
+  const close = () => wrap.remove();
+  wrap.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
+  wrap.querySelector("[data-profile]").addEventListener("click", () => {
+    close();
+    location.hash = "#/home/profile";
+  });
+  document.body.appendChild(wrap);
 }
