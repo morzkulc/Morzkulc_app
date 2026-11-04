@@ -36,6 +36,8 @@ export type AppVars = {
   duesSuspensionMinOverdue: number;
   /** Odwieszenie członkostwa: ile semestrów (razem z bieżącym) płaci zawieszony zamiast całej zaległości (skladki_odwieszenie_semestrow). */
   duesReinstateSemesters: number;
+  /** Wiek: minimum (warunkowo), pełnoletność, górna granica realnej daty urodzenia (wiek_min_czlonka / wiek_pelnoletnosci / wiek_max). */
+  ageLimits: {min: number; adult: number; max: number};
   /** Po ilu dniach niezatwierdzonego zgłoszenia mail do skarbnika (skladki_dni_alert_skarbnik). */
   duesTreasurerAlertDays: number;
   /** Ile dni przed końcem opłaconego okresu przypomnienie dla chętnych (skladki_dni_przypomnienia). */
@@ -81,6 +83,11 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
     duesSuspensionResendDays: toNumber(getVar(raw, "skladki_dni_ponowna_prosba_zawieszenie"), 30),
     duesSuspensionMinOverdue: toNumber(getVar(raw, "skladki_prosba_zawieszenie_od_semestrow"), 4),
     duesReinstateSemesters: toNumber(getVar(raw, "skladki_odwieszenie_semestrow"), 2),
+    ageLimits: {
+      min: toNumber(getVar(raw, "wiek_min_czlonka"), 16),
+      adult: toNumber(getVar(raw, "wiek_pelnoletnosci"), 18),
+      max: toNumber(getVar(raw, "wiek_max"), 100),
+    },
     duesTreasurerAlertDays: toNumber(getVar(raw, "skladki_dni_alert_skarbnik"), 3),
     duesReminderDays: toNumber(getVar(raw, "skladki_dni_przypomnienia"), 14),
   };

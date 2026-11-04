@@ -10,6 +10,7 @@ import { buildModulesFromSetup } from "/core/modules_registry.js";
 import { renderNav, renderView, spinnerHtml } from "/core/render_shell.js";
 import { hardReloadApp } from "/core/sw_update.js";
 import { mark } from "/core/perf.js";
+import { escapeHtml } from "/core/html_utils.js";
 
 // Graf modułów core+modules jest już w tym momencie pobrany, sparsowany
 // i skompilowany — różnica js0→shell to jego koszt (metryka ms:jsGraph).
@@ -281,6 +282,7 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
       ctx.kursPreviewMode = setupResp?.kursPreviewMode === true;
       ctx.kursWypozycza = setupResp?.kursWypozycza === true;
       ctx.kursExpired = setupResp?.kursExpired === true;
+      ctx.ageLimits = setupResp?.ageLimits || null;
       window.__APP_CTX__ = ctx;
     } catch (_) {
       ctx.setup = null;
@@ -310,7 +312,9 @@ const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 godziny
     }
     await renderView({ viewEl, ctx });
     mark("view");
-    showDuesReminder(ctx.session?.duesReminder);
+    // Niepoprawna data urodzenia ma pierwszeństwo przed przypomnieniem o składkach (jedno okno naraz).
+    if (ctx.session?.birthDateIssue) showBirthDateIssue(ctx.session.birthDateIssue);
+    else showDuesReminder(ctx.session?.duesReminder);
 
 
   } catch (e) {
@@ -385,6 +389,41 @@ function hardResetUi() {
   window.__APP_CTX__ = ctx;
 
   location.hash = "";
+}
+
+// Niepoprawna zapisana data urodzenia (np. wiek < 16 albo > 100 lat). Okno BEZ zamykania — jedyne
+// wyjście to przejście do Profil → Moje dane, gdzie formularz otwiera się sam (flaga w sessionStorage).
+// Pokazywane przy każdym starcie, dopóki data nie zostanie poprawiona.
+function showBirthDateIssue(issue) {
+  if (!issue?.message || document.getElementById("birthDateIssueModal")) return;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(issue.dateOfBirth || "");
+  const given = m ? `${m[3]}.${m[2]}.${m[1]}` : String(issue.dateOfBirth || "");
+  const wrap = document.createElement("div");
+  wrap.id = "birthDateIssueModal";
+  wrap.className = "gearModal";
+  wrap.setAttribute("role", "alertdialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.innerHTML = `
+    <div class="gearModalBackdrop"></div>
+    <div class="gearModalCard" style="max-width:440px;">
+      <div class="gearModalTop"><h3 style="margin:0;">Popraw datę urodzenia</h3></div>
+      <div class="gearModalBody" style="display:block;">
+        <p style="margin-top:0;">W Twoim profilu jest data urodzenia <strong>${escapeHtml(given)}</strong>.</p>
+        <p>${escapeHtml(issue.message)}</p>
+        <p class="muted" style="margin-bottom:0;">Do czasu poprawienia daty to okno będzie się pokazywać przy każdym otwarciu aplikacji.</p>
+      </div>
+      <div class="gearModalActions">
+        <span></span>
+        <button type="button" class="primary" data-fix>Popraw datę urodzenia</button>
+      </div>
+    </div>`;
+  wrap.querySelector("[data-fix]").addEventListener("click", () => {
+    try { sessionStorage.setItem("mk.fixBirthDate", "1"); } catch { /* formularz i tak otworzy się przy złej dacie */ }
+    wrap.remove();
+    if (location.hash === "#/home/profile") location.reload();
+    else location.hash = "#/home/profile";
+  });
+  document.body.appendChild(wrap);
 }
 
 // Przypomnienie o zaległych składkach (> skladki_popup_zaleglosc_semestrow z SETUP).

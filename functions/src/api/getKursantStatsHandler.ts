@@ -108,11 +108,10 @@ export async function handleGetKursantStats(req: Request, res: Response, deps: G
       const fee = userData?.admin?.courseFee ?? null;
       const weight = userData?.admin?.weight ?? null;
       const height = userData?.admin?.height ?? null;
-      const phone = userData?.profile?.phone ?? null;
       const pesel = userData?.admin?.pesel ?? null;
       const cenaKursu = (varsKursSnap.data() as any)?.vars?.cena_kursu?.value ?? null;
 
-      res.status(200).json({ok: true, myCapsizes, myRank, totalKursants, fee, weight, height, phone, pesel, cena_kursu: cenaKursu, leaderboard});
+      res.status(200).json({ok: true, myCapsizes, myRank, totalKursants, fee, weight, height, pesel, cena_kursu: cenaKursu, leaderboard});
     } catch (err: any) {
       logger.error("getKursantStats failed", {message: err?.message, stack: err?.stack});
       res.status(500).json({error: "Server error", message: err?.message || String(err)});

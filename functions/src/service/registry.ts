@@ -18,6 +18,8 @@ import { godzinkiMonthlyBalanceReviewTask } from "./tasks/godzinkiMonthlyBalance
 import { godzinkiArchiveSheetRowsTask } from "./tasks/godzinkiArchiveSheetRows";
 import { usersSyncRolesFromSheetTask } from "./tasks/usersSyncRolesFromSheet";
 import { membersSyncToSheetTask } from "./tasks/membersSyncToSheet";
+import { membersUpdateProfileInSheetTask } from "./tasks/membersUpdateProfileInSheet";
+import { usersNotifyMinorMemberTask } from "./tasks/usersNotifyMinorMember";
 import { kmRebuildUserStatsTask } from "./tasks/kmRebuildUserStats";
 import { kmRebuildRankingsTask } from "./tasks/kmRebuildRankings";
 import { kmMergeHistoricalUserTask } from "./tasks/kmMergeHistoricalUser";
@@ -75,6 +77,8 @@ const tasks: ServiceTask[] = [
   godzinkiArchiveSheetRowsTask,
   usersSyncRolesFromSheetTask,
   membersSyncToSheetTask,
+  membersUpdateProfileInSheetTask,
+  usersNotifyMinorMemberTask,
   kmRebuildUserStatsTask,
   kmRebuildRankingsTask,
   kmMergeHistoricalUserTask,

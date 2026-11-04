@@ -580,6 +580,13 @@
         }
       },
       {
+        "source": "/api/profile/data",
+        "function": {
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/klub",
         "function": {
           "functionId": "appApi",

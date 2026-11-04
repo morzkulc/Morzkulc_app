@@ -10,6 +10,9 @@ import {isProfileComplete} from "../modules/users/profile_complete";
 import {getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_service";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {isTestAccount, getAppVars} from "../modules/setup/app_vars";
+import {isPhoneValid, normalizePhone} from "../modules/users/profile_fields";
+import {AgeLimits, birthDateMessage, checkBirthDate} from "../modules/users/birth_date";
+import {todayWarsawIso} from "../modules/shared/date_range_utils";
 import {duesOverdueReminder} from "../modules/dues/dues_service";
 import {effectiveRoleKey, isSuspended} from "../modules/users/member_standing";
 import {findActiveKierownikEvents} from "../modules/calendar/events_service";
@@ -77,11 +80,6 @@ function normalizeNicknameKey(v: any): string {
   return normalizeStr(v).toLowerCase();
 }
 
-function normalizePhone(v: any): string {
-  const s = normalizeStr(v);
-  return s.replace(/\s+/g, " ");
-}
-
 function normalizeBool(v: any): boolean | undefined {
   if (v === true) return true;
   if (v === false) return false;
@@ -94,47 +92,18 @@ function normalizeBool(v: any): boolean | undefined {
   return undefined;
 }
 
-// returns normalized E.164-like digits string without spaces/hyphens; keeps leading '+'
-function normalizePhoneDigits(v: string): string {
-  const s = normalizeStr(v);
-  if (!s) return "";
-  const keepPlus = s.startsWith("+");
-  const digits = s.replace(/[^\d]/g, "");
-  return keepPlus ? "+" + digits : digits;
-}
-
-function isPhoneValid(v: string): boolean {
-  const n = normalizePhoneDigits(v);
-  const digitsCount = n.replace(/[^\d]/g, "").length;
-  // liberal but sane: 8..15 digits
-  if (digitsCount < 8) return false;
-  if (digitsCount > 15) return false;
-  return true;
-}
-
-function isIsoDateYYYYMMDD(v: string): boolean {
-  // strict YYYY-MM-DD
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
-  const [yy, mm, dd] = v.split("-").map((x) => Number(x));
-  if (!yy || !mm || !dd) return false;
-  if (mm < 1 || mm > 12) return false;
-  if (dd < 1 || dd > 31) return false;
-  // validate actual date
-  const d = new Date(Date.UTC(yy, mm - 1, dd));
-  if (Number.isNaN(d.getTime())) return false;
-  if (d.getUTCFullYear() !== yy) return false;
-  if (d.getUTCMonth() !== mm - 1) return false;
-  if (d.getUTCDate() !== dd) return false;
-  return true;
-}
-
-function isDateNotInFuture(iso: string): boolean {
-  if (!isIsoDateYYYYMMDD(iso)) return false;
-  const [yy, mm, dd] = iso.split("-").map((x) => Number(x));
-  const d = new Date(Date.UTC(yy, mm - 1, dd));
+/** Job: mail do Zarządu o osobie poniżej pełnoletności (dedup w tasku po dacie urodzenia). */
+async function enqueueMinorMemberNotify(db: FirebaseFirestore.Firestore, uid: string): Promise<void> {
+  const ref = db.collection("service_jobs").doc();
   const now = new Date();
-  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  return d.getTime() <= todayUtc.getTime();
+  await ref.set({id: ref.id, taskId: "users.notifyMinorMember", payload: {uid}, status: "queued", attempts: 0, createdAt: now, updatedAt: now});
+}
+
+/** Problem z zapisaną datą urodzenia do pokazania przy starcie aplikacji (null = w porządku / brak daty). */
+function birthDateIssueFor(dob: any, todayIso: string, limits: AgeLimits): {code: string; message: string; dateOfBirth: string} | null {
+  if (!String(dob || "").trim()) return null;
+  const c = checkBirthDate(dob, todayIso, limits);
+  return c.ok ? null : {code: c.code, message: birthDateMessage(c.code, limits), dateOfBirth: String(dob)};
 }
 
 function readProfileInput(req: Request): ProfileInput {
@@ -165,7 +134,7 @@ function readProfileInput(req: Request): ProfileInput {
   return out;
 }
 
-function validateIncomingProfile(incoming: ProfileInput): ValidationResult {
+function validateIncomingProfile(incoming: ProfileInput, limits: AgeLimits, todayIso: string): ValidationResult {
   const fields: Record<string, string> = {};
 
   // required strings if ANY profile update is being attempted
@@ -195,9 +164,14 @@ function validateIncomingProfile(incoming: ProfileInput): ValidationResult {
   // phone format
   if (ph && !isPhoneValid(ph)) fields.phone = "invalid_format";
 
-  // date validity
-  if (dob && !isIsoDateYYYYMMDD(dob)) fields.dateOfBirth = "invalid_format";
-  if (dob && isIsoDateYYYYMMDD(dob) && !isDateNotInFuture(dob)) fields.dateOfBirth = "cannot_be_future";
+  // data urodzenia: format, przyszłość, wiek (min/max z SETUP) — kod „too_young:16” niesie próg do komunikatu
+  if (dob) {
+    const c = checkBirthDate(dob, todayIso, limits);
+    if (!c.ok) {
+      fields.dateOfBirth = c.code === "too_young" ? `too_young:${limits.min}` :
+        c.code === "too_old" ? `too_old:${limits.max}` : c.code;
+    }
+  }
 
   // consents required = true
   if (incoming.consentRodo !== true) fields.consentRodo = "must_be_true";
@@ -597,7 +571,9 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
       let openingEmailCollision = false;
 
       // ✅ validate if client attempts profile update
-      const validation = validateIncomingProfile(incomingProfile);
+      const ageLimits = (await getAppVars(db)).ageLimits;
+      const todayIso = todayWarsawIso();
+      const validation = validateIncomingProfile(incomingProfile, ageLimits, todayIso);
       if (!validation.ok) {
         res.status(400).json({
           ok: false,
@@ -777,6 +753,10 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
             {merge: true}
           );
 
+          if (incomingProfile.dateOfBirth && checkBirthDate(incomingProfile.dateOfBirth, todayIso, ageLimits).code === "minor") {
+            await enqueueMinorMemberNotify(db, uid);
+          }
+
           // recompute completeness on merged profile
           profileComplete = isProfileComplete({
             ...((data as any).profile || {}),
@@ -865,6 +845,8 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           // Konto testowe (konta_testowe w Vars_MEMBERS) — przełącznik roli w aplikacji.
           isTestAccount: testAccount,
           duesReminder,
+          // Zapisana data urodzenia niepoprawna (np. < 16 lat, > 100 lat) → pop-up przy starcie + przejście do poprawienia.
+          birthDateIssue: birthDateIssueFor(profileComplete ? (data as any).profile?.dateOfBirth : "", todayIso, ageLimits),
         });
         return;
       }
@@ -977,6 +959,9 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         .catch((e: any) => console.error("enqueueGodzinkiHistMerge (new user) failed", {uid, message: e?.message}));
 
       const profileComplete = isProfileComplete(incomingProfile);
+      if (incomingProfile.dateOfBirth && checkBirthDate(incomingProfile.dateOfBirth, todayIso, ageLimits).code === "minor") {
+        await enqueueMinorMemberNotify(db, uid);
+      }
 
       // jeśli user już podał komplet profilu → sync do arkusza (await gwarantuje zapis joba przed odpowiedzią)
       if (profileComplete) {

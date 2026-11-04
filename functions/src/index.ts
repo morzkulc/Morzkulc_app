@@ -75,6 +75,8 @@ import {handleAdminBlachy} from "./api/adminBlachyHandler";
 import {handleBlachyApi} from "./api/blachyApiHandler";
 import {handleUserWeight} from "./api/userWeightHandler";
 import {handleNotificationPrefs} from "./api/notificationPrefsHandler";
+import {handleProfileData} from "./api/profileDataHandler";
+import {getAppVars} from "./modules/setup/app_vars";
 import {handleDues} from "./api/duesHandler";
 import {handleAdminDues} from "./api/adminDuesHandler";
 import {handleTestAccountRole} from "./api/testAccountRoleHandler";
@@ -514,6 +516,8 @@ const getSetupRoute = async (req: Request, res: Response) => {
         setupMissing: false,
         kursWypozycza,
         kursExpired,
+        // Progi wieku do sprawdzania daty urodzenia w przeglądarce (public/core/birth_date.js).
+        ageLimits: (await getAppVars(db)).ageLimits,
         ...(isKursPreview ? {kursPreviewMode: true} : {}),
       });
     } catch (err) {
@@ -1745,6 +1749,14 @@ const notificationPrefsRoute = async (req: Request, res: Response) => {
 export const notificationPrefs = onRequest({invoker: "private"}, notificationPrefsRoute);
 
 /**
+ * GET/POST /api/profile/data (authenticated) — edycja własnego imienia, nazwiska, telefonu (+ zapis do arkusza).
+ * Tylko w appApi (bez osobnej funkcji).
+ */
+const profileDataRoute = async (req: Request, res: Response) => {
+  return handleProfileData(req, res, {db, sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken});
+};
+
+/**
  * GET/POST /api/dues (authenticated) — składki/wpisowe członka: stan, zgłoszenie wpłaty, anulowanie.
  * GET/POST /api/admin/dues (zarząd/KR podgląd; akcje tylko skarbnik) — panel „Składki".
  */
@@ -2092,6 +2104,7 @@ const APP_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
   "/api/kurs/info": getKursInfoRoute,
   "/api/klub": getKlubInfoRoute,
   "/api/profile/notifications": notificationPrefsRoute,
+  "/api/profile/data": profileDataRoute,
   "/api/dues": duesRoute,
   "/api/admin/dues": adminDuesRoute,
   "/api/test/role": testAccountSetRoleRoute,

@@ -6,6 +6,7 @@ import { homeStart, homeDone } from "/core/perf.js";
 import { formatFreeText, isUrlOnly } from "/core/text_format.js";
 import { renderClubBadgeHtml } from "/core/club_badges.js";
 import { escapeHtml, escapeAttr } from "/core/html_utils.js";
+import { checkBirthDateClient } from "/core/birth_date.js";
 import { formatDatePL, buildKayakTitle, formatShortDate, countReservationDays, pluralizeDays, formatPoints } from "/core/format_utils.js";
 
 export function spinnerHtml(text = "Morzkulc myśli") {
@@ -573,6 +574,8 @@ function renderHomeProfile({ viewEl, ctx }) {
         ` : ""}
       </div>
 
+      <div class="profileBlock" id="profileDataBox">${spinnerHtml("Ładowanie danych...")}</div>
+
       ${isKursant ? `
       <div class="startStatBar" style="margin-top:10px;">
         <div class="startStatChip">
@@ -590,10 +593,6 @@ function renderHomeProfile({ viewEl, ctx }) {
         <div class="startStatChip">
           <span class="startStatChipKey">Waga</span>
           <span class="startStatChipVal" id="profileKursantWeight">…</span>
-        </div>
-        <div class="startStatChip">
-          <span class="startStatChipKey">Telefon</span>
-          <span class="startStatChipVal" id="profileKursantPhone">…</span>
         </div>
         <div class="startStatChip">
           <span class="startStatChipKey">PESEL</span>
@@ -716,6 +715,19 @@ function renderHomeProfile({ viewEl, ctx }) {
   // Box „Klub" — leniwie ładowane ogólne informacje klubowe (widoczny dla wszystkich).
   wireKlubBox(viewEl, ctx);
 
+  // Moje dane (imię, nazwisko, telefon) — edycja z zapisem do arkusza członków; moduł leniwy.
+  const pdEl = viewEl.querySelector("#profileDataBox");
+  if (pdEl) {
+    import("/modules/profile_data_box.js")
+      .then((m) => m.renderProfileDataBox(pdEl, ctx, (d) => {
+        if (ctx.session) {
+          ctx.session.firstName = d.firstName;
+          if (d.birthDate?.ok) ctx.session.birthDateIssue = null;
+        }
+      }))
+      .catch(() => pdEl.classList.add("hidden"));
+  }
+
   // Składki / wpisowe — blok ładowany leniwie (moduł spoza precache).
   const duesEl = viewEl.querySelector("#duesBox");
   if (duesEl) import("/modules/dues_box.js").then((m) => m.renderDuesBox(duesEl, ctx)).catch(() => duesEl.classList.add("hidden"));
@@ -789,12 +801,11 @@ function renderHomeProfile({ viewEl, ctx }) {
         set("#profileKursantCena",   data?.cena_kursu," zł");
         set("#profileKursantHeight", data?.height,    " cm");
         set("#profileKursantWeight", data?.weight,    " kg");
-        set("#profileKursantPhone",  data?.phone,     "");
         set("#profileKursantPesel",  data?.pesel,     "");
       })
       .catch(() => {
         ["#profileKursantFee","#profileKursantCena","#profileKursantHeight",
-         "#profileKursantWeight","#profileKursantPhone","#profileKursantPesel"]
+         "#profileKursantWeight","#profileKursantPesel"]
           .forEach((id) => { const el = viewEl.querySelector(id); if (el) el.textContent = "—"; });
       });
   }
@@ -1612,7 +1623,8 @@ function renderProfileForm({ viewEl, ctx }) {
 
       <div class="row">
         <label for="dateOfBirth">Data urodzenia</label>
-        <input id="dateOfBirth" type="date" min="1920-01-01" max="${escapeAttr(new Date().toISOString().slice(0, 10))}" />
+        <input id="dateOfBirth" type="date" max="${escapeAttr(new Date().toISOString().slice(0, 10))}" />
+        <div id="dobMsg" class="err hidden" role="alert"></div>
       </div>
 
       <div class="checkRow">
@@ -1645,6 +1657,25 @@ function renderProfileForm({ viewEl, ctx }) {
   const setErr = (msg) => {
     errEl.textContent = String(msg || "");
     errEl.classList.toggle("hidden", !errEl.textContent);
+  };
+
+  // Data urodzenia — komunikat od razu pod polem (te same progi i teksty co na serwerze).
+  const dobInput = document.getElementById("dateOfBirth");
+  const dobMsg = document.getElementById("dobMsg");
+  const showDobCheck = () => {
+    const v = String(dobInput.value || "").trim();
+    const c = v ? checkBirthDateClient(v, ctx?.ageLimits) : { ok: true, message: "" };
+    dobMsg.textContent = c.message || "";
+    dobMsg.className = c.ok ? "hint" : "err";
+    dobMsg.classList.toggle("hidden", !c.message);
+    dobInput.setAttribute("aria-invalid", c.ok ? "false" : "true");
+    return c;
+  };
+  dobInput.addEventListener("change", showDobCheck);
+  dobInput.addEventListener("blur", showDobCheck);
+  const focusDob = () => {
+    dobInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    dobInput.focus();
   };
 
   const nicknameInput = document.getElementById("nickname");
@@ -1713,8 +1744,9 @@ function renderProfileForm({ viewEl, ctx }) {
       setErr("Telefon ma nieprawidłowy format (min. 8 cyfr).");
       return;
     }
-    if (!isIsoDateYYYYMMDD(dob)) {
-      setErr("Data urodzenia ma nieprawidłowy format.");
+    if (!isIsoDateYYYYMMDD(dob) || !showDobCheck().ok) {
+      setErr("Popraw datę urodzenia.");
+      focusDob();
       return;
     }
     if (!consentRodo || !consentStatute) {
@@ -1780,6 +1812,10 @@ function renderProfileForm({ viewEl, ctx }) {
       if (e?.code === "validation_failed" && e?.fields) {
         const lines = Object.entries(e.fields).map(([k, v]) => fieldErrorToPl(k, v));
         setErr("Błąd walidacji: " + lines.join("; "));
+        if (e.fields.dateOfBirth) {
+          showDobCheck();
+          focusDob();
+        }
       } else if (e?.code === "kursant_not_found") {
         setErr(
           "Twój adres e-mail nie figuruje na liście kursantów. " +
@@ -1977,6 +2013,10 @@ function fieldErrorToPl(field, code) {
   if (code === "required") return `${label}: wymagane`;
   if (code === "invalid_format") return `${label}: nieprawidłowy format`;
   if (code === "cannot_be_future") return `${label}: nie może być w przyszłości`;
+  // too_young:16 / too_old:100 — próg z SETUP przychodzi w kodzie (registerUserHandler.ts)
+  const [base, limit] = String(code || "").split(":");
+  if (base === "too_young") return `${label}: członkiem klubu może zostać osoba, która ukończyła ${limit} lat — sprawdź datę`;
+  if (base === "too_old") return `${label}: wskazuje wiek powyżej ${limit} lat — sprawdź rok urodzenia`;
   if (code === "must_be_true") return `${label}: musisz zaakceptować`;
   if (code === "taken") return `${label}: jest już zajęta, wybierz inną`;
   return `${label}: błąd (${code})`;
