@@ -8,6 +8,7 @@ import {parseSchoolYear, getKursWindowEndSuffix} from "../modules/equipment/bund
 import {computeNegativeBalances, NegativeBalanceEntry} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -114,7 +115,7 @@ export async function handleGetAdminPending(req: Request, res: Response, deps: G
       const uid = tokenCheck.decoded.uid;
 
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
 
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});

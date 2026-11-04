@@ -28,6 +28,7 @@ function personLabel(r) {
 }
 
 function what(o) {
+  if (o.kind === "odwieszenie") return `Odwieszenie — ${semestersLabel(o.semesters)}`;
   return o.kind === "wpisowe" ? "Wpisowe (2 semestry)" : `Składka — ${semestersLabel(o.semesters)}`;
 }
 

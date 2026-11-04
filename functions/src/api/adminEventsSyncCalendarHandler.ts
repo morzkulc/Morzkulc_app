@@ -2,6 +2,7 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -43,7 +44,7 @@ export async function handleAdminEventsSyncCalendar(
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = String((userSnap.data() as any)?.role_key || "");
+      const roleKey = effectiveRoleKey(userSnap.data());
 
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});

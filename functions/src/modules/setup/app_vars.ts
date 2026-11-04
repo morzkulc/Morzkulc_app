@@ -28,6 +28,14 @@ export type AppVars = {
   duesMaxOverdueSemesters: number;
   /** Pop-up przypomnienia przy otwarciu aplikacji, gdy zaległość > N semestrów (skladki_popup_zaleglosc_semestrow). */
   duesPopupOverdueSemesters: number;
+  /** Ile dni decyzja widnieje w Zarząd → Składki → „Ostatnie decyzje” (skladki_dni_ostatnie_decyzje). */
+  duesRecentDecisionsDays: number;
+  /** Po ilu dniach można ponownie wysłać prośbę o zawieszenie członkostwa (skladki_dni_ponowna_prosba_zawieszenie). */
+  duesSuspensionResendDays: number;
+  /** Przycisk „Poproś o zawieszenie” od zaległości N semestrów, licząc bieżący (skladki_prosba_zawieszenie_od_semestrow). */
+  duesSuspensionMinOverdue: number;
+  /** Odwieszenie członkostwa: ile semestrów (razem z bieżącym) płaci zawieszony zamiast całej zaległości (skladki_odwieszenie_semestrow). */
+  duesReinstateSemesters: number;
   /** Po ilu dniach niezatwierdzonego zgłoszenia mail do skarbnika (skladki_dni_alert_skarbnik). */
   duesTreasurerAlertDays: number;
   /** Ile dni przed końcem opłaconego okresu przypomnienie dla chętnych (skladki_dni_przypomnienia). */
@@ -69,6 +77,10 @@ export async function getAppVars(db: FirebaseFirestore.Firestore): Promise<AppVa
     duesFeePln: toNumber(getVar(raw, "składka"), 0),
     duesMaxOverdueSemesters: toNumber(getVar(raw, "skladki_max_zaleglosc_semestrow"), 8),
     duesPopupOverdueSemesters: toNumber(getVar(raw, "skladki_popup_zaleglosc_semestrow"), 2),
+    duesRecentDecisionsDays: toNumber(getVar(raw, "skladki_dni_ostatnie_decyzje"), 30),
+    duesSuspensionResendDays: toNumber(getVar(raw, "skladki_dni_ponowna_prosba_zawieszenie"), 30),
+    duesSuspensionMinOverdue: toNumber(getVar(raw, "skladki_prosba_zawieszenie_od_semestrow"), 4),
+    duesReinstateSemesters: toNumber(getVar(raw, "skladki_odwieszenie_semestrow"), 2),
     duesTreasurerAlertDays: toNumber(getVar(raw, "skladki_dni_alert_skarbnik"), 3),
     duesReminderDays: toNumber(getVar(raw, "skladki_dni_przypomnienia"), 14),
   };

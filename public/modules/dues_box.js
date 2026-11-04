@@ -40,10 +40,63 @@ function transferHtml(st, order) {
     </div>`;
 }
 
+// Prośba o zawieszenie członkostwa — tylko mail do Zarządu; aplikacja niczego sama nie zawiesza.
+function suspensionHtml(susp) {
+  if (susp?.requestedAt) {
+    return `<p class="hint duesSuspendSent">Prośba o zawieszenie członkostwa wysłana do Zarządu ${fmtDate(susp.requestedAt)}. Zarząd odpowie mailowo.</p>`;
+  }
+  if (!susp?.canRequest) return "";
+  return `
+    <details class="duesSuspend">
+      <summary>Nie możesz teraz płacić składek?</summary>
+      <p class="muted">Możesz poprosić Zarząd o zawieszenie członkostwa. Decyzję podejmuje Zarząd i odpowie mailowo.
+        W czasie zawieszenia masz w aplikacji dostęp jak sympatyk (bez rezerwacji sprzętu, godzinek i zgłaszania imprez),
+        a listę mailową klubu tylko czytasz. Godzinki społeczne przepadają w tym czasie normalnie (4 lata od daty pracy).
+        Wrócić możesz w każdej chwili, płacąc składkę tylko za ostatnie 2 semestry — nie za cały okres zawieszenia.</p>
+      <label for="duesSuspendMsg">Wiadomość do Zarządu (opcjonalnie)</label>
+      <textarea id="duesSuspendMsg" maxlength="1000" rows="3" placeholder="Np. powód i na jak długo"></textarea>
+      <div class="actions"><button type="button" class="ghost" data-dues-suspend>Poproś Zarząd o zawieszenie członkostwa</button></div>
+    </details>`;
+}
+
+// Zawieszony członek: informacja o zawieszeniu + wniosek o odwieszenie (= zgłoszenie wpłaty za 2 semestry).
+function reinstateHtml(st, order, preview) {
+  let html = `<h3 class="profileBlockTitle">Składki — członkostwo zawieszone</h3>
+    <p class="duesState duesBad">Członkostwo zawieszone</p>
+    <p class="muted">W czasie zawieszenia masz w aplikacji dostęp jak sympatyk. Godzinki społeczne przepadają normalnie
+      (4 lata od daty pracy) — zawieszenie ich nie wstrzymuje.</p>`;
+  if (order) {
+    const waiting = order.status === "pending" ?
+      "Wniosek o odwieszenie złożony — wpłata czeka na potwierdzenie skarbnika." :
+      "Skarbnik potwierdził wpłatę — po wpisaniu do arkusza Zarząd przywróci status „Aktywny”.";
+    if (order.paidUntilAfter) html += `<p class="duesState duesOk">Po zaksięgowaniu: opłacone do ${fmtDate(order.paidUntilAfter)}</p>`;
+    html += `<p class="hint">${waiting} Dane do przelewu wysłaliśmy też mailem.</p>${transferHtml(st, order)}`;
+    if (order.status === "pending") {
+      html += `<div class="actions"><button type="button" class="ghost" data-dues-cancel="${escapeAttr(order.id)}">Anuluj wniosek</button></div>`;
+    }
+    return html;
+  }
+  if (!st.canOrder || !preview) {
+    return html + (st.reason ? `<p class="hint">${escapeHtml(st.reason)}</p>` : "");
+  }
+  return html + `
+    <h4>Jak wrócić do klubu</h4>
+    <p>Złóż wniosek o odwieszenie i opłać składkę za <strong>${semestersLabel(preview.semesters)}</strong>
+      ${preview.semesters === 2 ? "(poprzedni i bieżący) " : ""}— <strong>${pln(preview.amountPln)}</strong>. Nie płacisz za cały okres zawieszenia.
+      Po zaksięgowaniu: opłacone do ${fmtDate(preview.paidUntil)}.</p>
+    <p class="muted">Po złożeniu wniosku dostaniesz dane do przelewu. Gdy skarbnik potwierdzi wpłatę,
+      Zarząd przywróci status „Aktywny” i pełny dostęp do aplikacji.</p>
+    <div class="actions"><button type="button" class="primary" data-dues-order="${preview.semesters}">Złóż wniosek o odwieszenie</button></div>`;
+}
+
 function render(el, data) {
   const st = data.status;
   const order = data.order;
   const title = st.kind === "wpisowe" ? "Wpisowe" : "Składki";
+  if (st.kind === "odwieszenie") {
+    el.innerHTML = reinstateHtml(st, order, data.previews[0]) + `<p class="err hidden" id="duesErr"></p>`;
+    return;
+  }
   // Przy otwartym zgłoszeniu nie pokazujemy obecnej zaległości (wyglądało, jakby wpłata nic nie dała) —
   // tylko datę, do której składki będą opłacone po zaksięgowaniu tej wpłaty.
   let html = `<h3 class="profileBlockTitle">${title}</h3>${order ? "" : statusLine(st)}`;
@@ -77,6 +130,7 @@ function render(el, data) {
       <p class="muted" id="duesPreview"></p>
       ${st.overdue ? `<p class="hint">Wpłata najpierw pokrywa zaległe semestry.</p>` : ""}`;
   }
+  if (!order) html += suspensionHtml(data.suspension);
   html += `<p class="err hidden" id="duesErr"></p>`;
   el.innerHTML = html;
 
@@ -127,12 +181,16 @@ export function renderDuesBox(el, ctx) {
     }
     const orderBtn = ev.target.closest("[data-dues-order]");
     const cancelBtn = ev.target.closest("[data-dues-cancel]");
-    const btn = orderBtn || cancelBtn;
+    const suspendBtn = ev.target.closest("[data-dues-suspend]");
+    const btn = orderBtn || cancelBtn || suspendBtn;
     if (!btn) return;
     btn.disabled = true;
     setErr("");
     try {
-      if (orderBtn) {
+      if (suspendBtn) {
+        const message = el.querySelector("#duesSuspendMsg")?.value || "";
+        await apiPostJson({ url: URL_DUES, idToken: ctx.idToken, body: { action: "suspend_request", message } });
+      } else if (orderBtn) {
         const semesters = Number(orderBtn.getAttribute("data-dues-order") || el.querySelector("#duesSemesters")?.value || 1);
         await apiPostJson({ url: URL_DUES, idToken: ctx.idToken, body: { action: "create", semesters } });
       } else {

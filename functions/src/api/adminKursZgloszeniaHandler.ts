@@ -5,6 +5,7 @@ import * as admin from "firebase-admin";
 import {computeListy, ZGLOSZENIA_COLLECTION, ZgloszenieStatus} from "../modules/kurs/kurs_zgloszenia";
 import {loadKursSignupConfig, przelewInfo} from "../modules/kurs/kurs_signup_config";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -32,7 +33,7 @@ async function authorizeAdmin(req: Request, res: Response, deps: AdminKursDeps, 
   }
   const uid = tokenCheck.decoded.uid;
   const userSnap = await deps.db.collection("users_active").doc(uid).get();
-  if (!deps.adminRoleKeys.includes(norm((userSnap.data() as any)?.role_key))) {
+  if (!deps.adminRoleKeys.includes(effectiveRoleKey(userSnap.data()))) {
     res.status(403).json({error: "Forbidden"});
     return null;
   }

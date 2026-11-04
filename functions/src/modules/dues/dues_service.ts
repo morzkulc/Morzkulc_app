@@ -3,7 +3,7 @@ import {getAppVars, AppVars} from "../setup/app_vars";
 import {resolveFunctionRoleEmail} from "../setup/function_roles_service";
 import {todayWarsawIso} from "../shared/date_range_utils";
 import {normNullish} from "../shared/text_utils";
-import {MEMBER_ROLE_KEYS, effectivePaidUntilIso} from "../users/member_standing";
+import {MEMBER_ROLE_KEYS, effectivePaidUntilIso, isSuspended} from "../users/member_standing";
 
 /**
  * Składki i wpisowe zgłaszane w aplikacji (plan: DOCS/Sessions & TO DOs/01.11_skladki_zglaszanie_PLAN.md).
@@ -16,6 +16,11 @@ import {MEMBER_ROLE_KEYS, effectivePaidUntilIso} from "../users/member_standing"
  * Nowa data: brak daty (pierwsza wpłata) → koniec bieżącego semestru + (n − 1) kolejnych;
  * jest data → od niej n kolejnych końców semestrów (zaległość schodzi pierwsza).
  * Zaległość powyżej skladki_max_zaleglosc_semestrow → tylko po kontakcie z Zarządem.
+ *
+ * Odwieszenie (status „Zawieszony”, decyzja 03.11.2026): wniosek = zgłoszenie wpłaty za
+ * skladki_odwieszenie_semestrow semestrów razem z bieżącym (nie za cały okres zawieszenia);
+ * po zaksięgowaniu „opłacone do” = koniec bieżącego semestru (targetPaidUntil z chwili wniosku)
+ * i mail do Zarządu, żeby przywrócił status „Aktywny” w arkuszu.
  */
 
 export const DUES_ORDERS = "dues_orders";
@@ -26,7 +31,7 @@ export const ADMIN_EMAIL = "admin@morzkulc.pl";
 
 export class DuesClientError extends Error {}
 
-export type DuesKind = "skladka" | "wpisowe";
+export type DuesKind = "skladka" | "wpisowe" | "odwieszenie";
 export type DuesOrderStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type WriteBackStatus = "pending" | "done" | "conflict";
 
@@ -45,6 +50,8 @@ export interface DuesOrder {
   rejectReason?: string;
   decidedBy?: string;
   writeBack?: {status: WriteBackStatus; from: string; to: string; message?: string};
+  /** Odwieszenie: docelowe „opłacone do” (koniec semestru w chwili wniosku). */
+  targetPaidUntil?: string;
   createdAt: any;
   updatedAt: any;
   decidedAt?: any;
@@ -103,12 +110,13 @@ export function paidUntilAfterPayment(paidUntilRaw: any, semesters: number, toda
 // ─── Status członka ─────────────────────────────────────────────────────────
 
 export function duesKindFor(userData: any): DuesKind {
+  if (isSuspended(userData)) return "odwieszenie";
   return String(userData?.role_key || "") === "rola_kandydat" ? "wpisowe" : "skladka";
 }
 
 /** Tytuł przelewu: „Składka Jan Kowalski (ID: 12); AB12CD” — kod = numer zgłoszenia (decyzja 02.11.2026). */
 export function transferTitle(kind: DuesKind, userName: string, memberId: number, orderId: string): string {
-  const what = kind === "wpisowe" ? "Wpisowe" : "Składka";
+  const what = kind === "wpisowe" ? "Wpisowe" : kind === "odwieszenie" ? "Składka odwieszenie" : "Składka";
   const name = userName.replace(/[^\p{L}0-9 -]/gu, "").replace(/\s+/g, " ").trim();
   return `${what} ${name} (ID: ${memberId}); ${orderId.slice(0, 6).toUpperCase()}`;
 }
@@ -127,8 +135,10 @@ export interface DuesStatus {
   blocked: boolean;
   maxOverdue: number;
   feePln: number;
-  /** Wpisowe: zawsze 2 semestry. */
+  /** Wpisowe: zawsze 2 semestry; odwieszenie: min(zaległość, skladki_odwieszenie_semestrow). */
   fixedSemesters: number | null;
+  /** Odwieszenie: „opłacone do” po zaksięgowaniu (koniec bieżącego semestru). */
+  targetPaidUntil: string;
   clubAccount: string;
   clubBank: string;
 }
@@ -139,8 +149,8 @@ export function computeDuesStatus(userData: any, vars: AppVars, todayIso: string
   const paidUntil = effectivePaidUntilIso(raw);
   const base = {
     kind, paidUntil, paid: Boolean(paidUntil && paidUntil >= todayIso), maxOverdue: vars.duesMaxOverdueSemesters,
-    feePln: vars.duesFeePln, fixedSemesters: kind === "wpisowe" ? ENTRY_FEE_SEMESTERS : null,
-    clubAccount: vars.clubAccount, clubBank: vars.clubBank,
+    feePln: vars.duesFeePln, fixedSemesters: kind === "wpisowe" ? ENTRY_FEE_SEMESTERS : null as number | null,
+    targetPaidUntil: "", clubAccount: vars.clubAccount, clubBank: vars.clubBank,
   };
   if (!MEMBER_ROLE_KEYS.includes(String(userData?.role_key || ""))) {
     return {...base, applicable: false, canOrder: false, reason: "Składki dotyczą członków i kandydatów klubu.", overdue: null, blocked: false};
@@ -149,6 +159,19 @@ export function computeDuesStatus(userData: any, vars: AppVars, todayIso: string
     return {...base, applicable: true, canOrder: false, reason: "Zgłaszanie wpłat chwilowo niedostępne (brak ustawień składek w SETUP).", overdue: null, blocked: false};
   }
   const overdue = overdueSemesters(raw, todayIso, vars.semesterEnds);
+  if (kind === "odwieszenie") {
+    // Bez blokady > N semestrów — właśnie po to jest odwieszenie.
+    const n = overdue === null ? vars.duesReinstateSemesters : Math.min(overdue, vars.duesReinstateSemesters);
+    const odw = {...base, applicable: true, overdue, blocked: false, fixedSemesters: n,
+      targetPaidUntil: semesterEndOnOrAfter(todayIso, vars.semesterEnds)};
+    if (n <= 0) {
+      return {...odw, canOrder: false, reason: "Składki masz opłacone — o odwieszenie członkostwa napisz do Zarządu (zarzad@morzkulc.pl)."};
+    }
+    if (!userData?.memberId) {
+      return {...odw, canOrder: false, reason: "Brak numeru członkowskiego w arkuszu członków — skontaktuj się z Zarządem."};
+    }
+    return {...odw, canOrder: true, reason: ""};
+  }
   const blocked = overdue !== null && overdue > vars.duesMaxOverdueSemesters;
   if (blocked) {
     return {...base, applicable: true, canOrder: false, overdue, blocked,
@@ -163,16 +186,21 @@ export function computeDuesStatus(userData: any, vars: AppVars, todayIso: string
 
 /**
  * Przypomnienie (pop-up przy każdym otwarciu aplikacji, bez konsekwencji): zaległość
- * większa niż skladki_popup_zaleglosc_semestrow. Brak daty (null) — bez pop-upu.
+ * większa niż skladki_popup_zaleglosc_semestrow. Brak daty (null) i konto nieaktywne (np. zawieszone) — bez pop-upu.
  */
-export function duesOverdueReminder(userData: any, vars: AppVars, todayIso: string = todayWarsawIso()): {overdue: number; paidUntil: string} | null {
+export function duesOverdueReminder(userData: any, vars: AppVars, todayIso: string = todayWarsawIso()): {overdue: number; paidUntil: string; suspensionAvailable: boolean} | null {
+  if (String(userData?.status_key || "status_aktywny") !== "status_aktywny") return null;
   const st = computeDuesStatus(userData, vars, todayIso);
   if (!st.applicable || st.overdue === null || st.overdue <= vars.duesPopupOverdueSemesters) return null;
-  return {overdue: st.overdue, paidUntil: st.paidUntil};
+  // suspensionAvailable: w profilu jest już przycisk prośby o zawieszenie (dues_suspension.ts).
+  return {overdue: st.overdue, paidUntil: st.paidUntil, suspensionAvailable: st.overdue >= vars.duesSuspensionMinOverdue};
 }
 
 /** Podgląd: nowa data i kwota dla 1..maxN semestrów (wpisowe: tylko 2). */
 export function duesPreviews(status: DuesStatus, semesterEnds: string[], todayIso: string, maxN = 12): Array<{semesters: number; paidUntil: string; amountPln: number}> {
+  if (status.kind === "odwieszenie" && status.fixedSemesters) {
+    return [{semesters: status.fixedSemesters, paidUntil: status.targetPaidUntil, amountPln: status.fixedSemesters * status.feePln}];
+  }
   const ns = status.fixedSemesters ? [status.fixedSemesters] : Array.from({length: maxN}, (_, i) => i + 1);
   return ns.map((n) => ({semesters: n, paidUntil: paidUntilAfterPayment(status.paidUntil, n, todayIso, semesterEnds), amountPln: n * status.feePln}));
 }
@@ -220,6 +248,7 @@ export async function createDuesOrder(
     unitPln: vars.duesFeePln,
     amountPln: semesters * vars.duesFeePln,
     transferTitle: transferTitle(status.kind, args.userName, memberId, ref.id),
+    ...(status.kind === "odwieszenie" ? {targetPaidUntil: status.targetPaidUntil} : {}),
     status: "pending",
     createdAt: now,
     updatedAt: now,
@@ -266,7 +295,10 @@ export async function approveDuesOrder(db: FirebaseFirestore.Firestore, args: {o
     if (o.status !== "pending") throw new DuesClientError("Zgłoszenie zostało już rozpatrzone albo anulowane.");
     const userSnap = await tx.get(db.collection("users_active").doc(o.uid));
     const from = effectivePaidUntilIso((userSnap.data() as any)?.admin?.contributions);
-    const to = paidUntilAfterPayment(from, o.semesters, today, vars.semesterEnds);
+    // Odwieszenie: data docelowa z wniosku (nie „od zaległości”), ale nigdy wcześniejsza niż obecna.
+    const to = o.kind === "odwieszenie" && o.targetPaidUntil ?
+      (from > o.targetPaidUntil ? from : o.targetPaidUntil) :
+      paidUntilAfterPayment(from, o.semesters, today, vars.semesterEnds);
     result = {from, to};
     const now = admin.firestore.FieldValue.serverTimestamp();
     tx.update(ref, {status: "approved", decidedBy: args.performedBy, decidedAt: now, updatedAt: now,

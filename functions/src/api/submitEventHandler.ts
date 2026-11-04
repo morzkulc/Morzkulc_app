@@ -6,6 +6,7 @@ import * as logger from "firebase-functions/logger";
 import {createEvent} from "../modules/calendar/events_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -62,7 +63,7 @@ export async function handleSubmitEvent(req: Request, res: Response, deps: Submi
       }
 
       const userData = userSnap.data() as any;
-      const roleKey = norm(userData?.role_key);
+      const roleKey = effectiveRoleKey(userData);
       const statusKey = norm(userData?.status_key);
 
       if (await isUserStatusBlocked(db, statusKey)) {

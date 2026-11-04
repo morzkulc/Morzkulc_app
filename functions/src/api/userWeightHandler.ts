@@ -3,6 +3,7 @@
 
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -37,7 +38,7 @@ export async function handleUserWeight(req: Request, res: Response, deps: UserWe
       if (req.method === "GET") {
         const userSnap = await db.collection("users_active").doc(uid).get();
         const userData = userSnap.exists ? (userSnap.data() as any) : null;
-        const roleKey = String(userData?.role_key || "");
+        const roleKey = effectiveRoleKey(userData);
         const isKursant = roleKey === "rola_kursant";
 
         let weight: number | null = null;

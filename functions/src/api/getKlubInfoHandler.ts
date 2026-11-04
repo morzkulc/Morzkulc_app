@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {canSeeMemberContacts} from "../modules/users/member_standing";
+import {canSeeMemberContacts, effectiveRoleKey} from "../modules/users/member_standing";
 import * as logger from "firebase-functions/logger";
 import {fullNameFromUser, resolveZarzad} from "../modules/setup/function_roles_service";
 import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blachy_registry";
@@ -66,7 +66,7 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
       // filtrowanie po stronie serwera (pola nieobecne w odpowiedzi, nie tylko
       // nierenderowane) — świadomie NIE rozluźniać (przypomnienie użytkownika
       // 05.09.2026: nie pokazywać stanu konta nikomu poza zarządem/KR).
-      const roleKey = userSnap.exists ? String((userSnap.data() as any)?.role_key || "") : "";
+      const roleKey = userSnap.exists ? effectiveRoleKey(userSnap.data()) : "";
       const canSeeFinance = adminRoleKeys.includes(roleKey);
       // E-mail osób z kluczami — tylko członkowie/kandydaci/KR/zarząd (member_standing.ts).
       const canSeeContacts = canSeeMemberContacts(roleKey);

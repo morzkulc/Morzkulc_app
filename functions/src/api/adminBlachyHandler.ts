@@ -6,6 +6,7 @@ import {BLACHY_COLLECTION, isArchiwum, toPublic, validateBlachaInput} from "../m
 import {norm} from "../modules/shared/text_utils";
 import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -53,7 +54,7 @@ export async function handleAdminBlachy(req: Request, res: Response, deps: Admin
       ]);
       const cfg = parseBlachyConfig((varsSnap.data() as any)?.vars, todayWarsawIso());
       const mail = norm((userSnap.data() as any)?.email || tokenCheck.decoded.email).toLowerCase();
-      if (!canEditRegistry(cfg, mail, adminRoleKeys.includes(norm((userSnap.data() as any)?.role_key)))) {
+      if (!canEditRegistry(cfg, mail, adminRoleKeys.includes(effectiveRoleKey(userSnap.data())))) {
         res.status(403).json({error: "Forbidden"});
         return;
       }

@@ -407,7 +407,7 @@ function showDuesReminder(rem) {
       <div class="gearModalTop"><h3 style="margin:0;">Zaległe składki</h3></div>
       <div class="gearModalBody" style="display:block;">
         <p style="margin-top:0;">Zalegasz ze składkami członkowskimi: <strong>${sem}</strong>${paid}.</p>
-        <p class="muted" style="margin-bottom:0;">To tylko przypomnienie. Szczegóły i zgłoszenie wpłaty znajdziesz w profilu (blok „Składki”).</p>
+        <p class="muted" style="margin-bottom:0;">To tylko przypomnienie. Szczegóły i zgłoszenie wpłaty znajdziesz w profilu (blok „Składki”)${rem?.suspensionAvailable ? " — tam możesz też poprosić Zarząd o zawieszenie członkostwa" : ""}.</p>
       </div>
       <div class="gearModalActions">
         <button type="button" class="ghost ghostCancel" data-close>Zamknij</button>

@@ -24,6 +24,7 @@
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
 import {normNullish} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -100,7 +101,7 @@ export async function handleKmAdminMergePlaces(
       const uid = tokenCheck.decoded.uid;
 
       const userSnap = await deps.db.collection("users_active").doc(uid).get();
-      const roleKey = normNullish((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!deps.adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden — wymagana rola administratora."});
         return;

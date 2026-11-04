@@ -4,6 +4,7 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -60,7 +61,7 @@ export async function handleGetAdminGearDamageReports(req: Request, res: Respons
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

@@ -7,6 +7,7 @@ import * as admin from "firebase-admin";
 import {processApproval} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -58,7 +59,7 @@ async function authorizeAdmin(
   const uid = tokenCheck.decoded.uid;
   const email = norm(tokenCheck.decoded.email);
   const userSnap = await deps.db.collection("users_active").doc(uid).get();
-  const roleKey = norm((userSnap.data() as any)?.role_key);
+  const roleKey = effectiveRoleKey(userSnap.data());
   if (!deps.adminRoleKeys.includes(roleKey)) {
     res.status(403).json({error: "Forbidden"});
     return null;

@@ -1,6 +1,7 @@
 import {ServiceTask} from "../types";
 import {GoogleWorkspaceProvider} from "../providers/googleWorkspaceProvider";
 import {listaRoleForUserRole, RoleMappingEntry, SimpleLogger} from "../workspaceGroupSync";
+import {SUSPENDED_STATUS_KEY, effectiveRoleKey} from "../../modules/users/member_standing";
 import {normNullish} from "../../modules/shared/text_utils";
 import {getAppVars} from "../../modules/setup/app_vars";
 
@@ -17,8 +18,8 @@ import {getAppVars} from "../../modules/setup/app_vars";
  *   - PUNKTOWY (payload.email): przetwarza jednego użytkownika. Cel wywołań z registerUserHandler.ts
  *     (enqueueWorkspaceGroupsRoleSync) — natychmiastowa reakcja po zmianie roli poza sheet-syncem.
  *
- * Zawieszeni/skreśleni (status_key != status_aktywny) → oczekiwane: brak członkostwa w ŻADNEJ
- * zarządzanej grupie, w tym lista@.
+ * Zawieszeni → jak sympatyk (lista@ MEMBER + grupy sympatyka; decyzja 03.11.2026).
+ * Skreśleni/inni (status_key != aktywny/zawieszony) → brak członkostwa w ŻADNEJ zarządzanej grupie, w tym lista@.
  *
  * Idempotentny, non-destructive dla kont spoza users_active (np. sprzetowiec@ jako MANAGER na
  * lista@ — nie ma dokumentu w users_active, więc nigdy nie jest ruszany).
@@ -36,9 +37,16 @@ type Correction = {
   after: string | null;
 };
 
+/** Rola docelowa wg statusu: aktywny → rola z arkusza, zawieszony → sympatyk, reszta → null (brak grup). */
+function accessRoleFor(roleKey: string, statusKey: string): string | null {
+  if (statusKey === "status_aktywny") return roleKey;
+  if (statusKey === SUSPENDED_STATUS_KEY) return effectiveRoleKey({role_key: roleKey, status_key: statusKey});
+  return null;
+}
+
 function targetListaRoleFor(roleKey: string, statusKey: string): "MANAGER" | "MEMBER" | null {
-  if (statusKey !== "status_aktywny") return null;
-  return listaRoleForUserRole(roleKey);
+  const role = accessRoleFor(roleKey, statusKey);
+  return role ? listaRoleForUserRole(role) : null;
 }
 
 function targetManagedGroupsFor(
@@ -46,9 +54,10 @@ function targetManagedGroupsFor(
   statusKey: string,
   roleMappings: Record<string, RoleMappingEntry>
 ): Set<string> {
-  if (statusKey !== "status_aktywny") return new Set();
+  const role = accessRoleFor(roleKey, statusKey);
+  if (!role) return new Set();
   return new Set(
-    (roleMappings[roleKey]?.groups || [])
+    (roleMappings[role]?.groups || [])
       .map((g) => normNullish(g).toLowerCase())
       .filter((g) => g.includes("@"))
   );

@@ -2,7 +2,7 @@
 /* eslint-disable valid-jsdoc */
 
 import type {Request, Response} from "express";
-import {canSeeMemberContacts} from "../modules/users/member_standing";
+import {canSeeMemberContacts, effectiveRoleKey} from "../modules/users/member_standing";
 import type * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {
@@ -152,7 +152,7 @@ export async function handleGetGearKayaks(req: Request, res: Response, deps: Get
         db.collection("users_active").doc(tokenCheck.decoded.uid).get(),
       ]);
       // E-mail właściciela kajaka — tylko członkowie/kandydaci/KR/zarząd (member_standing.ts).
-      const showOwnerContact = canSeeMemberContacts(String((userSnap.data() as any)?.role_key || ""));
+      const showOwnerContact = canSeeMemberContacts(effectiveRoleKey(userSnap.data()));
 
       const kayaks = kayaksSnap.docs
         .map((d) => ({...d.data(), id: String(d.data()?.id || "") || d.id}))

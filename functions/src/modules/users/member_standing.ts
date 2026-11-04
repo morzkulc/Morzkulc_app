@@ -13,6 +13,23 @@ export const MEMBER_ROLE_KEYS = [...FULL_MEMBER_ROLE_KEYS, "rola_kandydat"];
  */
 export const CONTACT_VISIBLE_ROLE_KEYS = ["rola_czlonek", "rola_kandydat", "rola_kr", "rola_zarzad"];
 
+export const SUSPENDED_STATUS_KEY = "status_zawieszony";
+
+export function isSuspended(userData: any): boolean {
+  return String(userData?.status_key || "").trim() === SUSPENDED_STATUS_KEY;
+}
+
+/**
+ * Rola do UPRAWNIEŃ: członek z „Zawieszony” ma dostęp jak sympatyk (decyzja 03.11.2026).
+ * W bazie i arkuszu role_key zostaje prawdziwa (po odwieszeniu wraca bez zmian) — dlatego
+ * każdy odczyt roli do sprawdzenia uprawnień idzie przez tę funkcję, a raporty/arkusz czytają role_key.
+ */
+export function effectiveRoleKey(userData: any): string {
+  const role = String(userData?.role_key || "").trim();
+  if (!role) return "";
+  return isSuspended(userData) ? "rola_sympatyk" : role;
+}
+
 export function canSeeMemberContacts(roleKey: string): boolean {
   return CONTACT_VISIBLE_ROLE_KEYS.includes(String(roleKey || ""));
 }

@@ -1,6 +1,7 @@
 import {todayIsoUTC, isIsoDateYYYYMMDD} from "./calendar_utils";
 import {isUserStatusBlocked} from "../users/userStatusCheck";
 import {norm} from "../shared/text_utils";
+import {effectiveRoleKey} from "../users/member_standing";
 
 const COLLECTION = "events";
 
@@ -154,7 +155,7 @@ export async function resolveKierownikCandidate(
 
   const doc = snap.docs[0];
   const data = doc.data() as any;
-  const roleKey = norm(data?.role_key);
+  const roleKey = effectiveRoleKey(data);
   if (!memberRoleKeys.includes(roleKey)) {
     return {
       ok: false,

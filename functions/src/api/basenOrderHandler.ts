@@ -3,6 +3,7 @@ import {ClientError, getBasenVars, resolveBasenAdminGrant} from "../modules/base
 import {approveOrder, cancelOwnOrder, createOrder, rejectOrder} from "../modules/basen/basen_orders";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {fullName} from "../modules/shared/user_display";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -77,7 +78,7 @@ export async function handleBasenOrder(req: Request, res: Response, deps: Deps):
       }
 
       if (action === "approve" || action === "reject") {
-        const isStaff = deps.adminRoleKeys.includes(String(userData?.role_key || "")) ||
+        const isStaff = deps.adminRoleKeys.includes(effectiveRoleKey(userData)) ||
           await resolveBasenAdminGrant(deps.db, String(userData?.email || ""));
         if (!isStaff) {
           res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});

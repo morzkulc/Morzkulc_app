@@ -2,6 +2,7 @@ import type {Request, Response} from "express";
 import {submitPurchaseRequest} from "../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -66,7 +67,7 @@ export async function handleGodzinkiPurchase(req: Request, res: Response, deps: 
         return;
       }
 
-      const roleKey = String((userSnap.data() as any)?.role_key || "");
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!godzinkiRoleKeys.includes(roleKey)) {
         res.status(403).json({ok: false, code: "forbidden", error: "Wykup godzinek wymaga roli Kandydat lub Członek."});
         return;

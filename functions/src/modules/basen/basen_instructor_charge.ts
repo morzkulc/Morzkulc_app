@@ -5,6 +5,7 @@ import {nextEntryValuePln} from "./basen_finance";
 import {computeBalance, deductHoursInTx, getAllRecords, refundHoursForReservationInTx} from "../hours/godzinki_service";
 import {getGodzinkiVars} from "../hours/godzinki_vars";
 import {getServiceConfig} from "../../service/service_config";
+import {effectiveRoleKey} from "../users/member_standing";
 
 /**
  * Opłata za instruktora na basenie (regulamin basenu § 6): instruktor to zasób klubowy.
@@ -47,7 +48,7 @@ export async function precheckInstructorCharge(
   opts: {enrolling?: boolean} = {}
 ): Promise<void> {
   const userSnap = await db.collection("users_active").doc(uid).get();
-  const payer = payerFor(String((userSnap.data() as any)?.role_key || ""));
+  const payer = payerFor(effectiveRoleKey(userSnap.data()));
   if (payer === "free") return;
   const bVars = await getBasenVars(db);
   if (payer === "basen") {
@@ -85,7 +86,7 @@ export async function syncInstructorCharge(db: FirebaseFirestore.Firestore, eid:
         tx.get(db.collection("basen_enrollments").doc(enrollmentId(e.sessionId, e.slot, e.instructorUid))) :
         Promise.resolve(null),
     ]);
-    const payer = payerFor(String((userSnap.data() as any)?.role_key || ""));
+    const payer = payerFor(effectiveRoleKey(userSnap.data()));
     const session = sessionSnap.data() as BasenSession | undefined;
     const sessionCancelled = !session || isSessionCancelled(session) || session.slots?.[e.slot]?.status === "cancelled";
     const instr = instrSnap && instrSnap.exists ? (instrSnap.data() as BasenEnrollment) : null;

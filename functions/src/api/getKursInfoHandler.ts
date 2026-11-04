@@ -5,6 +5,7 @@ import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {getServiceConfig} from "../service/service_config";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -49,7 +50,7 @@ export async function handleGetKursInfo(req: Request, res: Response, deps: GetKu
       const email = (tokenCheck.decoded.email || "").toLowerCase();
 
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
 
       const isKursant = roleKey === "rola_kursant";
       const isAdmin = adminRoleKeys.includes(roleKey);

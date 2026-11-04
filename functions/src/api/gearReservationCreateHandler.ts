@@ -3,6 +3,7 @@ import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {createBundleReservation} from "../modules/equipment/bundle/gear_bundle_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -51,7 +52,7 @@ export async function handleGearReservationCreate(req: Request, res: Response, d
         return;
       }
       const userData = userSnap.data() as any;
-      const roleKey = String(userData?.role_key || "");
+      const roleKey = effectiveRoleKey(userData);
       const statusKey = String(userData?.status_key || "");
       if (await isUserStatusBlocked(db, statusKey)) {
         res.status(403).json({ok: false, code: "forbidden", message: "Konto zawieszone."});

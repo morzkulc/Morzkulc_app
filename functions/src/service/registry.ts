@@ -12,7 +12,7 @@ import { basenGrantInstructorRewardsTask } from "./tasks/basenGrantInstructorRew
 import { basenDecideSessionsTask } from "./tasks/basenDecideSessions";
 import { basenNotifyWaitlistPromotedTask } from "./tasks/basenNotifyWaitlistPromoted";
 import { basenNotifyOrderTask } from "./tasks/basenNotifyOrder";
-import { duesDailyTask, duesNotifyOrderTask, duesSendReminderTask, duesWriteBackTask } from "./tasks/duesTasks";
+import { duesDailyTask, duesNotifyOrderTask, duesNotifySuspensionRequestTask, duesSendReminderTask, duesWriteBackTask } from "./tasks/duesTasks";
 import { gearPrivateStorageTask } from "./tasks/gearPrivateStorage";
 import { godzinkiMonthlyBalanceReviewTask } from "./tasks/godzinkiMonthlyBalanceReview";
 import { godzinkiArchiveSheetRowsTask } from "./tasks/godzinkiArchiveSheetRows";
@@ -68,6 +68,7 @@ const tasks: ServiceTask[] = [
   duesWriteBackTask,
   duesNotifyOrderTask,
   duesSendReminderTask,
+  duesNotifySuspensionRequestTask,
   duesDailyTask,
   gearPrivateStorageTask,
   godzinkiMonthlyBalanceReviewTask,

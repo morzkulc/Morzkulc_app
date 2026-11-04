@@ -12,6 +12,7 @@ import {MEMBER_ROLE_KEYS, effectivePaidUntilIso} from "../../modules/users/membe
 import {
   DUES_ORDERS, DuesOrder, computeDuesStatus, formatDatePl, formatPln,
 } from "../../modules/dues/dues_service";
+import {DUES_SUSPENSION_REQUESTS, SUSPENSION_MAIL_TO, SuspensionRequest, buildSuspensionMails} from "../../modules/dues/dues_suspension";
 
 /**
  * Taski składek (plan: DOCS/Sessions & TO DOs/01.11_skladki_zglaszanie_PLAN.md):
@@ -22,9 +23,31 @@ import {
  *                         dla osób, które same je włączyły (profile.notifications.duesReminder).
  */
 
-const KIND_LABEL = {skladka: "Składka członkowska", wpisowe: "Wpisowe"};
+/** Mail do Zarządu po zaksięgowaniu wpłaty na odwieszenie — status zmienia Zarząd w arkuszu. */
+export function buildReinstateBoardMail(o: Pick<DuesOrder, "userName" | "memberId" | "userEmail" | "semesters" | "amountPln" | "writeBack">): {to: string; subject: string; body: string} {
+  return {
+    to: SUSPENSION_MAIL_TO,
+    subject: `Odwieszenie członkostwa — ${o.userName} (ID: ${o.memberId}) — zmień status na „Aktywny”`,
+    body: [
+      `${o.userName} (ID: ${o.memberId}, ${o.userEmail}) opłacił(a) odwieszenie członkostwa.`,
+      "",
+      `Wpłata: ${formatPln(o.amountPln)} (${semWord(o.semesters)}) — potwierdzona przez skarbnika.`,
+      `Składki opłacone do: ${formatDatePl(o.writeBack?.to || "")} (data już wpisana do arkusza).`,
+      "",
+      "Do zrobienia: w arkuszu członków zmień Status z „Zawieszony” na „Aktywny”.",
+      "Aplikacja przywróci pełny dostęp i grupy przy nocnej synchronizacji.",
+    ].join("\n"),
+  };
+}
+
+const KIND_LABEL ={skladka: "Składka członkowska", wpisowe: "Wpisowe", odwieszenie: "Odwieszenie członkostwa"};
+
+function semWord(n: number): string {
+  return `${n} ${n === 1 ? "semestr" : n < 5 ? "semestry" : "semestrów"}`;
+}
 
 function orderLabel(o: Pick<DuesOrder, "kind" | "semesters">): string {
+  if (o.kind === "odwieszenie") return `Odwieszenie członkostwa — składka za ${semWord(o.semesters)}`;
   return o.kind === "wpisowe" ? "Wpisowe (2 semestry)" : `Składka członkowska — ${o.semesters} ${o.semesters === 1 ? "semestr" : o.semesters < 5 ? "semestry" : "semestrów"}`;
 }
 
@@ -149,6 +172,17 @@ export const duesNotifyOrderTask: ServiceTask<NotifyPayload> = {
         "",
         "Jeśli to pomyłka, odpowiedz na tego maila albo napisz do skarbnika (skarbnik@morzkulc.pl).",
       ];
+    } else if (o.kind === "odwieszenie") {
+      subject = `Odwieszenie członkostwa — wpłata zaksięgowana, opłacone do ${formatDatePl(o.writeBack?.to || "")}`;
+      lines = [
+        "Skarbnik potwierdził Twoją wpłatę na odwieszenie członkostwa.",
+        "",
+        `Za: ${label}`,
+        `Kwota: ${formatPln(o.amountPln)}`,
+        `Składki opłacone do: ${formatDatePl(o.writeBack?.to || "")}`,
+        "",
+        "Zarząd przywróci Twój status na „Aktywny” — pełny dostęp do aplikacji wróci po nocnej synchronizacji.",
+      ];
     } else {
       subject = `${KIND_LABEL[o.kind]} zaksięgowan${o.kind === "wpisowe" ? "e" : "a"} — opłacone do ${formatDatePl(o.writeBack?.to || "")}`;
       lines = [
@@ -163,6 +197,10 @@ export const duesNotifyOrderTask: ServiceTask<NotifyPayload> = {
     }
     const body = [...lines, "", vars.appUrl, "", "SKK Morzkulc"].join("\n");
     await ctx.workspace.sendGenericEmail(o.userEmail, subject, body);
+    if (o.kind === "odwieszenie" && payload.kind === "booked") {
+      const b = buildReinstateBoardMail(o);
+      await ctx.workspace.sendGenericEmail(b.to, b.subject, b.body);
+    }
     await ref.update({[mark]: new Date()});
     return {ok: true, message: `Mail (${payload.kind}) wysłany.`};
   },
@@ -216,6 +254,30 @@ export const duesSendReminderTask: ServiceTask<ReminderPayload> = {
 };
 
 // ─── dues.daily ─────────────────────────────────────────────────────────────
+
+// ─── Prośba o zawieszenie członkostwa ──────────────────────────────────────
+
+export const duesNotifySuspensionRequestTask: ServiceTask<{uid: string}> = {
+  id: "dues.notifySuspensionRequest",
+  description: "Składki: prośba członka o zawieszenie członkostwa — mail do Zarządu i potwierdzenie do członka.",
+
+  validate: (payload) => {
+    if (!payload?.uid) throw new Error("Missing uid");
+  },
+
+  run: async (payload, ctx) => {
+    const ref = ctx.firestore.collection(DUES_SUSPENSION_REQUESTS).doc(payload.uid);
+    const r = (await ref.get()).data() as (SuspensionRequest & {notifiedAt?: any}) | undefined;
+    if (!r) return {ok: true, message: "Prośba nie istnieje — mail pominięty."};
+    if (r.notifiedAt) return {ok: true, message: "Mail już wysłany."};
+    const vars = await getAppVars(ctx.firestore);
+    const {board, member} = buildSuspensionMails(r, vars.appUrl);
+    await ctx.workspace.sendGenericEmail(board.to, board.subject, board.body);
+    if (member.to.includes("@")) await ctx.workspace.sendGenericEmail(member.to, member.subject, member.body);
+    await ref.update({notifiedAt: new Date()});
+    return {ok: true, message: "Prośba o zawieszenie wysłana do Zarządu."};
+  },
+};
 
 export const duesDailyTask: ServiceTask<Record<string, never>> = {
   id: "dues.daily",

@@ -474,7 +474,7 @@ const getSetupRoute = async (req: Request, res: Response) => {
       }
 
       const userData = userSnap.exists ? (userSnap.data() as any) : null;
-      const roleKey = String(userData?.role_key || "");
+      const roleKey = accessRoleKeyOf(userData);
       const statusKey = String(userData?.status_key || "");
 
       const kursModuleCfg = Object.values(setup.modules || {}).find(
@@ -990,7 +990,7 @@ export const appsScriptSync = onRequest({invoker: "private"}, async (req, res) =
     if (!authorized) {
       const snap = await db.collection("users_active").where("email", "==", who.email).limit(1).get();
       if (!snap.empty) {
-        const roleKey = String((snap.docs[0].data() as any)?.role_key || "");
+        const roleKey = accessRoleKeyOf(snap.docs[0].data());
         authorized = adminRoleKeys.includes(roleKey);
       }
     }
@@ -1829,6 +1829,7 @@ if (servingOrDiscovering("adminRunServiceTask")) {
  * Uruchamiany 1. dnia każdego miesiąca o 04:00 czasu warszawskiego.
  */
 import {onSchedule} from "firebase-functions/v2/scheduler";
+import {effectiveRoleKey as accessRoleKeyOf} from "./modules/users/member_standing";
 // runner ładowany DYNAMICZNIE (patrz loadRunTaskById niżej) — import statyczny
 // ciągnął za sobą registry.ts → 35 tasków → cztery providery z `googleapis`,
 // czyli ~4 s ładowania modułów w zimnym starcie KAŻDEJ z 65 funkcji HTTP, choć

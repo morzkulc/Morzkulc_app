@@ -1,6 +1,7 @@
 import type {Request, Response} from "express";
 import {cancelSession, resolveBasenAdminGrant, ClientError} from "../modules/basen/basen_service";
 import {syncSessionInstructorCharges} from "../modules/basen/basen_instructor_charge";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -45,7 +46,7 @@ export async function handleBasenCancelSession(req: Request, res: Response, deps
       }
 
       const userData = userSnap.data() as any;
-      const roleKey = String(userData?.role_key || "");
+      const roleKey = effectiveRoleKey(userData);
       const email = String(userData?.email || "");
 
       if (!deps.adminRoleKeys.includes(roleKey) && !(await resolveBasenAdminGrant(deps.db, email))) {

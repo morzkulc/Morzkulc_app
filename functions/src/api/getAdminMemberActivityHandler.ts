@@ -6,6 +6,7 @@ import * as logger from "firebase-functions/logger";
 import {normNullish} from "../modules/shared/text_utils";
 import {resolveDateRange} from "../modules/shared/date_range_utils";
 import {computeMemberActivity} from "../modules/hours/member_activity";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -43,7 +44,7 @@ export async function handleGetAdminMemberActivity(req: Request, res: Response, 
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = normNullish((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

@@ -3,6 +3,7 @@ import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {getAllRecords, computeBalance, computeNextExpiry, computeEarnedTotal, GodzinkiRecord} from "../modules/hours/godzinki_service";
 import {computeMemberActivity} from "../modules/hours/member_activity";
 import {resolveDateRange} from "../modules/shared/date_range_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -113,7 +114,7 @@ export async function handleGetGodzinki(req: Request, res: Response, deps: GetGo
 
       if (view === "ranking") {
         const userSnap = await db.collection("users_active").doc(uid).get();
-        const roleKey = String((userSnap.data() as any)?.role_key || "").trim();
+        const roleKey = effectiveRoleKey(userSnap.data());
         if (!godzinkiRoleKeys.includes(roleKey)) {
           res.status(403).json({error: "Forbidden"});
           return;

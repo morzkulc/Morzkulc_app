@@ -6,6 +6,7 @@ import {getGodzinkiVars} from "../../hours/godzinki_vars";
 import {isUserStatusBlocked} from "../../users/userStatusCheck";
 import {countMyOverlappingItemsByCategory, countItemsByCategory, findCategoryOverLimit} from "../shared/reservation_limits";
 import {norm} from "../../shared/text_utils";
+import {effectiveRoleKey} from "../../users/member_standing";
 
 export async function listMyReservations(db: FirebaseFirestore.Firestore, uid: string) {
   const snap = await db
@@ -23,7 +24,7 @@ async function getUserRole(db: FirebaseFirestore.Firestore, uid: string) {
   if (!snap.exists) return null;
   const data = snap.data() as any;
   return {
-    roleKey: String(data?.role_key || "rola_sympatyk"),
+    roleKey: (effectiveRoleKey(data) || "rola_sympatyk"),
     statusKey: String(data?.status_key || "status_aktywny"),
     email: String(data?.email || ""),
   };

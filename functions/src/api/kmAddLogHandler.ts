@@ -36,6 +36,7 @@ import {getKmVars} from "../modules/km/km_vars";
 import {addKmLog, updateKmLog, deleteKmLog, KmLogChangeResult} from "../modules/km/km_log_service";
 import {upsertKmPlace} from "../modules/km/km_places_service";
 import {normNullish} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -152,7 +153,7 @@ export async function handleKmAddLog(
         return;
       }
       const userData = userSnap.data() as any;
-      const roleKey = normNullish(userData?.role_key);
+      const roleKey = effectiveRoleKey(userData);
       // Kursant zapisuje wpisy przez formularz kursanta (wywrotolotek). Dopisany tylko tutaj —
       // memberRoleKeys decyduje też o imprezach, kierownikach i zgłoszeniach sprzętu.
       if (!deps.memberRoleKeys.includes(roleKey) && roleKey !== "rola_kursant") {

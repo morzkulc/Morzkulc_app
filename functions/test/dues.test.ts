@@ -27,8 +27,9 @@ import {
   cancelOwnDuesOrder, transferTitle,
 } from "../src/modules/dues/dues_service";
 import {getAppVars} from "../src/modules/setup/app_vars";
-import {duesDailyTask, duesNotifyOrderTask, duesWriteBackTask} from "../src/service/tasks/duesTasks";
+import {duesDailyTask, duesNotifyOrderTask, duesNotifySuspensionRequestTask, duesWriteBackTask} from "../src/service/tasks/duesTasks";
 import {handleAdminDues} from "../src/api/adminDuesHandler";
+import {createSuspensionRequest, suspensionInfo} from "../src/modules/dues/dues_suspension";
 import {isDuesPaid, isSemesterEndDate} from "../src/modules/users/member_standing";
 
 const ENDS = ["02-28", "09-30"];
@@ -110,8 +111,8 @@ describe("status i zgłoszenie", () => {
     const today = "2026-11-02";
     expect(duesOverdueReminder(user("A", "rola_czlonek", "2027-02-28"), vars, today)).toBeNull();
     expect(duesOverdueReminder(user("A", "rola_czlonek", "2026-02-28"), vars, today)).toBeNull(); // 2 semestry
-    expect(duesOverdueReminder(user("A", "rola_czlonek", "2025-09-30"), vars, today)).toEqual({overdue: 3, paidUntil: "2025-09-30"});
-    expect(duesOverdueReminder(user("B", "rola_czlonek", "2022-09-30"), vars, today)).toMatchObject({overdue: 9});
+    expect(duesOverdueReminder(user("A", "rola_czlonek", "2025-09-30"), vars, today)).toEqual({overdue: 3, paidUntil: "2025-09-30", suspensionAvailable: false});
+    expect(duesOverdueReminder(user("B", "rola_czlonek", "2022-09-30"), vars, today)).toMatchObject({overdue: 9, suspensionAvailable: true});
     expect(duesOverdueReminder(user("K", "rola_kandydat"), vars, today)).toBeNull(); // brak daty
     expect(duesOverdueReminder(user("S", "rola_sympatyk", "2020-09-30"), vars, today)).toBeNull();
   });
@@ -249,6 +250,27 @@ describe("panel Zarządu → Składki", () => {
   });
 });
 
+describe("panel Zarządu → Ostatnie decyzje", () => {
+  it("każda decyzja (także odrzucona i z konfliktem arkusza) znika po 30 dniach", async () => {
+    const day = 86400000;
+    const ago = (d: number) => ts(new Date(Date.now() - d * day).toISOString());
+    const o = (id: string, status: string, decidedDaysAgo: number, writeBack: any = null) => ({
+      _docId: id, id, uid: "ZAL", memberId: 10, userName: "Z", kind: "skladka", semesters: 1, amountPln: 75,
+      transferTitle: "t", status, createdAt: ago(decidedDaysAgo + 1), decidedAt: ago(decidedDaysAgo),
+      ...(writeBack ? {writeBack} : {}),
+    });
+    const {db} = seed([{...user("ZARZ", "rola_zarzad", "2099-09-30"), email: "zarz@x.pl"}], {dues_orders: [
+      o("ok_new", "approved", 5, {status: "done", to: "2027-02-28"}),
+      o("ok_old", "approved", 31, {status: "done", to: "2027-02-28"}),
+      o("rej_new", "rejected", 29),
+      o("rej_old", "rejected", 45),
+      o("conf_old", "approved", 40, {status: "conflict", message: "x"}),
+    ]});
+    const view = await callAdmin(db, "ZARZ", "zarz@x.pl", "GET");
+    expect(view.body.recent.map((r: any) => r.id)).toEqual(["ok_new", "rej_new"]);
+  });
+});
+
 describe("dues.daily", () => {
   it("alert do skarbnika o zgłoszeniu > 3 dni (raz); przypomnienie tylko dla chętnych, raz na datę", async () => {
     const {fake, db} = seed([
@@ -270,5 +292,81 @@ describe("dues.daily", () => {
 
     const again = await duesDailyTask.run({}, ctx(db, []));
     expect(again.details).toMatchObject({alerted: 0, reminded: 0});
+  });
+});
+
+describe("prośba o zawieszenie członkostwa", () => {
+  const today = "2026-11-02";
+  it("przycisk: zaległość ≥ 4 semestry (licząc bieżący), konto aktywne, brak świeżej prośby", async () => {
+    const {db} = seed([]);
+    const vars = await getAppVars(db);
+    expect(suspensionInfo(user("A", "rola_czlonek", "2025-02-28"), vars, "", today)).toEqual({canRequest: true, requestedAt: ""}); // 4
+    expect(suspensionInfo(user("A", "rola_czlonek", "2025-09-30"), vars, "", today).canRequest).toBe(false); // 3 — jest pop-up, nie ma przycisku
+    expect(suspensionInfo({...user("Z", "rola_czlonek", "2025-09-30"), status_key: "status_zawieszony"}, vars, "", today).canRequest).toBe(false);
+    expect(suspensionInfo(user("S", "rola_sympatyk", "2020-09-30"), vars, "", today).canRequest).toBe(false);
+    expect(suspensionInfo(user("A", "rola_czlonek", "2025-02-28"), vars, "2026-10-20", today)).toEqual({canRequest: false, requestedAt: "2026-10-20"});
+    expect(suspensionInfo(user("A", "rola_czlonek", "2025-02-28"), vars, "2026-09-01", today).canRequest).toBe(true); // > 30 dni
+  });
+
+  it("zawieszony: bez pop-upu", async () => {
+    const {db} = seed([]);
+    const vars = await getAppVars(db);
+    expect(duesOverdueReminder({...user("Z", "rola_czlonek", "2025-09-30"), status_key: "status_zawieszony"}, vars, today)).toBeNull();
+  });
+
+  it("prośba: doc + job, druga odrzucona; task wysyła mail do Zarządu i potwierdzenie, raz", async () => {
+    const {fake, db} = seed([user("A", "rola_czlonek", "2025-02-28")]);
+    const vars = await getAppVars(db);
+    const userData = await data(db, "A");
+    await createSuspensionRequest(db, vars, {uid: "A", userData, userName: "A Test", message: "Wyjazd na rok"}, today);
+    await expect(createSuspensionRequest(db, vars, {uid: "A", userData, userName: "A Test", message: ""}, today)).rejects.toThrow(/już wysłana/);
+    expect((fake.dump("service_jobs") as any[]).map((j) => j.taskId)).toEqual(["dues.notifySuspensionRequest"]);
+
+    const sent: any[] = [];
+    await duesNotifySuspensionRequestTask.run({uid: "A"}, ctx(db, sent));
+    expect(sent.map((m) => m.to)).toEqual(["zarzad@morzkulc.pl", "a@x.pl"]);
+    expect(sent[0].subject).toBe("Prośba o zawieszenie członkostwa — A Test (ID: 10)");
+    expect(sent[0].body).toMatch(/Zaległość: 4 semestry \(300 zł\)/);
+    expect(sent[0].body).toMatch(/Wyjazd na rok/);
+    const again: any[] = [];
+    await duesNotifySuspensionRequestTask.run({uid: "A"}, ctx(db, again));
+    expect(again).toEqual([]);
+  });
+});
+
+describe("zawieszony = sympatyk + odwieszenie", () => {
+  it("effectiveRoleKey: zawieszony → sympatyk, reszta bez zmian", async () => {
+    const {effectiveRoleKey} = await import("../src/modules/users/member_standing");
+    expect(effectiveRoleKey({role_key: "rola_czlonek", status_key: "status_zawieszony"})).toBe("rola_sympatyk");
+    expect(effectiveRoleKey({role_key: "rola_zarzad", status_key: "status_zawieszony"})).toBe("rola_sympatyk");
+    expect(effectiveRoleKey({role_key: "rola_czlonek", status_key: "status_aktywny"})).toBe("rola_czlonek");
+    expect(effectiveRoleKey({role_key: "", status_key: "status_zawieszony"})).toBe("");
+  });
+
+  it("status: odwieszenie = 2 semestry (poprzedni + bieżący), bez blokady > 8, cel = koniec bieżącego semestru", async () => {
+    const {db} = seed([]);
+    const vars = await getAppVars(db);
+    const sus = (c: string) => ({...user("Z", "rola_czlonek", c), status_key: "status_zawieszony"});
+    expect(computeDuesStatus(sus("2022-09-30"), vars, "2026-11-02")).toMatchObject({
+      kind: "odwieszenie", canOrder: true, blocked: false, overdue: 9, fixedSemesters: 2, targetPaidUntil: "2027-02-28"});
+    expect(computeDuesStatus(sus("2026-09-30"), vars, "2026-11-02")).toMatchObject({fixedSemesters: 1, canOrder: true});
+    expect(computeDuesStatus(sus(""), vars, "2026-11-02")).toMatchObject({fixedSemesters: 2, canOrder: true});
+    expect(computeDuesStatus(sus("2027-02-28"), vars, "2026-11-02")).toMatchObject({canOrder: false});
+  });
+
+  it("wniosek → potwierdzenie: data = koniec semestru z wniosku; po zaksięgowaniu mail do członka i do Zarządu", async () => {
+    const {fake, db} = seed([{...user("Z", "rola_czlonek", "2022-09-30"), status_key: "status_zawieszony"}]);
+    const o = await createDuesOrder(db, {uid: "Z", userData: await data(db, "Z"), userName: "Zawieszony Test", semesters: 7});
+    expect(o).toMatchObject({kind: "odwieszenie", semesters: 2, amountPln: 150});
+    expect(o.transferTitle).toMatch(/^Składka odwieszenie Zawieszony Test \(ID: 10\)/);
+    const target = o.targetPaidUntil as string;
+    expect(await approveDuesOrder(db, {orderId: o.id, performedBy: "SKARB"})).toEqual({from: "2022-09-30", to: target});
+
+    const stored = (fake.dump("dues_orders") as any[]).find((x) => x.id === o.id);
+    stored.writeBack = {status: "done", from: "2022-09-30", to: target};
+    const {buildReinstateBoardMail} = await import("../src/service/tasks/duesTasks");
+    const b = buildReinstateBoardMail(stored);
+    expect(b.to).toBe("zarzad@morzkulc.pl");
+    expect(b.body).toMatch(/zmień Status z „Zawieszony” na „Aktywny”/);
   });
 });

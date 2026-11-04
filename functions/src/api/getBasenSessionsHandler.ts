@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {canSeeMemberContacts} from "../modules/users/member_standing";
+import {canSeeMemberContacts, effectiveRoleKey} from "../modules/users/member_standing";
 import {listSeasonSessions, getUserEnrollments, computeSlotAvailability, resolveKayakLabelsBulk, getBasenVars, sessionSlotDatetimeMs, getAttendeesBySessionSlot, getAvailableKayaksBySessionSlot, getWaitlistsBySessionSlot, resolveBasenAdminGrant, todayIso} from "../modules/basen/basen_service";
 import {getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 import {computeSeason, loadSeasonEnrollments} from "../modules/basen/basen_season";
@@ -62,10 +62,10 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
       }
 
       const userData = userSnap.data() as any;
-      const isKursant = String(userData?.role_key || "") === "rola_kursant";
+      const isKursant = effectiveRoleKey(userData) === "rola_kursant";
 
       if (isFinanceView || !memberReads) {
-        const roleKey = String(userData?.role_key || "");
+        const roleKey = effectiveRoleKey(userData);
         if (!deps.adminRoleKeys.includes(roleKey) && !(await resolveBasenAdminGrant(deps.db, String(userData?.email || "")))) {
           res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});
           return;
@@ -86,7 +86,7 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
         userEnrollments.map((e) => e.kayakId).filter((id): id is string => Boolean(id) && id !== "PRIVATE")
       ));
       const [kayaksByKey, seasonEnrollments, kayakLabels] = await Promise.all([
-        getAvailableKayaksBySessionSlot(deps.db, upcoming, canSeeMemberContacts(String(userData?.role_key || ""))),
+        getAvailableKayaksBySessionSlot(deps.db, upcoming, canSeeMemberContacts(effectiveRoleKey(userData))),
         loadSeasonEnrollments(deps.db, sessions),
         resolveKayakLabelsBulk(deps.db, kayakIds),
       ]);

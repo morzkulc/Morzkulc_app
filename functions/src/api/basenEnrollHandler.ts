@@ -2,6 +2,7 @@ import type {Request, Response} from "express";
 import {enrollInSlot, joinWaitlist, getBasenVars, BasenSlotLabel, ClientError} from "../modules/basen/basen_service";
 import {precheckInstructorCharge, syncInstructorChargeSafe} from "../modules/basen/basen_instructor_charge";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -42,7 +43,7 @@ export async function handleBasenEnroll(req: Request, res: Response, deps: Deps)
       }
 
       const userData = userSnap.data() as any;
-      const roleKey = String(userData?.role_key || "");
+      const roleKey = effectiveRoleKey(userData);
       const statusKey = String(userData?.status_key || "");
 
       if (await isUserStatusBlocked(deps.db, statusKey)) {

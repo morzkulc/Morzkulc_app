@@ -11,6 +11,7 @@ import {getKursWindowEndSuffix} from "../modules/equipment/bundle/gear_bundle_se
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {isTestAccount, getAppVars} from "../modules/setup/app_vars";
 import {duesOverdueReminder} from "../modules/dues/dues_service";
+import {effectiveRoleKey, isSuspended} from "../modules/users/member_standing";
 import {findActiveKierownikEvents} from "../modules/calendar/events_service";
 
 type TokenCheck =
@@ -817,17 +818,20 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
         // szkoleniowiec (rozwiązywany tylko dla kandydata — ogranicza odczyty).
         // Trzy niezależne odczyty równolegle — wcześniej czekały jeden na drugi,
         // a /api/register jest pierwszym żądaniem przy każdym otwarciu aplikacji.
+        // Zawieszony: uprawnienia jak sympatyk (role_key w bazie zostaje prawdziwa — patrz effectiveRoleKey).
+        const suspended = isSuspended({status_key: statusKey});
+        const accessRoleKey = effectiveRoleKey({role_key: roleKey, status_key: statusKey});
         const [szkoleniowiec, kierownikSummary, isBasenAdmin, testAccount, duesReminder] = await Promise.all([
           roleKey === "rola_kandydat" ? resolveSzkoleniowiec(db) : Promise.resolve(null),
-          resolveKierownikSummary(db, uid, roleKey, deps.memberRoleKeys),
+          resolveKierownikSummary(db, uid, accessRoleKey, deps.memberRoleKeys),
           resolveBasenAdminGrant(db, email),
           isTestAccount(db, email),
           // Pop-up „zalegasz ze składkami” — tylko przypomnienie; błąd SETUP nie może blokować startu.
-          getAppVars(db).then((vars) => duesOverdueReminder({...data, role_key: roleKey}, vars)).catch(() => null),
+          getAppVars(db).then((vars) => duesOverdueReminder({...data, role_key: roleKey, status_key: statusKey}, vars)).catch(() => null),
         ]);
 
-        const allowedActions = deps.computeAllowedActions(roleKey);
-        if (isBasenAdmin) {
+        const allowedActions = deps.computeAllowedActions(accessRoleKey);
+        if (isBasenAdmin && !suspended) {
           if (!allowedActions.includes("basen.admin")) allowedActions.push("basen.admin");
         }
 
@@ -836,9 +840,12 @@ export async function handleRegisterUser(req: Request, res: Response, deps: Regi
           existed: true,
           uid,
           email: (data as any).email || email,
-          role_key: roleKey,
+          // role_key = rola do uprawnień w UI (zawieszony → sympatyk); prawdziwa w member_role_key.
+          role_key: accessRoleKey,
+          member_role_key: roleKey,
+          suspended,
           status_key: statusKey,
-          screen: defaultScreenForRoleKey(roleKey),
+          screen: defaultScreenForRoleKey(accessRoleKey),
           allowed_actions: allowedActions,
           setupMissing: !setupApp,
           openingMatch: Boolean((data as any).openingMatch),

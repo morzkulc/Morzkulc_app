@@ -5,6 +5,7 @@ import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {createBundleReservation, BundleItemInput} from "../modules/equipment/bundle/gear_bundle_service";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 /** Kolejkuje job serwisowy (fire-and-forget z gwarancją zapisu joba) — ten sam
  * wzorzec co submitGearDamageReportHandler.ts. */
@@ -85,7 +86,7 @@ export async function handleGearBundleReservationCreate(
         res.status(403).json({ok: false, code: "forbidden", message: "Konto zawieszone."});
         return;
       }
-      const roleKey = String((userSnap.data() as any)?.role_key || "");
+      const roleKey = effectiveRoleKey(userSnap.data());
       // Kursant przechodzi przez bramkę roli — jego eligibility (flaga kurs_wypożycza
       // + okno wypożyczeń do końca września roku szkoleniówki) egzekwuje
       // createBundleReservation. Pozostałe role spoza memberRoleKeys odrzucamy tutaj.

@@ -3,6 +3,7 @@ import {resolveBasenAdminGrant, getBasenVars} from "../modules/basen/basen_servi
 import {adminAddBasenGodziny, addManualExtraBasenGodziny, getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
 import {BasenProduct} from "../modules/basen/basen_finance";
 import {getKarnetEligibility, adminAddKarnet} from "../modules/basen/basen_orders";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 const PRODUCTS: BasenProduct[] = ["jednorazowe", "karnet5", "karnet10"];
 
@@ -54,7 +55,7 @@ export async function handleBasenAdminAddGodziny(req: Request, res: Response, de
       }
 
       const adminData = adminSnap.data() as any;
-      const adminRoleKey = String(adminData?.role_key || "");
+      const adminRoleKey = effectiveRoleKey(adminData);
       const adminEmail = String(adminData?.email || "");
       if (!deps.adminRoleKeys.includes(adminRoleKey) && !(await resolveBasenAdminGrant(deps.db, adminEmail))) {
         res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});

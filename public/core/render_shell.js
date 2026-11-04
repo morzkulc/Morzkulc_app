@@ -173,7 +173,9 @@ async function renderHomeDashboard({ viewEl, ctx }) {
 
   // Komunikat dla ról z ograniczonym dostępem. Kandydat ma pełne prawa członka
   // (poza limitem sprzętu) — jego informacje są w profilu, nie na dashboardzie.
-  const accessInfoMsg = dash.isSympatyk
+  const accessInfoMsg = ctx?.session?.suspended
+    ? "Twoje członkostwo jest zawieszone — masz dostęp do aplikacji jak sympatyk. Jak wrócić do klubu (wniosek o odwieszenie i kwota do zapłaty) — zobacz Profil → Składki."
+    : dash.isSympatyk
     ? "Jako Sympatyk możesz przeglądać sprzęt, imprezy i ranking oraz zapisywać się na zajęcia basenowe, gdy są dostępne. Jeśli jesteś zainteresowany członkostwem w SKK Morzkulc, napisz na zarzad@morzkulc.pl."
     : dash.kursExpired
       ? "Twoje uprawnienia kursanta wygasły z końcem września — możesz przeglądać sprzęt, ale wypożyczanie nie jest już dostępne. Zarząd wkrótce nada Ci rolę docelową. W razie pytań napisz na zarzad@morzkulc.pl."
@@ -530,7 +532,8 @@ async function renderHomeDashboard({ viewEl, ctx }) {
 function renderHomeProfile({ viewEl, ctx }) {
   const name = getHelloName(ctx);
   const roleKey = String(ctx?.session?.role_key || "");
-  const roleLabel = roleKeyToLabel(roleKey, ctx?.setup?.roleMappings);
+  // Zawieszony: w profilu prawdziwa rola z arkusza (role_key w sesji = sympatyk, do uprawnień).
+  const roleLabel = roleKeyToLabel(String(ctx?.session?.member_role_key || roleKey), ctx?.setup?.roleMappings);
   const statusLabel = statusKeyToLabel(String(ctx?.session?.status_key || ""), ctx?.setup?.statusMappings);
   const isKursant = roleKey === "rola_kursant";
   const dash = getDashboardConfig(ctx);
@@ -599,7 +602,7 @@ function renderHomeProfile({ viewEl, ctx }) {
       </div>
       ` : ""}
 
-      ${(!isKursant && !dash.isSympatyk) ? `
+      ${(!isKursant && (!dash.isSympatyk || ctx?.session?.suspended)) ? `
       <div class="profileBlock" id="duesBox">${spinnerHtml("Ładowanie składek...")}</div>
       ` : ""}
 

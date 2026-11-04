@@ -44,7 +44,8 @@ const TAB_VARS_KURS = "Vars_KURS";
 // Zostaje w kodzie — patrz uzasadnienie w komentarzu nagłówkowym pliku.
 const STATUS_MAPPINGS: Record<string, {label: string; blocksAccess: boolean}> = {
   status_aktywny: {label: "Aktywny", blocksAccess: false},
-  status_zawieszony: {label: "Zawieszony", blocksAccess: true},
+  // Zawieszony NIE blokuje aplikacji: dostęp jak sympatyk przez effectiveRoleKey (decyzja 03.11.2026).
+  status_zawieszony: {label: "Zawieszony", blocksAccess: false},
   status_pending: {label: "Oczekujący", blocksAccess: false},
 };
 

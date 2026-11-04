@@ -6,6 +6,7 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {createDamageReport, isSupportedDamageCategory} from "../modules/equipment/damage/gear_damage_service";
 import {normNullish} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 /** Kolejkuje job serwisowy (fire-and-forget z gwarancją zapisu joba) — ten sam
  * wzorzec co adminGearReservationCancelHandler.ts. */
@@ -64,7 +65,7 @@ export async function handleSubmitGearDamageReport(req: Request, res: Response, 
 
       const userSnap = await db.collection("users_active").doc(uid).get();
       const userData = (userSnap.exists ? userSnap.data() : null) as any;
-      const roleKey = normNullish(userData?.role_key);
+      const roleKey = effectiveRoleKey(userData);
 
       const body = (req.body || {}) as any;
       const category = normNullish(body.category).toLowerCase();

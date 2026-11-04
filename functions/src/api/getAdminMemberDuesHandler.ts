@@ -7,7 +7,7 @@ import {computeBalance, GodzinkiRecord} from "../modules/hours/godzinki_service"
 import {normNullish} from "../modules/shared/text_utils";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
 import {fullName, nickname, isRegistered} from "../modules/shared/user_display";
-import {FULL_MEMBER_ROLE_KEYS, contributionsRaw, isDuesPaid, isInGoodStanding} from "../modules/users/member_standing";
+import {FULL_MEMBER_ROLE_KEYS, contributionsRaw, isDuesPaid, isInGoodStanding, effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -45,7 +45,7 @@ export async function handleGetAdminMemberDues(req: Request, res: Response, deps
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = normNullish((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

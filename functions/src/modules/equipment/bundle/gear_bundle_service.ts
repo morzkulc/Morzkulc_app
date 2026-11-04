@@ -9,6 +9,7 @@ import {countMyOverlappingItemsByCategory, countItemsByCategory, findCategoryOve
 import {findActiveKierownikEvents} from "../../calendar/events_service";
 import {norm} from "../../shared/text_utils";
 import {getCachedDoc} from "../../setup/doc_cache";
+import {effectiveRoleKey} from "../../users/member_standing";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -163,7 +164,7 @@ async function getUserRole(db: FirebaseFirestore.Firestore, uid: string) {
   if (!snap.exists) return null;
   const data = snap.data() as any;
   return {
-    roleKey: norm(data?.role_key) || "rola_sympatyk",
+    roleKey: effectiveRoleKey(data) || "rola_sympatyk",
     statusKey: norm(data?.status_key) || "status_aktywny",
     email: norm(data?.email),
   };

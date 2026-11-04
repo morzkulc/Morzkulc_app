@@ -6,6 +6,7 @@ import {fullName} from "../modules/shared/user_display";
 import {
   DuesClientError, cancelOwnDuesOrder, computeDuesStatus, createDuesOrder, duesPreviews, getOpenDuesOrder, paidUntilAfterPayment,
 } from "../modules/dues/dues_service";
+import {createSuspensionRequest, lastSuspensionRequestIso, suspensionInfo} from "../modules/dues/dues_suspension";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -29,6 +30,7 @@ function publicOrder(o: any) {
  * GET  /api/dues — stan składek/wpisowego zalogowanego + podgląd nowej daty + otwarte zgłoszenie.
  * POST /api/dues — {action: "create", semesters} zgłoszenie wpłaty (wpisowe: zawsze 2 semestry)
  *                  {action: "cancel", orderId} anulowanie własnego niepotwierdzonego zgłoszenia.
+ *                  {action: "suspend_request", message?} prośba do Zarządu o zawieszenie członkostwa (tylko mail).
  */
 export async function handleDues(req: Request, res: Response, deps: Deps): Promise<void> {
   if (deps.sendPreflight(req, res)) return;
@@ -55,11 +57,13 @@ export async function handleDues(req: Request, res: Response, deps: Deps): Promi
         const today = todayWarsawIso();
         const status = computeDuesStatus(userData, vars, today);
         const previews = status.canOrder ? duesPreviews(status, vars.semesterEnds, today) : [];
-        const order = status.applicable ? await getOpenDuesOrder(deps.db, uid) : null;
+        const [order, lastSuspIso] = status.applicable ?
+          await Promise.all([getOpenDuesOrder(deps.db, uid), lastSuspensionRequestIso(deps.db, uid)]) : [null, ""];
+        const suspension = suspensionInfo(userData, vars, lastSuspIso, today);
         // Data „opłacone do” po zaksięgowaniu tego zgłoszenia (po potwierdzeniu — ta wyliczona przez skarbnika).
-        const paidUntilAfter = order ? (order.writeBack?.to ||
+        const paidUntilAfter = order ? (order.writeBack?.to || order.targetPaidUntil ||
           (vars.semesterEnds.length ? paidUntilAfterPayment(status.paidUntil, order.semesters, today, vars.semesterEnds) : "")) : "";
-        res.status(200).json({ok: true, status, previews, order: order ? {...publicOrder(order), paidUntilAfter} : null});
+        res.status(200).json({ok: true, status, previews, order: order ? {...publicOrder(order), paidUntilAfter} : null, suspension});
         return;
       }
 
@@ -74,6 +78,14 @@ export async function handleDues(req: Request, res: Response, deps: Deps): Promi
           uid, userData, userName: fullName(userData) || String(userData?.email || uid), semesters: body.semesters,
         });
         res.status(200).json({ok: true, order: publicOrder({...order, createdAt: null})});
+        return;
+      }
+      if (action === "suspend_request") {
+        const vars = await getAppVars(deps.db);
+        await createSuspensionRequest(deps.db, vars, {
+          uid, userData, userName: fullName(userData) || String(userData?.email || uid), message: body.message,
+        });
+        res.status(200).json({ok: true});
         return;
       }
       if (action === "cancel") {

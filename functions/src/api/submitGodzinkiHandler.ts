@@ -4,6 +4,7 @@ import {getGodzinkiVars} from "../modules/hours/godzinki_vars";
 import {isIsoDateYYYYMMDD} from "../modules/calendar/calendar_utils";
 import {isUserStatusBlocked} from "../modules/users/userStatusCheck";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -77,7 +78,7 @@ export async function handleSubmitGodzinki(req: Request, res: Response, deps: Su
         res.status(403).json({ok: false, code: "forbidden", error: "Konto zawieszone."});
         return;
       }
-      const roleKey = String((userSnap.data() as any)?.role_key || "");
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!deps.godzinkiRoleKeys.includes(roleKey)) {
         res.status(403).json({ok: false, code: "forbidden", error: "Zgłaszanie godzinek wymaga roli Kandydat lub Członek."});
         return;

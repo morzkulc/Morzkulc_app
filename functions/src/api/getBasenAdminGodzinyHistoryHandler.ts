@@ -1,6 +1,7 @@
 import type {Request, Response} from "express";
 import {resolveBasenAdminGrant} from "../modules/basen/basen_service";
 import {getBasenGodzinyRecords, computeBasenGodzinyBalance} from "../modules/basen/basen_godziny_service";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type Deps = {
   db: FirebaseFirestore.Firestore;
@@ -44,7 +45,7 @@ export async function handleGetBasenAdminGodzinyHistory(req: Request, res: Respo
       }
 
       const adminData = adminSnap.data() as any;
-      const adminRoleKey = String(adminData?.role_key || "");
+      const adminRoleKey = effectiveRoleKey(adminData);
       const adminEmail = String(adminData?.email || "");
       if (!deps.adminRoleKeys.includes(adminRoleKey) && !(await resolveBasenAdminGrant(deps.db, adminEmail))) {
         res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});

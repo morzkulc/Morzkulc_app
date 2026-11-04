@@ -661,6 +661,9 @@ textarea {
 .duesOk { color: var(--ok); font-weight: 700; }
 .duesBad { color: var(--danger); font-weight: 700; }
 .duesState { margin: 4px 0 8px; }
+.duesSuspend { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.duesSuspend summary { cursor: pointer; font-weight: 600; }
+.duesSuspend textarea { width: 100%; box-sizing: border-box; }
 .duesTransfer { display: grid; gap: 6px; margin: 8px 0; text-align: left; overflow-wrap: anywhere; }
 .duesCopy { margin-left: 6px; padding: 2px 8px; font-size: 0.85em; }
 .duesForm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }

@@ -2,6 +2,7 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 import {norm} from "../modules/shared/text_utils";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
 import {BLACHY_COLLECTION, findInRegistry} from "../modules/blachy/blachy_registry";
@@ -68,7 +69,7 @@ export async function handleBlachyApi(req: Request, res: Response, deps: BlachyA
         uid: tokenCheck.decoded.uid,
         email: norm(tokenCheck.decoded.email || u.email).toLowerCase(),
         name: userName(u),
-        role: norm(u.role_key),
+        role: effectiveRoleKey(u),
         status: norm(u.status_key),
       };
       const ctx = await loadBlachyContext(db, today);

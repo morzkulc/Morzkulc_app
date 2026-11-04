@@ -4,7 +4,7 @@ import {BasenVars, ClientError, getBasenVars, karnetSeasonProblem, requireKarnet
 import {adminAddBasenGodzinyInTx, priceProduct, ProductPricing} from "./basen_godziny_service";
 import {computeEarnedBalance, deductHoursInTx, getAllRecords, GodzinkiRecord} from "../hours/godzinki_service";
 import {getGodzinkiVars} from "../hours/godzinki_vars";
-import {MEMBER_ROLE_KEYS, isDuesPaid} from "../users/member_standing";
+import {MEMBER_ROLE_KEYS, isDuesPaid, effectiveRoleKey} from "../users/member_standing";
 
 /**
  * Zamówienia godzin basenowych (kolekcja basen_orders).
@@ -75,7 +75,7 @@ export async function getKarnetEligibility(
 ): Promise<KarnetEligibility> {
   const vars = await getBasenVars(db);
   const godzinkiCost = {karnet5: karnetGodzinkiCost("karnet5", vars), karnet10: karnetGodzinkiCost("karnet10", vars)};
-  const member = MEMBER_ROLE_KEYS.includes(String(userData?.role_key || ""));
+  const member = MEMBER_ROLE_KEYS.includes(effectiveRoleKey(userData));
   if (!member) {
     return {member, eligible: false, byProduct: {karnet5: false, karnet10: false}, godzinkiCost, duesPaid: false, godzinkiBalance: 0,
       reasons: ["Karnety są dostępne tylko dla członków klubu."]};

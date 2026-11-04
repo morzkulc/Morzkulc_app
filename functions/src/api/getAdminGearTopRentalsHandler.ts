@@ -8,6 +8,7 @@ import {normNullish} from "../modules/shared/text_utils";
 import {resolveDateRange} from "../modules/shared/date_range_utils";
 import {fullName, nickname} from "../modules/shared/user_display";
 import {CATEGORY_LABELS} from "../modules/equipment/shared/gear_catalog_service";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -63,7 +64,7 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = normNullish((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

@@ -5,7 +5,7 @@ import {getAppVars} from "../modules/setup/app_vars";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
 import {normNullish} from "../modules/shared/text_utils";
 import {fullName, isRegistered, nickname} from "../modules/shared/user_display";
-import {MEMBER_ROLE_KEYS} from "../modules/users/member_standing";
+import {MEMBER_ROLE_KEYS, effectiveRoleKey} from "../modules/users/member_standing";
 import {
   DUES_ORDERS, DuesClientError, DuesOrder, approveDuesOrder, computeDuesStatus, isTreasurer, paidUntilAfterPayment, rejectDuesOrder,
 } from "../modules/dues/dues_service";
@@ -19,8 +19,6 @@ type Deps = {
   requireIdToken: (req: Request) => Promise<{error: string} | {decoded: any}>;
   adminRoleKeys: string[];
 };
-
-const RECENT_DAYS = 60;
 
 function iso(ts: any): string | null {
   return ts?.toDate ? ts.toDate().toISOString() : (ts instanceof Date ? ts.toISOString() : null);
@@ -48,7 +46,7 @@ export async function handleAdminDues(req: Request, res: Response, deps: Deps): 
       const userData = (await deps.db.collection("users_active").doc(uid).get()).data() as any;
       const email = normNullish(userData?.email || tokenCheck.decoded.email).toLowerCase();
       const treasurer = await isTreasurer(deps.db, email);
-      if (!treasurer && !deps.adminRoleKeys.includes(String(userData?.role_key || ""))) {
+      if (!treasurer && !deps.adminRoleKeys.includes(effectiveRoleKey(userData))) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
@@ -61,7 +59,7 @@ export async function handleAdminDues(req: Request, res: Response, deps: Deps): 
           deps.db.collection("users_active").where("role_key", "in", MEMBER_ROLE_KEYS).get(),
         ]);
         const contribByUid = new Map(usersSnap.docs.map((d) => [d.id, (d.data() as any)?.admin?.contributions]));
-        const recentCutoff = Date.now() - RECENT_DAYS * 86400000;
+        const recentCutoff = Date.now() - vars.duesRecentDecisionsDays * 86400000;
         const orders = ordersSnap.docs.map((d) => d.data() as DuesOrder & Record<string, any>);
         const toRow = (o: DuesOrder & Record<string, any>) => ({
           id: o.id, uid: o.uid, memberId: o.memberId, userName: o.userName, kind: o.kind, semesters: o.semesters,
@@ -76,7 +74,8 @@ export async function handleAdminDues(req: Request, res: Response, deps: Deps): 
           .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
         const recent = orders
           .filter((o) => o.status === "approved" || o.status === "rejected")
-          .filter((o) => o.writeBack?.status !== "done" || (o.decidedAt?.toMillis?.() ?? 0) >= recentCutoff)
+          // Każda decyzja (potwierdzona/odrzucona, niezależnie od zapisu do arkusza) znika po N dniach.
+          .filter((o) => (o.decidedAt?.toMillis?.() ?? 0) >= recentCutoff)
           .map(toRow)
           .sort((a, b) => String(b.decidedAt).localeCompare(String(a.decidedAt)));
 

@@ -5,6 +5,7 @@ import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {resolveDamageReport} from "../modules/equipment/damage/gear_damage_service";
 import {normNullish} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -47,7 +48,7 @@ export async function handleResolveGearDamageReport(req: Request, res: Response,
 
       const userSnap = await db.collection("users_active").doc(uid).get();
       const userData = (userSnap.exists ? userSnap.data() : null) as any;
-      const roleKey = normNullish(userData?.role_key);
+      const roleKey = effectiveRoleKey(userData);
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

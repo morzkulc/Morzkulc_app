@@ -2,6 +2,7 @@ import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
 import {adminCancelReservation} from "../modules/equipment/kayaks/gear_kayaks_service";
 import {norm} from "../modules/shared/text_utils";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -53,7 +54,7 @@ export async function handleAdminGearReservationCancel(req: Request, res: Respon
 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
-      const roleKey = norm((userSnap.data() as any)?.role_key);
+      const roleKey = effectiveRoleKey(userSnap.data());
       if (!adminRoleKeys.includes(roleKey)) {
         res.status(403).json({error: "Forbidden"});
         return;

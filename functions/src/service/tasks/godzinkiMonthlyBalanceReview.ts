@@ -3,6 +3,7 @@ import {ServiceTask} from "../types";
 import {computeNegativeBalances, creditApprovedEarn} from "../../modules/hours/godzinki_service";
 import {getGodzinkiVars} from "../../modules/hours/godzinki_vars";
 import {getAppVars} from "../../modules/setup/app_vars";
+import {effectiveRoleKey} from "../../modules/users/member_standing";
 
 /**
  * Task: godzinki.monthlyBalanceReview
@@ -53,7 +54,7 @@ export async function creditBoardMonthlyBonus(
 
   for (const doc of boardSnap.docs) {
     const uid = doc.id;
-    const roleKey = String((doc.data() as any)?.role_key || "") as "rola_zarzad" | "rola_kr";
+    const roleKey = effectiveRoleKey(doc.data()) as "rola_zarzad" | "rola_kr";
     const bonusHours = bonusByRole[roleKey] || 0;
     if (bonusHours <= 0) continue;
     const existing = await db.collection("godzinki_ledger")

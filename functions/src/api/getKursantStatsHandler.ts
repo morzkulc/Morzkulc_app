@@ -3,6 +3,7 @@
 
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
+import {effectiveRoleKey} from "../modules/users/member_standing";
 
 type TokenCheck =
   | {error: string}
@@ -42,7 +43,7 @@ export async function handleGetKursantStats(req: Request, res: Response, deps: G
 
       const userSnap = await db.collection("users_active").doc(uid).get();
       const userData = userSnap.data() as any;
-      const roleKey = String(userData?.role_key || "");
+      const roleKey = effectiveRoleKey(userData);
 
       const isKursant = roleKey === "rola_kursant";
       const isAdmin = adminRoleKeys.includes(roleKey);
