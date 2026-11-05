@@ -205,6 +205,45 @@
   function onScroll() { if (nav) nav.classList.toggle("scrolled", window.scrollY > 40); }
   window.addEventListener("scroll", onScroll, {passive: true}); onScroll();
 
+  // ---------- kotwice (#harmonogram itd.) ----------
+  // Zgłoszenie z telefonu (04.11.2026): „Harmonogram” lądował na zdjęciach. W Chrome nieodtworzone —
+  // zabezpieczenie dla każdej przeglądarki: gdy po przewinięciu treść nad celem urośnie (doczytane
+  // zdjęcia / dane; Safari nie koryguje wtedy pozycji), poprawiamy ją, dopóki użytkownik sam nie przewinie.
+  var NAV_PAD = 72;
+  var anchor = null;
+  function anchorDrift() { return anchor ? anchor.el.getBoundingClientRect().top - NAV_PAD : 0; }
+  function anchorFix() {
+    if (!anchor || Date.now() > anchor.until) { anchor = null; return; }
+    var d = anchorDrift();
+    if (Math.abs(d) > 12) window.scrollTo({top: window.scrollY + d, behavior: "auto"});
+  }
+  var anchorIdle = null;
+  function anchorSchedule() { clearTimeout(anchorIdle); anchorIdle = setTimeout(anchorFix, 220); }
+  function anchorTrack(el) { anchor = {el: el, until: Date.now() + 5000}; anchorSchedule(); }
+  ["wheel", "touchstart", "keydown"].forEach(function (t) {
+    window.addEventListener(t, function () { anchor = null; }, {passive: true});
+  });
+  window.addEventListener("scroll", function () { if (anchor) anchorSchedule(); }, {passive: true});
+  document.addEventListener("load", function () { if (anchor) anchorSchedule(); }, true);
+  // Każda zmiana wysokości strony (zdjęcia, dane z API, rozwinięte sekcje) — też sprawdź pozycję.
+  if ("ResizeObserver" in window) new ResizeObserver(function () { if (anchor) anchorSchedule(); }).observe(document.body);
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href*='#']");
+    if (!a || a.target === "_blank") return;
+    var url = new URL(a.getAttribute("href"), location.href);
+    if (url.pathname !== location.pathname || !url.hash || url.hash === "#") return;
+    var el = document.getElementById(decodeURIComponent(url.hash.slice(1)));
+    if (!el) return;
+    e.preventDefault();
+    history.pushState(null, "", url.hash);
+    window.scrollTo({top: window.scrollY + el.getBoundingClientRect().top - NAV_PAD, behavior: "smooth"});
+    anchorTrack(el);
+  });
+  if (location.hash.length > 1) {
+    var startEl = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (startEl) anchorTrack(startEl);
+  }
+
   if ("IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (es) {
       es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });

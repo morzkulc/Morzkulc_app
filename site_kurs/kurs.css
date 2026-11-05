@@ -65,13 +65,18 @@ h3 { font-size: 21px; }
   display: flex; align-items: center; gap: 24px; padding: 0 20px;
   transition: background .3s, border-color .3s; border-bottom: 1px solid transparent;
 }
-.nav.scrolled { background: rgba(6, 20, 31, .85); backdrop-filter: blur(14px); border-color: var(--line); }
+/* Tło zawsze — bez niego jasne zdjęcia w hero dawały białe menu na białym (zgłoszenie 04.11.2026). */
+.nav { background: rgba(6, 20, 31, .62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.nav.scrolled { background: rgba(6, 20, 31, .85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-color: var(--line); }
+.nav-home { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: #fff; border: 1px solid var(--line); flex: none; }
+.nav-home:hover { background: rgba(255, 255, 255, .08); text-decoration: none; }
+.nav-home svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .brand { font-family: "Space Grotesk", sans-serif; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 0; }
 .brand:hover { text-decoration: none; }
 .brand-sub { color: var(--muted); font-weight: 500; font-size: 14px; }
 .brand-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--grad); box-shadow: 0 0 14px var(--sea); }
 .nav-links { display: flex; gap: 22px; margin-left: auto; }
-.nav-links a { color: var(--text); font-size: 15px; opacity: .8; }
+.nav-links a { color: #fff; font-size: 15px; opacity: .88; }
 .nav-links a:hover { opacity: 1; text-decoration: none; }
 
 /* ---------- hero ---------- */
@@ -167,6 +172,9 @@ ul.dash li::before { content: "—"; position: absolute; left: 4px; }
 .py-l { font-weight: 600; }
 .py-v { font: 700 34px "Space Grotesk", sans-serif; color: var(--accent); line-height: 1; }
 /* Cena ulgowa w nagłówku — widoczna od razu, nad przyciskami. */
+.hero-where { display: flex; align-items: flex-start; gap: 10px; max-width: 46ch; margin: -8px 0 22px; color: #dbe8ef; font-size: 15px; line-height: 1.45; }
+.hero-where svg { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 2px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hero-where strong { color: #fff; }
 .hero-young { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 24px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: rgba(255, 122, 47, .16); }
 .hy-l { font-weight: 600; }
 .hy-v { font: 700 26px "Space Grotesk", sans-serif; color: var(--accent); line-height: 1; }
@@ -350,6 +358,11 @@ body.has-demo-bar { padding-bottom: 72px; }
 }
 
 /* ---------- responsive ---------- */
+@media (max-width: 400px) {
+  .brand { font-size: 16px; gap: 8px; }
+  .nav-home { width: 32px; height: 32px; }
+  .nav .btn-sm { padding-left: 12px; padding-right: 12px; font-size: 13px; }
+}
 @media (max-width: 960px) {
   .skills { grid-template-columns: repeat(2, 1fr); }
   .price-grid, .after, .story-grid { grid-template-columns: 1fr; }
@@ -360,6 +373,8 @@ body.has-demo-bar { padding-bottom: 72px; }
 @media (max-width: 720px) {
   body { font-size: 16px; }
   .nav-links { display: none; }
+  .nav { gap: 10px; padding: 0 12px; }
+  .brand, .nav .btn { white-space: nowrap; }
   .nav .btn { margin-left: auto; }
   .brand-sub { display: none; }
   .worlds { grid-template-columns: 1fr; }

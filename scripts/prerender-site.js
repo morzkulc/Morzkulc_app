@@ -378,7 +378,7 @@ function kursLlms(data, cfg) {
   const L = [];
   L.push("# SKK Morzkulc — Kurs Kajakarstwa Górskiego i Morskiego" + (k.edycja ? " " + k.edycja : ""));
   L.push("");
-  L.push("> Kurs kajakarstwa górskiego i morskiego dla osób pełnoletnich, także bez doświadczenia, prowadzony przez klub kajakowy SKK Morzkulc z Gdańska: wykłady, zajęcia basenowe i weekendowe wyjazdy szkoleniowe. Cały sprzęt w cenie.");
+  L.push("> Kurs kajakarstwa górskiego i morskiego dla osób pełnoletnich z Trójmiasta i okolic, także bez doświadczenia, prowadzony przez klub kajakowy SKK Morzkulc z Gdańska: wykłady, zajęcia basenowe w Trójmieście i weekendowe wyjazdy szkoleniowe. Cały sprzęt w cenie.");
   L.push("");
   if (k.cena) L.push("- Cena: " + pln(k.cena) + (k.cenaMlodzi && k.mlodziWiek ? " (osoby do " + k.mlodziWiek + " roku życia: " + pln(k.cenaMlodzi) + ")" : ""));
   if (k.zadatek) L.push("- Zadatek przy zapisie: " + pln(k.zadatek));
