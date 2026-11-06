@@ -52,6 +52,23 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+// Opcje listy kajaków: najpierw klubowe (w tym „pół na pół" — kajak klubowy),
+// pod nimi prywatne (PRV, wymagają zgody właściciela), na końcu „Własny kajak".
+// Grupy jako <optgroup> — natywny, delikatny podział, czytelny też na mobile.
+// `extraFirst` = opcja spoza listy (np. obecnie przypisany, już zajęty kajak).
+function kayakOptionsHtml(kayaks, extraFirst = null) {
+  const list = Array.isArray(kayaks) ? kayaks : [];
+  const opt = (k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`;
+  const club = list.filter((k) => k.id !== "PRIVATE" && k.isPrivate !== true);
+  const priv = list.filter((k) => k.id !== "PRIVATE" && k.isPrivate === true);
+  const own = list.filter((k) => k.id === "PRIVATE");
+  let html = extraFirst ? opt(extraFirst) : "";
+  if (club.length) html += `<optgroup label="Kajaki klubowe">${club.map(opt).join("")}</optgroup>`;
+  if (priv.length) html += `<optgroup label="Kajaki prywatne (za zgodą właściciela)">${priv.map(opt).join("")}</optgroup>`;
+  if (own.length) html += `<optgroup label="Inne">${own.map(opt).join("")}</optgroup>`;
+  return html;
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -261,7 +278,7 @@ function renderSlotCard(sessionId, slotKey, slot, ctx, canEnroll) {
             <label>Kajak</label>
             <select class="basenKayakSelect">
               <option value="" disabled selected>Wybierz kajak</option>
-              ${(Array.isArray(slot.availableKayaks) ? slot.availableKayaks : []).map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("")}
+              ${kayakOptionsHtml(slot.availableKayaks)}
             </select>
           </div>
           <div class="basenEnrollRow">
@@ -756,14 +773,14 @@ function openModifyModal(innerEl, ctx, sessionId, slotKey, current, onChanged) {
   // Kajaki z danych terminu (slot.availableKayaks) + kajak, który user ma teraz (jest zajęty,
   // więc nie ma go na liście wolnych) — bez osobnego zapytania i zimnego startu (perf 01.11, W5).
   const slotData = (innerEl._basenSessions || []).find((s) => s.id === sessionId)?.slots?.[slotKey] || {};
-  const kayaks = Array.isArray(slotData.availableKayaks) ? [...slotData.availableKayaks] : [];
-  if (current.currentKayakId && !kayaks.some((k) => k.id === current.currentKayakId)) {
-    kayaks.unshift({ id: current.currentKayakId, label: slotData.userKayakLabel || current.currentKayakId });
-  }
+  const kayaks = Array.isArray(slotData.availableKayaks) ? slotData.availableKayaks : [];
+  const currentExtra = (current.currentKayakId && !kayaks.some((k) => k.id === current.currentKayakId))
+    ? { id: current.currentKayakId, label: slotData.userKayakLabel || current.currentKayakId }
+    : null;
   // Zapis sprzed obowiązkowego wyboru kajaka może nie mieć kajaka — wtedy tylko podpowiedź
   // (nieaktywna), żeby „Zapisz zmiany" nie przypisało po cichu pierwszego kajaka z listy.
   const placeholder = current.currentKayakId ? "" : `<option value="" disabled>Wybierz kajak</option>`;
-  kayakSelect.innerHTML = placeholder + kayaks.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join("");
+  kayakSelect.innerHTML = placeholder + kayakOptionsHtml(kayaks, currentExtra);
   kayakSelect.value = current.currentKayakId || "";
 
   // Trzy różne stany, nie dwa: "Brak" (zwykły zapis, bez instruktora, koniec tematu),
