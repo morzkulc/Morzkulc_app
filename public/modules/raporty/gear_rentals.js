@@ -147,7 +147,10 @@ export const gearRentalsReport = {
           const lab = it.label ? ` — ${escapeHtml(it.label)}` : "";
           return `<div class="reportItem">${escapeHtml(head)}${lab}</div>`;
         }).join("");
-        const term = `${escapeHtml(formatDatePL(r.startDate))} – ${escapeHtml(formatDatePL(r.endDate))}`;
+        const isBasen = r.source === "basen";
+        const term = isBasen
+          ? `<span class="reportTag">Basen</span> ${escapeHtml(formatDatePL(r.startDate))}`
+          : `${escapeHtml(formatDatePL(r.startDate))} – ${escapeHtml(formatDatePL(r.endDate))}`;
         const rid = r.id || "";
         let action;
         if (rid && cancelState.openId === rid) {

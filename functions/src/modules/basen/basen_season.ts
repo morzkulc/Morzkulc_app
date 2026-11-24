@@ -26,6 +26,7 @@ export interface SeasonSessionRow {
   light: Light | null; // tylko planned — prognoza decyzji
   decisionAtMs: number;
   kurs: boolean; // termin z pulą kursancką — opłacany przez kurs, poza wynikiem sezonu
+  payment: {status: "invoice" | "cash"; date: string | null} | null; // rozliczenie z basenem; null = do rozliczenia
 }
 
 export interface SeasonSummary {
@@ -109,6 +110,7 @@ export function computeSeason(
       light: null,
       decisionAtMs: sessionDecisionMs(s, vars.basen_okno_anulowania_h),
       kurs: Object.values(s.slots || {}).some((sl) => sl?.reservedSpots?.restrictedToKursant === true),
+      payment: s.payment?.status ? {status: s.payment.status, date: s.payment.date || null} : null,
     };
   });
 

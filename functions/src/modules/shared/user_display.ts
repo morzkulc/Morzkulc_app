@@ -16,3 +16,17 @@ export function isRegistered(u: any): boolean {
   const p = u?.profile || {};
   return Boolean(normNullish(p.firstName) && normNullish(p.lastName));
 }
+
+/**
+ * Nazwa do list widocznych dla członków (historia/ranking sprzętu, decyzja 24.11.2026):
+ * ksywa, a bez ksywy imię + inicjał nazwiska („Jan K.”). Nigdy pełne nazwisko ani e-mail.
+ */
+export function publicMemberName(u: any): string {
+  const nick = nickname(u);
+  if (nick) return nick;
+  const p = u?.profile || {};
+  const first = normNullish(p.firstName);
+  const last = normNullish(p.lastName);
+  if (first && last) return `${first} ${Array.from(last)[0].toUpperCase()}.`;
+  return first || "";
+}

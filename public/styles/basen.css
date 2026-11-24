@@ -1099,3 +1099,18 @@ button.basenClaimTagBtn:disabled {
 .basenRegulaminTableWrap{overflow-x:auto;margin:6px 0;}
 .basenRegulaminTable{border-collapse:collapse;font-size:14px;min-width:480px;}
 .basenRegulaminTable th,.basenRegulaminTable td{border:1px solid var(--border, rgba(127,127,127,.35));padding:6px 8px;text-align:left;}
+
+/* Rozliczenie z basenem (Finanse) */
+.basenSettleActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.basenSettleCash {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}

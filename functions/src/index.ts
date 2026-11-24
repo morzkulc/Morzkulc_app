@@ -53,6 +53,7 @@ import {handleBasenSetKayak} from "./api/basenSetKayakHandler";
 import {handleBasenSetInstructor} from "./api/basenSetInstructorHandler";
 import {handleBasenClaimWaitingStudent} from "./api/basenClaimWaitingStudentHandler";
 import {handleBasenAddSauna} from "./api/basenAddSaunaHandler";
+import {handleBasenSetPayment} from "./api/basenSetPaymentHandler";
 import {handleGetBasenAdminGodzinyUsers} from "./api/getBasenAdminGodzinyUsersHandler";
 import {handleGetBasenAdminGodzinyHistory} from "./api/getBasenAdminGodzinyHistoryHandler";
 import {handleGetBasenMyGodziny} from "./api/getBasenMyGodzinyHandler";
@@ -1196,6 +1197,7 @@ const getEventsRoute = async (req: Request, res: Response) => {
     setCorsHeaders,
     corsHandler,
     requireIdToken,
+    calendarId: svcCfg.calendar?.calendarId || "",
   });
 };
 export const getEvents = onRequest({invoker: "private"}, getEventsRoute);
@@ -1250,6 +1252,24 @@ const getAdminGearTopRentalsRoute = async (req: Request, res: Response) => {
   });
 };
 export const getAdminGearTopRentals = onRequest({invoker: "private"}, getAdminGearTopRentalsRoute);
+
+/**
+ * GET /api/gear/top-rentals (authenticated, wszyscy poza sympatykiem/zawieszonym)
+ * Ten sam ranking „Najczęściej używany sprzęt” dla członków w module Sprzęt —
+ * osoby jako ksywa / imię + inicjał, bez e-maili (E4, 24.11.2026). Tylko w appApi.
+ */
+const getGearTopRentalsRoute = async (req: Request, res: Response) => {
+  return handleGetAdminGearTopRentals(req, res, {
+    db,
+    sendPreflight,
+    requireAllowedHost,
+    setCorsHeaders,
+    corsHandler,
+    requireIdToken,
+    adminRoleKeys,
+    audience: "members",
+  });
+};
 
 /**
  * GET /api/admin/reports/gear-damage (authenticated, role: zarzad/kr)
@@ -1445,6 +1465,7 @@ const BASEN_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
   "/api/basen/sessions/create": (req, res) => handleBasenCreateSession(req, res, basenDeps),
   "/api/basen/sessions/cancel": (req, res) => handleBasenCancelSession(req, res, basenDeps),
   "/api/basen/sessions/add-sauna": (req, res) => handleBasenAddSauna(req, res, basenDeps),
+  "/api/basen/sessions/payment": (req, res) => handleBasenSetPayment(req, res, basenDeps),
   "/api/basen/kayak": (req, res) => handleBasenSetKayak(req, res, basenDeps),
   "/api/basen/instructor": (req, res) => handleBasenSetInstructor(req, res, basenDeps),
   "/api/basen/instructor/claim": (req, res) => handleBasenClaimWaitingStudent(req, res, basenDeps),
@@ -1641,6 +1662,7 @@ const getKlubInfoRoute = async (req: Request, res: Response) => {
     corsHandler,
     requireIdToken,
     adminRoleKeys,
+    calendarId: svcCfg.calendar?.calendarId || "",
   });
 };
 export const getKlubInfo = onRequest({invoker: "private"}, getKlubInfoRoute);
@@ -2135,6 +2157,7 @@ const APP_ROUTES: Record<string, (req: any, res: any) => Promise<void>> = {
   "/api/gear/favorites": getGearFavoritesRoute,
   "/api/gear/favorites/toggle": gearFavoriteToggleRoute,
   "/api/gear/kayak-reservations": getKayakReservationsRoute,
+  "/api/gear/top-rentals": getGearTopRentalsRoute,
   "/api/events/submit": submitEventRoute,
   "/api/events/interest/toggle": eventInterestToggleRoute,
   "/api/godzinki/submit": submitGodzinkiRoute,

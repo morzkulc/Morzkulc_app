@@ -9,6 +9,7 @@ import {BLACHY_COLLECTION, sortRegistry, toPublic} from "../modules/blachy/blach
 import {canEditRegistry, parseBlachyConfig} from "../modules/blachy/blachy_procedura";
 import {ARCHIWUM_DO_ROKU, ARCHIWUM_UWAGA} from "../modules/blachy/blachy_archiwum_2025";
 import {todayWarsawIso} from "../modules/shared/date_range_utils";
+import {calendarAddUrl} from "../modules/calendar/calendar_event_data";
 
 type TokenCheck =
   | {error: string}
@@ -22,6 +23,8 @@ export type GetKlubInfoDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[]; // role widzące dane finansowe (rola_zarzad, rola_kr)
+  /** Id publicznego kalendarza klubowego (SVC_CALENDAR_ID) — kafelek „Dodaj do kalendarza”. */
+  calendarId?: string;
 };
 
 /** „8699,01"/„8699.01"/8699 → string w PL (przecinek dziesiętny); pusto → „0". */
@@ -130,6 +133,9 @@ export async function handleGetKlubInfo(req: Request, res: Response, deps: GetKl
       if (regulaminy) linki.regulaminy = regulaminy;
       if (infografiki) linki.infografiki = infografiki;
       if (klucze) linki.klucze = klucze;
+      // „Dodaj do kalendarza” — ten sam przycisk co w module Imprezy (do konta Google).
+      const kalendarz = calendarAddUrl(deps.calendarId || "");
+      if (kalendarz) linki.kalendarz = kalendarz;
 
       // 6) Osoby z kluczami do siedziby / dostępem do akademika — widoczne dla
       // każdego zalogowanego (patrz komentarz przy canSeeKeys wyżej — usunięty

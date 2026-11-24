@@ -16,6 +16,15 @@ export function isValidOrganizerKey(v: string): boolean {
   return (EVENT_ORGANIZER_KEYS as readonly string[]).includes(v);
 }
 
+// Maksymalna długość nazwy imprezy (decyzja 24.11.2026). Długość = string.length
+// (jednostki UTF-16) — tak samo liczy atrybut maxlength w formularzu aplikacji.
+// Dotyczy nowych zgłoszeń i nowych/zmienionych nazw z arkusza; istniejących wpisów nie rusza.
+export const EVENT_NAME_MAX = 60;
+
+export function eventNameTooLongMessage(length: number): string {
+  return `Nazwa imprezy jest za długa (${length} znaków, maks. ${EVENT_NAME_MAX}).`;
+}
+
 // Pole "Miejsce" ma być nazwą miejsca, nie linkiem — użytkownicy notorycznie
 // wklejają tam cały link do mapy zamiast nazwy, co brzydko wygląda na liście.
 // Do tego celu jest osobne, opcjonalne pole "Link do mapy" (mapLink).
@@ -273,6 +282,9 @@ export async function createEvent(
   }
   if (!norm(args.name)) {
     return {ok: false, code: "validation_failed", message: "Missing name"};
+  }
+  if (norm(args.name).length > EVENT_NAME_MAX) {
+    return {ok: false, code: "validation_failed", message: eventNameTooLongMessage(norm(args.name).length)};
   }
   if (!norm(args.location)) {
     return {ok: false, code: "validation_failed", message: "Missing location"};

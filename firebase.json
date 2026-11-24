@@ -146,6 +146,13 @@
         }
       },
       {
+        "source": "/api/gear/top-rentals",
+        "function": {
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/admin/reports/gear-damage",
         "function": {
           "functionId": "appApi",
@@ -406,6 +413,13 @@
       },
       {
         "source": "/api/basen/sessions/add-sauna",
+        "function": {
+          "functionId": "appApi",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/basen/sessions/payment",
         "function": {
           "functionId": "appApi",
           "region": "us-central1"

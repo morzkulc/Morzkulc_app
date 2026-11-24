@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
-import {GoogleCalendarProvider, CalendarEventData} from "../providers/googleCalendarProvider";
+import {GoogleCalendarProvider} from "../providers/googleCalendarProvider";
+import {buildCalendarEventData, loadEventLinkBase} from "../../modules/calendar/calendar_event_data";
 import {getServiceConfig} from "../service_config";
 import {norm} from "../../modules/shared/text_utils";
 
@@ -46,6 +47,7 @@ export const eventsSyncCalendarTask: ServiceTask<Payload> = {
     ctx.logger.info("eventsSyncCalendar: approved events loaded", {count: snap.size});
 
     const calendar = new GoogleCalendarProvider(delegated);
+    const linkBase = await loadEventLinkBase(ctx.firestore);
 
     let created = 0;
     let updated = 0;
@@ -65,21 +67,7 @@ export const eventsSyncCalendarTask: ServiceTask<Payload> = {
         continue;
       }
 
-      const descriptionParts: string[] = [];
-      const description = norm(data?.description);
-      const contact = norm(data?.contact);
-      const link = norm(data?.link);
-      if (description) descriptionParts.push(description);
-      if (contact) descriptionParts.push(`Kontakt: ${contact}`);
-      if (link) descriptionParts.push(`Link: ${link}`);
-
-      const calData: CalendarEventData = {
-        summary: name,
-        description: descriptionParts.join("\n"),
-        location: norm(data?.location),
-        startDate,
-        endDate,
-      };
+      const calData = buildCalendarEventData(sheetId, data, linkBase);
 
       const existingCalId = norm(data?.calendarEventId);
 

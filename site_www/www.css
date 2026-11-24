@@ -115,6 +115,7 @@ footer .foot { display: grid; gap: 6px; }
 .page section { padding-top: 40px; }
 .page .btn-ghost { background: var(--card); color: var(--accent); border: 1px solid var(--line); }
 .more { margin-top: 16px; }
+.calSubscribe { margin-top: 28px; }
 .list { padding-left: 1.2em; }
 .list li { margin: 6px 0; }
 

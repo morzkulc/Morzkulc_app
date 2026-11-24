@@ -1818,3 +1818,17 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Historia wypożyczeń sztuki (szczegóły karty → „Więcej”) */
+.gearHistory {
+  margin-top: 8px;
+}
+
+.gearHistoryTitle {
+  font-weight: 700;
+  margin: 6px 0 4px;
+}
+
+.gearHistoryBtn {
+  margin-top: 6px;
+}

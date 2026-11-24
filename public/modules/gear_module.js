@@ -91,6 +91,11 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
         return;
       }
 
+      if (requestedRoute === "top-used") {
+        await renderTopUsedView({ viewEl, ctx, id });
+        return;
+      }
+
       const activeTab = GEAR_TABS.find((t) => t.id === requestedRoute)?.id || "kayaks";
       const activeTabLabel = GEAR_TABS.find((t) => t.id === activeTab)?.label || "Kajaki";
       const isKayaksView = activeTab === "kayaks";
@@ -135,6 +140,12 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           <button type="button" class="startTile2 danger" data-gear-shortcut="report-damage" title="Zgłoś uszkodzenie sprzętu">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span class="startTile2Title">Zgłoś uszkodzenie</span>
+          </button>
+
+          <button type="button" class="startTile2" data-gear-shortcut="top-used" title="Ranking najczęściej używanego sprzętu"${canSeeGearRanking(ctx) ? "" : " disabled"}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="10"/></svg>
+            <span class="startTile2Title">Najczęściej używany</span>
+            ${canSeeGearRanking(ctx) ? "" : `<span class="startTile2Subtitle">dla członków klubu</span>`}
           </button>
         </div>
       `;
@@ -447,6 +458,7 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
           if (action === "reserve") window.location.hash = `#${id}/kayaks`;
           else if (action === "club-event") window.location.hash = `#${id}/club-event`;
           else if (action === "report-damage") window.location.hash = `#${id}/report-damage`;
+          else if (action === "top-used") window.location.hash = `#${id}/top-used`;
         });
       });
 
@@ -568,10 +580,42 @@ export function createGearModule({ id, type, label, defaultRoute, order, enabled
             idToken: ctx.idToken,
           });
           const reservations = Array.isArray(resp?.reservations) ? resp.reservations : [];
-          containerEl.innerHTML = renderReservationsSimple(reservations);
+          const canSeeHistory = canSeeGearRanking(ctx);
+          containerEl.innerHTML = renderReservationsSimple(reservations) + (canSeeHistory ? `
+            <div class="gearHistory">
+              <button type="button" class="ghost gearHistoryBtn" data-gear-history="year">Historia wypożyczeń</button>
+              <div class="gearHistoryContent"></div>
+            </div>` : "");
+          if (canSeeHistory) bindItemHistory(containerEl.querySelector(".gearHistory"), kayakId, category);
         } catch {
           containerEl.innerHTML = `<div class="gearReservNoData">Nie udało się załadować.</div>`;
         }
+      };
+
+      // Historia zakończonych wypożyczeń sztuki (rok wstecz → „cała historia”).
+      const bindItemHistory = (wrapEl, itemId, category) => {
+        if (!wrapEl) return;
+        const contentEl = wrapEl.querySelector(".gearHistoryContent");
+        wrapEl.addEventListener("click", async (ev) => {
+          const btn = ev.target.closest?.("[data-gear-history]");
+          if (!btn) return;
+          ev.stopPropagation();
+          const mode = btn.getAttribute("data-gear-history");
+          btn.disabled = true;
+          contentEl.innerHTML = `<div class="gearReservNoData">Ładuję...</div>`;
+          try {
+            const resp = await apiGetJson({
+              url: `${KAYAK_RESERVATIONS_URL}?category=${encodeURIComponent(category)}&itemId=${encodeURIComponent(itemId)}&history=${encodeURIComponent(mode)}`,
+              idToken: ctx.idToken,
+            });
+            const entries = Array.isArray(resp?.entries) ? resp.entries : [];
+            wrapEl.querySelector(":scope > .gearHistoryBtn")?.remove();
+            contentEl.innerHTML = renderItemHistory(entries, mode);
+          } catch (e) {
+            btn.disabled = false;
+            contentEl.innerHTML = `<div class="gearReservNoData">${escapeHtml(e?.message || "Nie udało się załadować historii.")}</div>`;
+          }
+        });
       };
 
       // Zajęte zakresy dla kalendarza wyboru terminu w modalu bundlowym — jeden fetch
@@ -2506,6 +2550,62 @@ function renderReservationsSimple(reservations) {
       </div>
     `;
   }).join("");
+}
+
+// Historia sztuki i ranking: wszyscy poza sympatykiem i zawieszonym (sesja niesie
+// rolę efektywną — zawieszony = rola_sympatyk). Serwer sprawdza to samo.
+function canSeeGearRanking(ctx) {
+  const role = String(ctx?.session?.role_key || "");
+  return Boolean(role) && role !== "rola_sympatyk";
+}
+
+// Ranking „Najczęściej używany sprzęt” dla członków — ten sam widok co raport
+// Zarządu (topRentalsReport), z endpointem członkowskim (bez e-maili, ksywy).
+async function renderTopUsedView({ viewEl, ctx, id }) {
+  viewEl.innerHTML = `
+    <div class="card wide">
+      <div class="moduleHeader">
+        <h2>Najczęściej używany sprzęt</h2>
+        <div class="moduleNav">
+          <button type="button" class="moduleNavBtn" data-mod-back title="Wróć">${NAV_BACK_SVG}</button>
+          <button type="button" class="moduleNavBtn" data-mod-home title="Strona główna">${NAV_HOME_SVG}</button>
+        </div>
+      </div>
+      <p class="hint">Suma dni wypożyczeń (z terminami basenowymi) w wybranym okresie.</p>
+      <div id="gearTopUsed"></div>
+    </div>
+  `;
+  viewEl.querySelector("[data-mod-back]")?.addEventListener("click", () => { window.location.hash = `#${id}/kayaks`; });
+  viewEl.querySelector("[data-mod-home]")?.addEventListener("click", () => { window.location.hash = "#home/home"; });
+  const container = viewEl.querySelector("#gearTopUsed");
+  if (!canSeeGearRanking(ctx)) {
+    container.innerHTML = `<p class="hint">Ranking jest dostępny dla członków klubu.</p>`;
+    return;
+  }
+  // Import dynamiczny — moduł Sprzęt nie pobiera rankingu przy każdym otwarciu.
+  const { topRentalsReport } = await import("/modules/raporty/top_rentals.js");
+  topRentalsReport.render({ container, ctx, url: "/api/gear/top-rentals" });
+}
+
+function renderItemHistory(entries, mode) {
+  const title = mode === "all" ? "Historia wypożyczeń (całość)" : "Historia wypożyczeń (ostatni rok)";
+  const rows = entries.length ? entries.map((e) => {
+    const start = formatDatePLFromIso(e.startDate);
+    const end = formatDatePLFromIso(e.endDate);
+    const term = e.startDate === e.endDate ? start : `${start} – ${end}`;
+    const tag = e.source === "basen" ? `<span class="reportTag">Basen</span> ` : "";
+    const who = e.isClubEvent
+      ? (e.eventName ? `Impreza „${escapeHtml(e.eventName)}”` : "Impreza klubowa")
+      : escapeHtml(e.userDisplayName || "—");
+    return `
+      <div class="gearReservSimpleRow">
+        <div class="gearReservSimpleDates">${tag}${escapeHtml(term)}</div>
+        <div class="gearReservSimpleUser">${who}</div>
+      </div>`;
+  }).join("") : `<div class="gearReservNoData">Brak zakończonych wypożyczeń${mode === "all" ? "" : " w ostatnim roku"}.</div>`;
+  const moreBtn = mode === "all" ? "" :
+    `<button type="button" class="ghost gearHistoryBtn" data-gear-history="all">Pokaż całą historię</button>`;
+  return `<div class="gearHistoryTitle">${title}</div>${rows}${moreBtn}`;
 }
 
 function gearTabIcon(id) {

@@ -4,6 +4,10 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {compositeId, isSupportedBundleCategory} from "../modules/equipment/bundle/gear_bundle_service";
+import {effectiveRoleKey} from "../modules/users/member_standing";
+import {publicMemberName} from "../modules/shared/user_display";
+import {todayWarsawIso, minusMonths} from "../modules/shared/date_range_utils";
+import {loadBasenKayakHistory} from "../modules/basen/basen_usage";
 
 type TokenCheck =
   | {error: string}
@@ -69,6 +73,23 @@ export async function handleGetKayakReservations(
 
       const excludeReservationId = String(req.query?.excludeReservationId || "").trim();
 
+      // Tryb historii (decyzja 24.11.2026): tylko ZAKOŃCZONE wypożyczenia (endDate < dziś),
+      // "year" = rok wstecz, "all" = cała historia; + terminy basenowe (kajaki).
+      // Niedostępne dla sympatyka i zawieszonego (effectiveRoleKey → rola_sympatyk).
+      const historyMode = String(req.query?.history || "").trim().toLowerCase();
+      if (historyMode && historyMode !== "year" && historyMode !== "all") {
+        res.status(400).json({error: "Invalid history mode"});
+        return;
+      }
+      if (historyMode) {
+        const userSnap = await db.collection("users_active").doc(tokenCheck.decoded.uid).get();
+        const roleKey = effectiveRoleKey(userSnap.exists ? userSnap.data() : null);
+        if (!roleKey || roleKey === "rola_sympatyk") {
+          res.status(403).json({ok: false, code: "forbidden", message: "Historia wypożyczeń jest dostępna dla członków klubu."});
+          return;
+        }
+      }
+
       const todayIso = todayIsoUTC();
       const cid = compositeId(categoryRaw, itemId);
 
@@ -92,6 +113,11 @@ export async function handleGetKayakReservations(
         for (const d of kayakIdsSnap.docs) {
           if (!docsById.has(d.id)) docsById.set(d.id, d.data());
         }
+      }
+
+      if (historyMode) {
+        await respondWithHistory(res, db, {category: categoryRaw, itemId, historyMode, docs: Array.from(docsById.values())});
+        return;
       }
 
       const docs = Array.from(docsById.entries())
@@ -152,5 +178,77 @@ export async function handleGetKayakReservations(
       });
       res.status(500).json({error: "Server error", message: err?.message || String(err)});
     }
+  });
+}
+
+export type ItemHistoryEntry = {
+  startDate: string;
+  endDate: string;
+  userUid: string;
+  source: "reservation" | "basen";
+  isClubEvent: boolean;
+  eventId: string;
+};
+
+/**
+ * Zakończone wypożyczenia sztuki z zakresu: endDate < todayIso i (fromIso pusty
+ * albo endDate >= fromIso). Najnowsze na górze. Czysta funkcja — eksport dla testów.
+ */
+export function selectEndedReservations(docs: any[], todayIso: string, fromIso: string): ItemHistoryEntry[] {
+  return docs
+    .map((r) => ({
+      startDate: String(r?.startDate || ""),
+      endDate: String(r?.endDate || ""),
+      userUid: String(r?.userUid || ""),
+      source: "reservation" as const,
+      isClubEvent: Boolean(r?.eventId),
+      eventId: String(r?.eventId || ""),
+    }))
+    .filter((r) => r.startDate && r.endDate && r.endDate < todayIso && (!fromIso || r.endDate >= fromIso));
+}
+
+async function respondWithHistory(
+  res: Response,
+  db: FirebaseFirestore.Firestore,
+  args: {category: string; itemId: string; historyMode: string; docs: any[]}
+) {
+  const todayIso = todayWarsawIso();
+  const fromIso = args.historyMode === "year" ? minusMonths(todayIso, 12) : "";
+
+  const entries = selectEndedReservations(args.docs, todayIso, fromIso);
+  if (args.category === "kayaks") {
+    const basen = await loadBasenKayakHistory(db, args.itemId, fromIso, todayIso);
+    for (const u of basen) {
+      entries.push({startDate: u.date, endDate: u.date, userUid: u.uid, source: "basen", isClubEvent: false, eventId: ""});
+    }
+  }
+  entries.sort((a, b) => b.endDate.localeCompare(a.endDate) || b.startDate.localeCompare(a.startDate));
+
+  const uids = [...new Set(entries.map((e) => e.userUid).filter(Boolean))];
+  const nameByUid = new Map<string, string>();
+  if (uids.length) {
+    const snaps = await db.getAll(...uids.map((uid) => db.collection("users_active").doc(uid)));
+    for (const snap of snaps) if (snap.exists) nameByUid.set(snap.id, publicMemberName(snap.data()));
+  }
+  const eventIds = [...new Set(entries.map((e) => e.eventId).filter(Boolean))];
+  const eventNameById = new Map<string, string>();
+  if (eventIds.length) {
+    const snaps = await db.getAll(...eventIds.map((id) => db.collection("events").doc(id)));
+    for (const snap of snaps) if (snap.exists) eventNameById.set(snap.id, String((snap.data() as any)?.name || ""));
+  }
+
+  res.status(200).json({
+    ok: true,
+    category: args.category,
+    itemId: args.itemId,
+    history: {mode: args.historyMode, from: fromIso, to: todayIso},
+    entries: entries.map((e) => ({
+      startDate: e.startDate,
+      endDate: e.endDate,
+      source: e.source,
+      userDisplayName: nameByUid.get(e.userUid) || "",
+      isClubEvent: e.isClubEvent,
+      eventName: e.eventId ? (eventNameById.get(e.eventId) || "") : "",
+    })),
   });
 }

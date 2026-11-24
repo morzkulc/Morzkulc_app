@@ -6,9 +6,10 @@ import * as logger from "firebase-functions/logger";
 import {daysOnWaterInclusive} from "../modules/calendar/calendar_utils";
 import {normNullish} from "../modules/shared/text_utils";
 import {resolveDateRange} from "../modules/shared/date_range_utils";
-import {fullName, nickname} from "../modules/shared/user_display";
+import {fullName, nickname, publicMemberName} from "../modules/shared/user_display";
 import {CATEGORY_LABELS} from "../modules/equipment/shared/gear_catalog_service";
 import {effectiveRoleKey} from "../modules/users/member_standing";
+import {loadBasenKayakUsage} from "../modules/basen/basen_usage";
 
 type TokenCheck =
   | {error: string}
@@ -22,6 +23,12 @@ export type GetAdminGearTopRentalsDeps = {
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
   adminRoleKeys: string[];
+  /**
+   * "members" (E4, 24.11.2026): ten sam ranking w module Sprzęt dla członków —
+   * dostęp dla każdego poza sympatykiem/zawieszonym, osoby jako ksywa albo imię +
+   * inicjał nazwiska, bez e-maili. Domyślnie "admin" (raport Zarządu/KR).
+   */
+  audience?: "admin" | "members";
 };
 
 type RentalEntry = {
@@ -30,6 +37,8 @@ type RentalEntry = {
   userNick: string;
   userEmail: string;
   days: number;
+  /** "basen" = suma terminów basenowych tej osoby na tej sztuce (1 termin = 1 dzień). */
+  source?: "basen";
 };
 
 type ItemAgg = {
@@ -44,6 +53,7 @@ type ItemAgg = {
 
 export async function handleGetAdminGearTopRentals(req: Request, res: Response, deps: GetAdminGearTopRentalsDeps) {
   const {sendPreflight, requireAllowedHost, setCorsHeaders, corsHandler, requireIdToken, db, adminRoleKeys} = deps;
+  const membersView = deps.audience === "members";
 
   if (sendPreflight(req, res)) return;
   if (!requireAllowedHost(req, res)) return;
@@ -65,7 +75,8 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
       const uid = tokenCheck.decoded.uid;
       const userSnap = await db.collection("users_active").doc(uid).get();
       const roleKey = effectiveRoleKey(userSnap.data());
-      if (!adminRoleKeys.includes(roleKey)) {
+      const allowed = membersView ? Boolean(roleKey) && roleKey !== "rola_sympatyk" : adminRoleKeys.includes(roleKey);
+      if (!allowed) {
         res.status(403).json({error: "Forbidden"});
         return;
       }
@@ -150,6 +161,39 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
         }
       }
 
+      // Basen: każdy termin = 1 dzień użycia sztuki; terminy jednej osoby na tej samej
+      // sztuce sumowane w jeden wpis "basen" (bez prywatnych — patrz basen_usage.ts).
+      const basenUsage = await loadBasenKayakUsage(db, from, to);
+      for (const u of basenUsage) {
+        const itemKey = `kayaks/${u.number}`;
+        if (u.uid) uids.add(u.uid);
+        let agg = byKey.get(itemKey);
+        if (!agg) {
+          agg = {
+            category: "kayaks",
+            categoryLabel: CATEGORY_LABELS.kayaks,
+            number: u.number,
+            name: u.label,
+            totalDays: 0,
+            rentalsCount: 0,
+            rentals: [],
+          };
+          byKey.set(itemKey, agg);
+        }
+        if (!agg.name && u.label) {
+          agg.name = u.label;
+          missingNameRefs.delete(itemKey);
+        }
+        agg.totalDays += 1;
+        agg.rentalsCount += 1;
+        const existingBasen = agg.rentals.find((r) => r.source === "basen" && r.userUid === u.uid);
+        if (existingBasen) {
+          existingBasen.days += 1;
+        } else {
+          agg.rentals.push({userUid: u.uid, userName: "", userNick: "", userEmail: "", days: 1, source: "basen"});
+        }
+      }
+
       // Dociągnij nazwy (marka+model) dla pozycji bez itemLabel — legacy kayakIds[] (doc id = number).
       if (missingNameRefs.size) {
         const kayakKeys = Array.from(missingNameRefs.entries()).filter(([, v]) => v.category === "kayaks");
@@ -178,14 +222,18 @@ export async function handleGetAdminGearTopRentals(req: Request, res: Response, 
         const nickByUid = new Map<string, string>();
         userDocs.forEach((d) => {
           if (d.exists) {
-            nameByUid.set(d.id, fullName(d.data()));
-            nickByUid.set(d.id, nickname(d.data()));
+            nameByUid.set(d.id, membersView ? publicMemberName(d.data()) : fullName(d.data()));
+            if (!membersView) nickByUid.set(d.id, nickname(d.data()));
           }
         });
         for (const item of byKey.values()) {
           for (const rental of item.rentals) {
             rental.userName = nameByUid.get(rental.userUid) || "";
             rental.userNick = nickByUid.get(rental.userUid) || "";
+            if (membersView) {
+              rental.userEmail = "";
+              rental.userUid = "";
+            }
           }
         }
       }

@@ -1,10 +1,11 @@
 import * as admin from "firebase-admin";
 import {ServiceTask} from "../types";
 import {GoogleSheetsProvider, buildLooseRowGetter} from "../providers/googleSheetsProvider";
-import {GoogleCalendarProvider, CalendarEventData} from "../providers/googleCalendarProvider";
+import {GoogleCalendarProvider} from "../providers/googleCalendarProvider";
+import {buildCalendarEventData, loadEventLinkBase} from "../../modules/calendar/calendar_event_data";
 import {getServiceConfig} from "../service_config";
 import {norm} from "../../modules/shared/text_utils";
-import {resolveKierownicyList, kierownikUidsOf, KierownikEntry} from "../../modules/calendar/events_service";
+import {resolveKierownicyList, kierownikUidsOf, KierownikEntry, EVENT_NAME_MAX} from "../../modules/calendar/events_service";
 
 /**
  * Task: events.syncFromSheet
@@ -29,6 +30,36 @@ import {resolveKierownicyList, kierownikUidsOf, KierownikEntry} from "../../modu
 type Payload = {
   dry?: boolean;
 };
+
+export type TooLongEventName = {rowNumber: number; sheetId: string; name: string; length: number};
+
+/**
+ * Nazwy imprez dłuższe niż EVENT_NAME_MAX — wyłącznie w wierszach NOWYCH (bez ID
+ * albo z ID nieobecnym w Firestore) lub ze ZMIENIONĄ nazwą względem Firestore.
+ * Istniejących, niezmienionych wpisów nie sprawdzamy (decyzja 24.11.2026).
+ * Czysta funkcja — eksport dla testów.
+ */
+export function findTooLongEventNames(
+  rows: Array<{rowNumber: number; sheetId: string; name: string}>,
+  existingNames: Map<string, string>
+): TooLongEventName[] {
+  const out: TooLongEventName[] = [];
+  for (const r of rows) {
+    const name = norm(r.name);
+    if (name.length <= EVENT_NAME_MAX) continue;
+    const sheetId = norm(r.sheetId);
+    const unchanged = Boolean(sheetId) && existingNames.has(sheetId) && norm(existingNames.get(sheetId)) === name;
+    if (unchanged) continue;
+    out.push({rowNumber: r.rowNumber, sheetId, name, length: name.length});
+  }
+  return out;
+}
+
+export function buildTooLongNamesMessage(items: TooLongEventName[]): string {
+  const lines = items.map((it) => `• wiersz ${it.rowNumber}: ${it.length} zn. — „${it.name.slice(0, EVENT_NAME_MAX)}…”`);
+  return "Synchronizacja imprez wstrzymana — nic nie zapisano.\n" +
+    `Nazwa imprezy może mieć maks. ${EVENT_NAME_MAX} znaków. Skróć w arkuszu:\n${lines.join("\n")}`;
+}
 
 /** Eksport dla testów jednostkowych (vitest). */
 export function isApproved(v: any): boolean {
@@ -184,6 +215,7 @@ export const eventsSyncFromSheetTask: ServiceTask<Payload> = {
 
     const sheets = new GoogleSheetsProvider(delegated);
     const calendarProvider = calendarId ? new GoogleCalendarProvider(delegated) : null;
+    const linkBase = calendarProvider ? await loadEventLinkBase(ctx.firestore) : {appUrl: "", moduleId: ""};
 
     let table;
     try {
@@ -205,6 +237,28 @@ export const eventsSyncFromSheetTask: ServiceTask<Payload> = {
     // (case/spacje/interpunkcja, np. "Ranking?" vs "ranking?") nie może już
     // po cichu zerować pól — arkusz edytują ludzie i dryf wróci.
     const get = buildLooseRowGetter(table.headers);
+
+    // Limit długości nazwy (EVENT_NAME_MAX) — sprawdzany PRZED jakimkolwiek zapisem
+    // (także przed dopisaniem ID do arkusza). Za długa nowa/zmieniona nazwa wstrzymuje
+    // CAŁY sync (decyzja 24.11.2026). ok:true + validationError — wzorem gear.syncAllFromSheet,
+    // żeby appsScriptSync pokazał komunikat w arkuszu, a job nie był ponawiany.
+    const nameRows = table.rows
+      .map((row) => ({rowNumber: Number(row["_rowNumber"]), sheetId: norm(get(row, "ID")), name: norm(get(row, "nazwa imprezy"))}))
+      .filter((r) => r.name);
+    const idsToCheck = Array.from(new Set(nameRows.filter((r) => r.sheetId && r.name.length > EVENT_NAME_MAX).map((r) => r.sheetId)));
+    const existingNames = new Map<string, string>();
+    if (idsToCheck.length) {
+      const snaps = await ctx.firestore.getAll(...idsToCheck.map((id) => ctx.firestore.collection("events").doc(id)));
+      for (const snap of snaps) {
+        if (snap.exists) existingNames.set(snap.id, norm((snap.data() as any)?.name));
+      }
+    }
+    const tooLong = findTooLongEventNames(nameRows, existingNames);
+    if (tooLong.length) {
+      const message = buildTooLongNamesMessage(tooLong);
+      ctx.logger.warn("eventsSyncFromSheet: aborted — event names too long", {count: tooLong.length, rows: tooLong.map((t) => t.rowNumber)});
+      return {ok: true, message, details: {validationError: true, tooLongNames: tooLong.length, dryRun}};
+    }
 
     let upserted = 0;
     let skipped = 0;
@@ -394,18 +448,7 @@ export const eventsSyncFromSheetTask: ServiceTask<Payload> = {
         try {
           const existingCalId = norm(existingData?.calendarEventId);
 
-          const descriptionParts: string[] = [];
-          if (description) descriptionParts.push(description);
-          if (contact) descriptionParts.push(`Kontakt: ${contact}`);
-          if (link) descriptionParts.push(`Link: ${link}`);
-
-          const calData: CalendarEventData = {
-            summary: name,
-            description: descriptionParts.join("\n"),
-            location,
-            startDate,
-            endDate,
-          };
+          const calData = buildCalendarEventData(sheetId, {name, startDate, endDate, description, contact, link, location}, linkBase);
 
           if (existingCalId) {
             await calendarProvider.updateEvent(calendarId, existingCalId, calData);

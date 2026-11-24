@@ -8,6 +8,7 @@ import {resolveDateRange} from "../modules/shared/date_range_utils";
 import {fullName, nickname} from "../modules/shared/user_display";
 import {CATEGORY_LABELS} from "../modules/equipment/shared/gear_catalog_service";
 import {effectiveRoleKey} from "../modules/users/member_standing";
+import {loadBasenKayakUsage} from "../modules/basen/basen_usage";
 
 type TokenCheck =
   | {error: string}
@@ -87,6 +88,8 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
         endDate: string;
         costHours: number;
         items: Array<{category: string; categoryLabel: string; number: string; label: string}>;
+        /** "basen" = termin basenowy (bez akcji anulowania — zarządzane w module Basen). */
+        source?: "basen";
       };
 
       const rows: Row[] = [];
@@ -108,7 +111,7 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
               category: cat,
               categoryLabel: CATEGORY_LABELS[cat] || normNullish(it.category) || "Sprzęt",
               number: normNullish(it.itemNumber) || normNullish(it.number),
-              label: normNullish(it.label),
+              label: normNullish(it.itemLabel) || normNullish(it.label),
             };
           });
         } else if (Array.isArray(r.kayakIds) && r.kayakIds.length) {
@@ -136,6 +139,22 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
         });
       }
 
+      // Basen: jeden wiersz na osobę i dzień terminu, pozycje = kajaki klubowe
+      // (bez prywatnych — patrz basen_usage.ts). id puste → brak akcji anulowania.
+      const basenUsage = await loadBasenKayakUsage(db, from, to);
+      const basenRows = new Map<string, Row>();
+      for (const u of basenUsage) {
+        const k = `${u.date}|${u.uid}`;
+        let row = basenRows.get(k);
+        if (!row) {
+          row = {id: "", userUid: u.uid, userName: "", userNick: "", userEmail: "", startDate: u.date, endDate: u.date, costHours: 0, items: [], source: "basen"};
+          basenRows.set(k, row);
+          rows.push(row);
+          if (u.uid) uids.add(u.uid);
+        }
+        row.items.push({category: "kayaks", categoryLabel: CATEGORY_LABELS.kayaks, number: u.number, label: u.label});
+      }
+
       // Rozwiąż nazwy użytkowników jednym batchem.
       const uidList = Array.from(uids);
       if (uidList.length) {
@@ -143,15 +162,19 @@ export async function handleGetAdminGearRentals(req: Request, res: Response, dep
         const userDocs = await db.getAll(...refs);
         const nameByUid = new Map<string, string>();
         const nickByUid = new Map<string, string>();
+        const emailByUid = new Map<string, string>();
         userDocs.forEach((d) => {
           if (d.exists) {
             nameByUid.set(d.id, fullName(d.data()));
             nickByUid.set(d.id, nickname(d.data()));
+            emailByUid.set(d.id, normNullish((d.data() as any)?.email));
           }
         });
         for (const row of rows) {
           row.userName = nameByUid.get(row.userUid) || "";
           row.userNick = nickByUid.get(row.userUid) || "";
+          // Wiersze basenowe nie niosą e-maila (alokacja ma tylko uid) — z profilu.
+          if (!row.userEmail) row.userEmail = emailByUid.get(row.userUid) || "";
         }
       }
 

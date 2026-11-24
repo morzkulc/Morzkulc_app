@@ -4,6 +4,7 @@
 import type {Request, Response} from "express";
 import * as logger from "firebase-functions/logger";
 import {listUpcomingEvents, listRecentEvents, listAllEvents} from "../modules/calendar/events_service";
+import {calendarAddUrl} from "../modules/calendar/calendar_event_data";
 
 type TokenCheck =
   | {error: string}
@@ -16,6 +17,8 @@ export type GetEventsDeps = {
   setCorsHeaders: (req: Request, res: Response) => void;
   corsHandler: any;
   requireIdToken: (req: Request) => Promise<TokenCheck>;
+  /** Id publicznego kalendarza klubowego (SVC_CALENDAR_ID) — przycisk „Dodaj do kalendarza”. */
+  calendarId?: string;
 };
 
 export async function handleGetEvents(req: Request, res: Response, deps: GetEventsDeps) {
@@ -49,7 +52,7 @@ export async function handleGetEvents(req: Request, res: Response, deps: GetEven
         events = await listUpcomingEvents(db);
       }
 
-      res.status(200).json({ok: true, events});
+      res.status(200).json({ok: true, events, calendarAddUrl: calendarAddUrl(deps.calendarId || "")});
     } catch (err: any) {
       logger.error("getEvents failed", {message: err?.message, stack: err?.stack});
       res.status(500).json({error: "Server error", message: err?.message || String(err)});

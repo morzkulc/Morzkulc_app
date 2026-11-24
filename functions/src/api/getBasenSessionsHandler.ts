@@ -70,7 +70,9 @@ export async function handleGetBasenSessions(req: Request, res: Response, deps: 
           res.status(403).json({error: "Brak uprawnień. Wymagana rola: zarząd/KR lub opiekun basenowy."});
           return;
         }
-        res.status(200).json({ok: true, ...(await buildFinance(deps.db))});
+        // Rozliczenia z basenem oznacza TYLKO obsługa basenu; zarząd/KR bez nadania widzi je bez edycji.
+        const canMarkPayments = await resolveBasenAdminGrant(deps.db, String(userData?.email || ""));
+        res.status(200).json({ok: true, ...(await buildFinance(deps.db)), canMarkPayments});
         return;
       }
 

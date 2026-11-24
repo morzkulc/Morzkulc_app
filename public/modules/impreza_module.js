@@ -37,6 +37,8 @@ function spinnerHtml(text = "Ładowanie…") {
 }
 
 const DESC_TRUNCATE_LIMIT = 220;
+// = EVENT_NAME_MAX w functions/src/modules/calendar/events_service.ts (serwer też waliduje).
+const EVENT_NAME_MAX = 60;
 
 function truncateText(text, limit) {
   const t = String(text || "");
@@ -80,7 +82,7 @@ function renderEventCard(ev, isInterested) {
   const { short: descShort, isTruncated: descTruncated } = truncateText(ev.description, DESC_TRUNCATE_LIMIT);
 
   return `
-    <div class="imprezaCard">
+    <div class="imprezaCard" data-event-id="${esc(ev.id)}">
       <div class="imprezaCardHead">
         <div class="imprezaNameRow">
           <div class="imprezaName">${esc(ev.name)}</div>
@@ -114,7 +116,30 @@ function renderEventCard(ev, isInterested) {
   `;
 }
 
-async function renderListView(innerEl, ctx) {
+// „Dodaj do kalendarza” — jeden przycisk nad listą: dodaje publiczny kalendarz
+// klubowy do konta Google użytkownika (Google pokazuje okno potwierdzenia).
+function renderCalendarAddHtml(addUrl) {
+  if (!addUrl) return "";
+  return `
+    <div class="imprezaCalSubscribe">
+      <a class="imprezaCalBtn" href="${esc(addUrl)}" target="_blank" rel="noopener noreferrer">📅 Dodaj do kalendarza</a>
+    </div>`;
+}
+
+// Link do konkretnej imprezy (#/<moduł>/ev-<id>, np. z opisu w kalendarzu Google):
+// przewiń do karty i ją podświetl; gdy jej nie ma na liście — informacja.
+function focusEventCard(innerEl, eventId) {
+  const card = Array.from(innerEl.querySelectorAll(".imprezaCard[data-event-id]"))
+    .find((el) => el.getAttribute("data-event-id") === eventId);
+  if (!card) {
+    innerEl.insertAdjacentHTML("afterbegin", `<div class="hint imprezaFocusMissing">Tej imprezy nie ma na liście nadchodzących — mogła się już odbyć albo została usunięta.</div>`);
+    return;
+  }
+  card.classList.add("imprezaCard--focus");
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function renderListView(innerEl, ctx, focusEventId = "") {
   innerEl.innerHTML = spinnerHtml("Ładowanie imprez…");
 
   try {
@@ -125,17 +150,20 @@ async function renderListView(innerEl, ctx) {
         .catch(() => []),
     ]);
     const events = Array.isArray(data?.events) ? data.events : [];
+    const calendarHtml = renderCalendarAddHtml(data?.calendarAddUrl);
 
     if (!events.length) {
-      innerEl.innerHTML = `<div class="hint imprezaEmpty">Brak nadchodzących imprez.</div>`;
+      innerEl.innerHTML = `${calendarHtml}<div class="hint imprezaEmpty">Brak nadchodzących imprez.</div>`;
+      if (focusEventId) focusEventCard(innerEl, focusEventId);
       return;
     }
 
     const interestedSet = new Set(interestedIds);
-    innerEl.innerHTML = `<div class="imprezaList">${events.map((ev) => renderEventCard(ev, interestedSet.has(ev.id))).join("")}</div>`;
+    innerEl.innerHTML = `${calendarHtml}<div class="imprezaList">${events.map((ev) => renderEventCard(ev, interestedSet.has(ev.id))).join("")}</div>`;
 
     bindInterestButtons(innerEl, ctx);
     bindMoreButtons(innerEl);
+    if (focusEventId) focusEventCard(innerEl, focusEventId);
   } catch (e) {
     innerEl.innerHTML = `<div class="err">${esc(e?.message || "Nie udało się załadować imprez.")}</div>`;
   }
@@ -191,7 +219,8 @@ function renderSubmitFormHtml() {
 
         <div class="row">
           <label for="evName">Nazwa imprezy *</label>
-          <input id="evName" type="text" maxlength="200" required />
+          <input id="evName" type="text" maxlength="200" required aria-describedby="evNameCounter" />
+          <div class="hint imprezaNameCounter" id="evNameCounter">0/${EVENT_NAME_MAX}</div>
         </div>
 
         <div class="row">
@@ -292,6 +321,21 @@ async function bindSubmitForm(innerEl, ctx) {
 
   const getVal = (id) => String(innerEl.querySelector(`#${id}`)?.value || "").trim();
 
+  // Limit nazwy: celowo bez twardego maxlength=60 — przeglądarka po cichu ucinałaby
+  // wklejony tekst; zamiast tego licznik i błąd od razu przy wpisywaniu.
+  const nameEl = innerEl.querySelector("#evName");
+  const nameCounterEl = innerEl.querySelector("#evNameCounter");
+  const nameTooLongMsg = (len) => `Nazwa imprezy jest za długa (${len} znaków, maks. ${EVENT_NAME_MAX}).`;
+  const syncNameCounter = () => {
+    const len = nameEl.value.trim().length;
+    const tooLong = len > EVENT_NAME_MAX;
+    nameCounterEl.textContent = tooLong ? `${len}/${EVENT_NAME_MAX} — ${nameTooLongMsg(len)}` : `${len}/${EVENT_NAME_MAX}`;
+    nameCounterEl.classList.toggle("imprezaNameCounter--err", tooLong);
+    nameEl.setAttribute("aria-invalid", tooLong ? "true" : "false");
+    submitBtn.disabled = tooLong;
+  };
+  nameEl.addEventListener("input", syncNameCounter);
+
   const syncKierownikVisibility = () => {
     const isMorzkulc = organizerEl.value === "morzkulc";
     kierownikRowEl.classList.toggle("hidden", !isMorzkulc);
@@ -317,6 +361,7 @@ async function bindSubmitForm(innerEl, ctx) {
     form.reset();
     kierownikEmailEl.disabled = false;
     syncKierownikVisibility();
+    syncNameCounter();
     setErr("");
     setOk("");
   });
@@ -339,6 +384,10 @@ async function bindSubmitForm(innerEl, ctx) {
 
     if (!name || !startDate || !endDate || !location) {
       setErr("Uzupełnij wymagane pola: nazwa, daty, miejsce.");
+      return;
+    }
+    if (name.length > EVENT_NAME_MAX) {
+      setErr(nameTooLongMsg(name.length));
       return;
     }
     if (startDate > endDate) {
@@ -371,8 +420,8 @@ async function bindSubmitForm(innerEl, ctx) {
     } catch (e) {
       setErr(e?.message || "Nie udało się wysłać zgłoszenia.");
     } finally {
-      submitBtn.disabled = false;
       submitBtn.textContent = "Wyślij zgłoszenie";
+      syncNameCounter(); // odblokowuje przycisk, o ile nazwa mieści się w limicie
     }
   });
 }
@@ -399,6 +448,11 @@ export function createImprezaModule({ id, type, label, defaultRoute, order, enab
 
       const requestedTab = String(routeId || "").trim();
       const activeTab = (requestedTab === "submit" && canSubmit) ? "submit" : "list";
+      // ev-<eventId> = lista z przewinięciem do tej imprezy (link z kalendarza Google).
+      let focusEventId = "";
+      if (requestedTab.startsWith("ev-")) {
+        try { focusEventId = decodeURIComponent(requestedTab.slice(3)); } catch { focusEventId = requestedTab.slice(3); }
+      }
 
       viewEl.innerHTML = `
         <div class="card wide">
@@ -438,7 +492,7 @@ export function createImprezaModule({ id, type, label, defaultRoute, order, enab
         innerEl.innerHTML = renderSubmitFormHtml();
         bindSubmitForm(innerEl, ctx);
       } else {
-        await renderListView(innerEl, ctx);
+        await renderListView(innerEl, ctx, focusEventId);
       }
     },
   };

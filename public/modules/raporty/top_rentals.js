@@ -12,7 +12,8 @@ export const topRentalsReport = {
   label: "Najczęściej wypożyczane",
   description: "",
 
-  render({ container, ctx }) {
+  // url: domyślnie raport Zarządu; moduł Sprzęt podaje /api/gear/top-rentals (widok dla członków).
+  render({ container, ctx, url: reportUrl = REPORT_URL }) {
     container.innerHTML = `
       <div class="reportControls">
         <label class="reportLabel">Zakres:
@@ -76,7 +77,8 @@ export const topRentalsReport = {
         const rentals = Array.isArray(r.rentals) ? r.rentals : [];
         const detailRows = rentals.map((rt) => {
           const who = escapeHtml(rt.userName || rt.userNick || rt.userEmail || "—");
-          return `<div class="reportEmail">${who} — ${escapeHtml(String(rt.days))} dni</div>`;
+          const basen = rt.source === "basen" ? " (basen)" : "";
+          return `<div class="reportEmail">${who} — ${escapeHtml(String(rt.days))} dni${basen}</div>`;
         }).join("");
         html += `<tr class="hidden" id="${rowId}"><td></td><td colspan="3">${detailRows || `<div class="hint">Brak danych.</div>`}</td></tr>`;
       });
@@ -95,7 +97,7 @@ export const topRentalsReport = {
 
     const load = async () => {
       const range = rangeSel.value;
-      let url = `${REPORT_URL}?range=${encodeURIComponent(range)}`;
+      let url = `${reportUrl}?range=${encodeURIComponent(range)}`;
       if (range === "custom") {
         const from = fromInput.value;
         const to = toInput.value;

@@ -17,6 +17,7 @@ const CANCEL_ENROLL_URL = "/api/basen/cancel-enrollment";
 const CREATE_SESSION_URL = "/api/basen/sessions/create";
 const CANCEL_SESSION_URL = "/api/basen/sessions/cancel";
 const ADD_SAUNA_URL = "/api/basen/sessions/add-sauna";
+const SESSION_PAYMENT_URL = "/api/basen/sessions/payment";
 const SET_KAYAK_URL = "/api/basen/kayak";
 const SET_INSTRUCTOR_URL = "/api/basen/instructor";
 const CLAIM_URL = "/api/basen/instructor/claim";
@@ -1995,11 +1996,92 @@ async function renderFinanceTab(innerEl, ctx) {
         <tbody>${pastRows}</tbody>
       </table></div>` : `<div class="basenHint">Brak minionych terminów.</div>`}
 
+    ${renderSettlementHtml(rows, data.canMarkPayments === true)}
+
     <div class="basenHint" style="margin-top:14px;">
       Termin rusza, gdy wynik ≥ 0 zł albo strata ≤ ${esc(rules.maxStrataTerminu)} zł i sezon ≥ −${esc(rules.budzetSezonu)} zł. Koszt terminu ${esc(rules.kosztTerminu)} zł, decyzja ${esc(rules.oknoH)} h przed.
       Godzina wyceniana po cenie zakupu; „do zera” po ${esc(rules.cenaWejscia)} zł. Kursy poza wynikiem.
     </div>
   `;
+  bindSettlement(innerEl, ctx);
+}
+
+// ─── Rozliczenie z basenem (faktura wystawiona / zapłacono gotówką) ───────────
+// Prosty znacznik przy odbytym terminie, żeby przy kolejnej prośbie o fakturę nie
+// policzyć terminów już rozliczonych. Oznacza tylko obsługa basenu; inni widzą statusy.
+
+const SETTLEMENT_LABELS = {
+  none: "⚪ do rozliczenia",
+  invoice: "🧾 faktura wystawiona",
+  cash: "💵 gotówka",
+};
+
+function settlementStatusText(p) {
+  if (!p) return SETTLEMENT_LABELS.none;
+  if (p.status === "cash") return `${SETTLEMENT_LABELS.cash}${p.date ? ` ${shortDate(p.date)}` : ""}`;
+  return SETTLEMENT_LABELS.invoice;
+}
+
+function renderSettlementHtml(rows, canMark) {
+  const held = rows.filter((r) => r.outcome === "held").slice().reverse();
+  const todo = held.filter((r) => !r.payment).length;
+  const invoice = held.filter((r) => r.payment?.status === "invoice").length;
+  const cash = held.filter((r) => r.payment?.status === "cash").length;
+  if (!held.length) {
+    return `<div class="basenAttendeesGroupTitle" style="margin-top:16px;">Rozliczenie z basenem</div><div class="basenHint">Brak odbytych terminów.</div>`;
+  }
+  const tableRows = held.map((r) => `
+      <tr>
+        ${canMark ? `<td><input type="checkbox" data-settle-id="${esc(r.id)}" data-settle-todo="${r.payment ? "0" : "1"}" aria-label="Zaznacz ${esc(shortDate(r.date))}"></td>` : ""}
+        <td>${esc(shortDate(r.date))}${r.kurs ? ` <span class="basenHint">kurs</span>` : ""}</td>
+        <td>${esc(settlementStatusText(r.payment))}</td>
+      </tr>`).join("");
+  const actions = canMark ? `
+    <div class="basenSettleActions">
+      <button type="button" data-settle-only-todo>Zaznacz „do rozliczenia”</button>
+      <button type="button" class="primary" data-settle-action="invoice">🧾 Faktura wystawiona</button>
+      <span class="basenSettleCash">
+        <button type="button" class="primary" data-settle-action="cash">💵 Zapłacono gotówką</button>
+        <input type="date" data-settle-date value="${esc(todayIso())}" max="${esc(todayIso())}" aria-label="Data zapłaty gotówką">
+      </span>
+      <button type="button" class="ghost" data-settle-action="none">Cofnij — do rozliczenia</button>
+    </div>
+    <div class="err hidden" data-settle-err></div>` : "";
+  return `
+    <div class="basenAttendeesGroupTitle" style="margin-top:16px;">Rozliczenie z basenem</div>
+    <div class="basenHint">Do rozliczenia: <strong>${esc(todo)}</strong> · faktura wystawiona: ${esc(invoice)} · gotówka: ${esc(cash)}</div>
+    ${actions}
+    <div class="basenFinanceTableWrap"><table class="basenFinanceTable">
+      <thead><tr>${canMark ? "<th></th>" : ""}<th>Data</th><th>Rozliczenie</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table></div>`;
+}
+
+function bindSettlement(innerEl, ctx) {
+  const errEl = innerEl.querySelector("[data-settle-err]");
+  const boxes = () => Array.from(innerEl.querySelectorAll("[data-settle-id]"));
+  innerEl.querySelector("[data-settle-only-todo]")?.addEventListener("click", () => {
+    boxes().forEach((b) => { b.checked = b.getAttribute("data-settle-todo") === "1"; });
+  });
+  innerEl.querySelectorAll("[data-settle-action]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const status = btn.getAttribute("data-settle-action");
+      const sessionIds = boxes().filter((b) => b.checked).map((b) => b.getAttribute("data-settle-id"));
+      const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.toggle("hidden", !msg); } };
+      if (!sessionIds.length) { showErr("Zaznacz co najmniej jeden termin."); return; }
+      const date = innerEl.querySelector("[data-settle-date]")?.value || "";
+      if (status === "cash" && !date) { showErr("Podaj datę zapłaty gotówką."); return; }
+      showErr("");
+      innerEl.querySelectorAll("[data-settle-action]").forEach((b) => { b.disabled = true; });
+      try {
+        await apiPostJson({ url: SESSION_PAYMENT_URL, idToken: ctx.idToken, body: { sessionIds, status, date } });
+        await renderFinanceTab(innerEl, ctx);
+      } catch (e) {
+        innerEl.querySelectorAll("[data-settle-action]").forEach((b) => { b.disabled = false; });
+        showErr(e?.message || "Nie udało się zapisać rozliczenia.");
+      }
+    });
+  });
 }
 
 // ─── Moje konto (wyciąg — pełna historia własnych godzin basenowych) ──────────

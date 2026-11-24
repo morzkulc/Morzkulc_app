@@ -271,6 +271,17 @@
   max-width: 560px;
 }
 
+.imprezaNameCounter {
+  margin-top: 4px;
+  text-align: right;
+}
+
+.imprezaNameCounter--err {
+  color: var(--danger);
+  font-weight: 600;
+  text-align: left;
+}
+
 .imprezaDateRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -281,4 +292,37 @@
   .imprezaDateRow {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Link do imprezy (#/…/ev-<id>) ─── */
+
+.imprezaCard--focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  scroll-margin-top: 80px;
+}
+
+.imprezaFocusMissing {
+  margin-bottom: 10px;
+}
+
+/* ─── Dodaj do kalendarza ─── */
+
+.imprezaCalSubscribe {
+  margin-bottom: 12px;
+}
+
+.imprezaCalBtn {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--primary-2);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.imprezaCalBtn:hover {
+  border-color: var(--primary);
 }

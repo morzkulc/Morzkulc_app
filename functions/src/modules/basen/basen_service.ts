@@ -113,6 +113,8 @@ export interface BasenSession {
   decision?: BasenSessionDecision; // basen.decideSessions, 30 h przed terminem
   final?: BasenSessionFinal; // wynik odbytego terminu, zapisywany raz po dacie (finalizePastSessions)
   cancelReason?: "frekwencja" | "admin";
+  // Rozliczenie z basenem (basen_payments.ts): brak = do rozliczenia.
+  payment?: {status: "invoice" | "cash"; date: string | null; markedBy: string; markedAt: any};
   createdBy: string;
   createdAt: any;
   updatedAt: any;
